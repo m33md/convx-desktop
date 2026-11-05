@@ -7,7 +7,7 @@ plugins {
     id("org.jetbrains.compose") version "1.9.3"
 }
 
-// CI numbers each build (1.0.<run>), so every installer is newer than the last and upgrades it.
+// CI numbers each build (1.1.<run>), so every installer is newer than the last and upgrades it.
 val appVersion = System.getenv("CONVX_VERSION")?.takeIf { it.isNotBlank() } ?: "1.0.0"
 val appCommit = System.getenv("GITHUB_SHA")?.takeIf { it.isNotBlank() } ?: "dev"
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# Publishes the given files as the rolling "desktop-latest" pre-release, built from commit $1 as
+# Publishes the given files as the rolling "desktop-latest" release, built from commit $1 as
 # version $2. Every file is named with its version (Convx-Setup-1.0.71.exe, Convx-1.0.71.msi,
 # Convx-1.0.71-portable.zip), and the notes carry the version and commit for the app's updater.
+# It's marked the latest release, so /releases/latest always leads to the newest setup.
 #
 # The tag points at a one-file commit rather than at the build commit: a GITHUB_TOKEN may not
 # create a ref whose tree adds workflow files, and every commit on this branch carries them.
@@ -50,7 +51,7 @@ git -C "$tmp" -c user.name="github-actions[bot]" -c user.email="41898282+github-
   commit -qm "Convx for Windows, built from ${sha::7}"
 git -C "$tmp" push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}" "release:refs/tags/$tag"
 
-gh release create "$tag" --verify-tag --prerelease \
+gh release create "$tag" --verify-tag --latest \
   --title "Convx for Windows ${version}" \
   --notes "${download} If Windows says it protected your PC, click More info, then Run anyway. Version ${version}. Source: https://github.com/${GITHUB_REPOSITORY}/tree/${sha}" \
   "${files[@]}"

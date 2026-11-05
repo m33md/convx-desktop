@@ -1,6 +1,6 @@
 name: Desktop release
 
-# Publishes the newest finished Windows build as one rolling pre-release, so it has plain
+# Publishes the newest finished Windows build as one rolling release, so it has plain
 # download links (no GitHub sign-in, no zip in a zip). Runs when this file changes;
 # desktop.yml republishes after every later build.
 on:
@@ -24,13 +24,18 @@ jobs:
 
       - name: Download the newest Windows build
         run: |
-          run=$(gh run list -b "$GITHUB_REF_NAME" -w "Desktop build" -s success -L 1 --json databaseId -q '.[0].databaseId')
+          run=$(gh run list -b "$GITHUB_REF_NAME" -w "Desktop build" -s success -L 1 --json databaseId -q '.[0].databaseId // empty')
+          if [ -z "$run" ]; then
+            echo "::notice::No finished Windows build yet; desktop.yml publishes the first one."
+            exit 0
+          fi
           echo "SHA=$(gh run view "$run" --json headSha -q .headSha)" >> "$GITHUB_ENV"
           gh run download "$run" -n Convx-windows-installers -D out
           gh run download "$run" -n Convx-windows-portable -D out
           ls -la out
 
       - name: Publish
+        if: env.SHA != ''
         run: |
           version=$(basename out/msi/*.msi .msi)
           bash .github/scripts/publish-desktop-release.sh "$SHA" "${version#Convx-}" out/msi/*.msi out/exe/*.exe out/*.zip
