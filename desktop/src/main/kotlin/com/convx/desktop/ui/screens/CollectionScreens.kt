@@ -29,7 +29,12 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
+import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +50,9 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.TextStyle
@@ -66,6 +74,7 @@ import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.Artwork
 import com.convx.desktop.ui.components.CollectionMenuContent
+import com.convx.desktop.ui.components.DownloadMenuItems
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Gutter
 import com.convx.desktop.ui.components.ItemShelf
@@ -76,6 +85,9 @@ import com.convx.desktop.ui.components.MessageState
 import com.convx.desktop.ui.components.Overlays
 import com.convx.desktop.ui.components.SongRow
 import com.convx.desktop.ui.components.SongTableHeader
+import com.convx.desktop.ui.components.ListReorder
+import com.convx.desktop.ui.components.rememberListReorder
+import com.convx.desktop.ui.components.reorderGestures
 import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.onSecondaryClick
 import com.convx.desktop.ui.components.openAtProvider
@@ -356,6 +368,8 @@ fun LazyListScope.songTable(
     trailingLabel: String? = null,
     trailing: ((Int) -> String?)? = null,
     menuExtra: (@Composable (index: Int, song: Song, dismiss: () -> Unit) -> Unit)? = null,
+    /** Lets the rows be dragged into another order; their keys are then [songKey]s, so each song must be in once. */
+    reorder: ListReorder? = null,
 ) {
     // Playlists of uploads and videos often carry no albums at all; don't show an empty column.
     @Suppress("NAME_SHADOWING")
@@ -367,10 +381,26 @@ fun LazyListScope.songTable(
     }
     // Row padding, then the number column, then the artwork if any: the rule starts under the title.
     val ruleInset = 12.dp + 48.dp + if (showArtwork) 54.dp else 0.dp
-    itemsIndexed(songs, key = { i, s -> "$keyPrefix-$i-${s.id}" }) { i, song ->
+    itemsIndexed(songs, key = { i, s -> if (reorder != null) songKey(keyPrefix, s) else "$keyPrefix-$i-${s.id}" }) { i, song ->
+        val held = reorder != null && reorder.held == songKey(keyPrefix, song)
         Box(
             Modifier
+                .then(
+                    if (reorder == null) {
+                        Modifier
+                    } else {
+                        Modifier
+                            .animateItem(
+                                fadeInSpec = null,
+                                fadeOutSpec = null,
+                                placementSpec = if (reorder.active && !held) spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntOffset.VisibilityThreshold) else null,
+                            )
+                            .zIndex(if (held) 1f else 0f)
+                            .graphicsLayer { translationY = reorder.shift(songKey(keyPrefix, song)) }
+                    },
+                )
                 .padding(horizontal = Gutter - 12.dp)
+                .then(if (held) Modifier.shadow(12.dp, RoundedCornerShape(8.dp)).background(Color(0xFF2A2A2D), RoundedCornerShape(8.dp)) else Modifier)
                 .drawWithContent {
                     drawContent()
                     val start = ruleInset.toPx()
@@ -393,6 +423,9 @@ fun LazyListScope.songTable(
         }
     }
 }
+
+/** A song row's key in a [songTable] that can be reordered. */
+fun songKey(keyPrefix: String, song: Song) = "$keyPrefix-${song.id}"
 
 /** The phone's list separator on a tinted page. */
 private val Rule = Color.White.copy(alpha = 0.12f)
@@ -533,6 +566,21 @@ fun PlaylistScreen(id: String) {
                                 Overlays.toast(if (saved) "Removed from Your Library" else "Saved to Your Library")
                             },
                             link = "https://music.youtube.com/playlist?list=$playlistId",
+                            // A long playlist loads as it scrolls; Download fetches the rest first.
+                            loadAll = if (complete) null else suspend {
+                                while (loadingMore) kotlinx.coroutines.delay(100)
+                                loadingMore = true
+                                try {
+                                    while (true) {
+                                        val continuation = page.value?.songsContinuation ?: break
+                                        val more = withContext(Dispatchers.IO) { YouTube.playlistContinuation(continuation).getOrNull() } ?: break
+                                        page.update { it.copy(songs = it.songs + more.songs, songsContinuation = more.continuation) }
+                                    }
+                                } finally {
+                                    loadingMore = false
+                                }
+                                page.value?.songs.orEmpty().map { it.toSong() }
+                            },
                             extra = { close ->
                                 MenuItem("Start radio", "radio") {
                                     com.convx.desktop.ui.components.ItemActions.radio(playlist)
@@ -569,12 +617,25 @@ fun LocalPlaylistScreen(id: String) {
         Box(Modifier.padding(top = LocalPageInsets.current.top)) { MessageState("This playlist was deleted", icon = "delete") }
         return
     }
-    val songs = playlist.songs
-    val thumbs = remember(songs) { songs.mapNotNull { it.thumbnail }.distinct().take(4) }
+    val thumbs = remember(playlist.songs) { playlist.songs.mapNotNull { it.thumbnail }.distinct().take(4) }
     val pageColor = PageBlack
+    // Drag a song to put the playlist in your own order, as on Spotify.
+    val listState = rememberLazyListState()
+    val insets = LocalPageInsets.current
+    val reorder = rememberListReorder(listState, edgeTop = insets.top, edgeBottom = insets.bottom)
+    val movable = remember(playlist.songs) { playlist.songs.distinctBy { it.id }.size == playlist.songs.size }
+    SideEffect {
+        reorder.bind(
+            keys = { if (movable) playlist.songs.map { songKey("local", it) } else emptyList() },
+            allowed = { _, keys -> keys.indices },
+            onDrop = { keys -> Library.reorderPlaylist(id, keys.map { (it as String).removePrefix("local-") }) },
+        )
+    }
+    LaunchedEffect(playlist.songs) { reorder.settled(playlist.songs.map { songKey("local", it) }) }
+    val songs = reorder.arrange(playlist.songs) { songKey("local", it) }
     val isThisPlaying = playback.isPlaying && songs.any { it.id == playback.currentId }
     Box(Modifier.fillMaxSize().background(pageColor)) {
-        PageList(state = rememberLazyListState(), tint = pageColor, topPadding = 0.dp) {
+        PageList(state = listState, tint = pageColor, topPadding = 0.dp, listModifier = Modifier.reorderGestures(reorder)) {
             collectionHeader(
                 title = playlist.name,
                 art = { size -> com.convx.desktop.ui.components.EditablePlaylistCover(playlist, size, RoundedCornerShape(12.dp)) },
@@ -609,6 +670,8 @@ fun LocalPlaylistScreen(id: String) {
                         Overlays.toast("Added to queue")
                         dismiss()
                     }
+                    // The whole playlist for listening offline; songs already on this PC are skipped.
+                    DownloadMenuItems(songs, dismiss)
                     MenuItem("Modify with AI", "sparks") {
                         dismiss()
                         editPlaylistWithAi(id)
@@ -637,6 +700,7 @@ fun LocalPlaylistScreen(id: String) {
                     songs,
                     playlist.name,
                     "local",
+                    reorder = if (movable) reorder else null,
                     menuExtra = { i, song, dismiss ->
                         if (i > 0) {
                             MenuItem("Move up", "expand_less") {

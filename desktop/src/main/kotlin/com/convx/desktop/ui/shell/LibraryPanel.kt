@@ -9,6 +9,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import com.convx.desktop.ui.glass.glassControl
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.expandHorizontally
@@ -42,6 +44,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -73,6 +76,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.convx.desktop.core.AppScope
@@ -98,6 +103,8 @@ import com.convx.desktop.ui.components.Overlays
 import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.onSecondaryClick
 import com.convx.desktop.ui.components.openAtProvider
+import com.convx.desktop.ui.components.rememberListReorder
+import com.convx.desktop.ui.components.reorderGestures
 import com.convx.desktop.ui.components.rememberMenuAnchor
 import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.ui.glass.GlassShapes
@@ -166,11 +173,34 @@ private enum class LibrarySort(val key: String, val label: String) {
     Added("added", "Recently Added"),
     Alphabetical("alphabetical", "Alphabetical"),
     Creator("creator", "Creator"),
+    /** Spotify's "Custom order": the order you dragged things into, what's new on top. */
+    Custom("custom", "Custom order"),
     ;
 
     companion object {
         fun of(key: String) = entries.firstOrNull { it.key == key } ?: Recents
     }
+}
+
+/** [entries] in the order of [sort]; [custom] is Custom order's keys, what isn't in it yet on top, newest first. */
+private fun sortEntries(entries: List<LibraryEntry>, sort: LibrarySort, custom: List<String>): List<LibraryEntry> = when (sort) {
+    LibrarySort.Recents -> entries.sortedByDescending { it.recent }
+    LibrarySort.Added -> entries.sortedByDescending { it.added }
+    LibrarySort.Alphabetical -> entries.sortedBy { it.title.lowercase() }
+    LibrarySort.Creator -> entries.sortedWith(compareBy({ it.owner.lowercase() }, { it.title.lowercase() }))
+    LibrarySort.Custom -> {
+        val place = custom.withIndex().associate { it.value to it.index }
+        entries.filter { it.key !in place }.sortedByDescending { it.added } + entries.filter { it.key in place }.sortedBy { place.getValue(it.key) }
+    }
+}
+
+/** [whole] with the keys of [part] in [part]'s order, each in a place one of them had; ones it lacks go after. */
+private fun inPlaces(whole: List<String>, part: List<String>): List<String> {
+    val had = whole.toHashSet()
+    val moving = part.filter { it in had }
+    val set = moving.toHashSet()
+    val next = moving.iterator()
+    return whole.map { if (it in set) next.next() else it } + part.filterNot { it in had }
 }
 
 @Immutable
@@ -386,7 +416,7 @@ fun LibraryPanel(collapsed: Boolean, modifier: Modifier = Modifier) {
     val localSongs = remember(filter == LibraryFilter.Local, localIndex, library) {
         if (filter == LibraryFilter.Local) localSongEntries(localIndex, library) else emptyList()
     }
-    val shown = remember(all, localSongs, filter, query, sort, pins) {
+    val shown = remember(all, localSongs, filter, query, sort, pins, settings.libraryOrder) {
         val matching = (all + localSongs).filter { entry ->
             val kindOk = when (filter) {
                 null -> entry.kind != Kind.LocalSong
@@ -397,16 +427,45 @@ fun LibraryPanel(collapsed: Boolean, modifier: Modifier = Modifier) {
             }
             kindOk && (query.isBlank() || entry.title.contains(query.trim(), ignoreCase = true) || entry.owner.contains(query.trim(), ignoreCase = true))
         }
-        val sorted = when (sort) {
-            LibrarySort.Recents -> matching.sortedByDescending { it.recent }
-            LibrarySort.Added -> matching.sortedByDescending { it.added }
-            LibrarySort.Alphabetical -> matching.sortedBy { it.title.lowercase() }
-            LibrarySort.Creator -> matching.sortedWith(compareBy({ it.owner.lowercase() }, { it.title.lowercase() }))
-        }
+        val sorted = sortEntries(matching, sort, settings.libraryOrder)
         // Pins stay on top in the order they were pinned, as Spotify keeps them; under Local files, the whole list leads.
         val ordered = if (filter == LibraryFilter.Local) sorted.sortedBy { it.kind != Kind.LocalFiles } else sorted
         ordered.filter { it.key in pins }.sortedBy { pins.indexOf(it.key) } + ordered.filter { it.key !in pins }
     }
+
+    // Drag a row to put Your Library in your own order, as on Spotify: pins move among the pins,
+    // the rest among the rest, and the sort turns to Custom order.
+    val listState = rememberLazyListState()
+    val reorder = rememberListReorder(listState, edgeTop = 4.dp, edgeBottom = 16.dp)
+    val canReorder = filter != LibraryFilter.Local
+    SideEffect {
+        reorder.bind(
+            keys = { shown.map { it.key } },
+            allowed = { key, keys ->
+                val entry = shown.firstOrNull { it.key == key }
+                if (!canReorder || entry == null || entry.kind == Kind.LocalSong) {
+                    null
+                } else {
+                    val pinnedCount = keys.count { it in pins }
+                    if (key in pins) 0 until pinnedCount else pinnedCount..keys.lastIndex
+                }
+            },
+            onDrop = { dropped ->
+                val keys = dropped.map { it as String }
+                val movedPins = keys.filter { it in pins }
+                if (movedPins != shown.map { it.key }.filter { it in pins }) {
+                    AppSettings.update { it.copy(pinnedLibrary = inPlaces(it.pinnedLibrary, movedPins)) }
+                } else {
+                    // The whole library in the order it's shown now, hidden rows too, with the shown ones moved.
+                    val whole = sortEntries(all, sort, settings.libraryOrder).map { it.key }.filterNot { it in pins }
+                    val order = inPlaces(whole, keys.filterNot { it in pins })
+                    AppSettings.update { it.copy(libraryOrder = order, librarySort = LibrarySort.Custom.key) }
+                }
+            },
+        )
+    }
+    val rows = reorder.arrange(shown) { it.key }
+    LaunchedEffect(shown) { reorder.settled(shown.map { it.key }) }
 
     Column(
         modifier
@@ -420,26 +479,50 @@ fun LibraryPanel(collapsed: Boolean, modifier: Modifier = Modifier) {
         PanelHeader(collapsed)
         if (!collapsed) {
             FilterRow(filter) { filter = it }
-            ToolsRow(query, { query = it }, sort)
+            ToolsRow(query, { query = it }, sort) { option ->
+                // Custom order starts from the order shown now, so nothing jumps when it's picked.
+                AppSettings.update {
+                    if (option == LibrarySort.Custom && it.libraryOrder.isEmpty()) {
+                        it.copy(librarySort = option.key, libraryOrder = sortEntries(all, sort, it.libraryOrder).map { e -> e.key })
+                    } else {
+                        it.copy(librarySort = option.key)
+                    }
+                }
+            }
         }
-        val listState = rememberLazyListState()
         LazyColumn(
             state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth().fadingEdge(14.dp),
+            modifier = Modifier.weight(1f).fillMaxWidth().fadingEdge(14.dp).reorderGestures(reorder),
             contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 16.dp),
         ) {
-            items(shown, key = { it.key }) { entry ->
+            items(rows, key = { it.key }) { entry ->
                 val song = entry.kind == Kind.LocalSong
-                LibraryRow(
-                    entry = entry,
-                    collapsed = collapsed,
-                    pinned = entry.key in pins,
-                    selected = !song && navigator.current.screen == entry.screen,
-                    playing = if (song) player.current?.id == entry.id else player.queueTitle != null && player.queueTitle == entry.title && player.current != null,
-                    isPlaying = player.isPlaying,
-                    // A file plays from where it is in the list, the rest of the shown files after it.
-                    onClick = { if (song) playLocalFrom(shown, entry) else navigator.navigate(entry.screen) },
-                )
+                val held = reorder.held == entry.key
+                Box(
+                    Modifier
+                        .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (reorder.active && !held) spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntOffset.VisibilityThreshold) else null)
+                        .zIndex(if (held) 1f else 0f)
+                        .graphicsLayer {
+                            translationY = reorder.shift(entry.key)
+                            if (held) {
+                                shadowElevation = 12.dp.toPx()
+                                shape = RoundedCornerShape(10.dp)
+                                clip = true
+                            }
+                        }
+                        .background(if (held) Color(0xFF2A2A2D) else Color.Transparent, RoundedCornerShape(10.dp)),
+                ) {
+                    LibraryRow(
+                        entry = entry,
+                        collapsed = collapsed,
+                        pinned = entry.key in pins,
+                        selected = !song && navigator.current.screen == entry.screen,
+                        playing = if (song) player.current?.id == entry.id else player.queueTitle != null && player.queueTitle == entry.title && player.current != null,
+                        isPlaying = player.isPlaying,
+                        // A file plays from where it is in the list, the rest of the shown files after it.
+                        onClick = { if (song) playLocalFrom(shown, entry) else navigator.navigate(entry.screen) },
+                    )
+                }
             }
             if (shown.isEmpty() && !collapsed) {
                 item(key = "empty") {
@@ -613,7 +696,7 @@ private fun FilterChip(label: String?, selected: Boolean, icon: String? = null, 
 
 /** Search in your library on the left, the sort on the right, as Spotify lays them out. */
 @Composable
-private fun ToolsRow(query: String, onQuery: (String) -> Unit, sort: LibrarySort) {
+private fun ToolsRow(query: String, onQuery: (String) -> Unit, sort: LibrarySort, onSort: (LibrarySort) -> Unit) {
     var searching by remember { mutableStateOf(query.isNotEmpty()) }
     val focus = remember { FocusRequester() }
     val sortMenu = rememberMenuAnchor()
@@ -702,7 +785,7 @@ private fun ToolsRow(query: String, onQuery: (String) -> Unit, sort: LibrarySort
                 LibrarySort.entries.forEach { option ->
                     MenuItem(option.label, if (option == sort) "check" else null) {
                         sortMenu.expanded = false
-                        AppSettings.update { it.copy(librarySort = option.key) }
+                        onSort(option)
                     }
                 }
             }

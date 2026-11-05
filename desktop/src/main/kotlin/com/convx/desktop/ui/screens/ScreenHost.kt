@@ -79,6 +79,8 @@ fun PageList(
     topPadding: Dp = LocalPageInsets.current.top + 8.dp,
     background: (@Composable BoxScope.() -> Unit)? = null,
     onNearEnd: (() -> Unit)? = null,
+    /** On the list itself, such as [com.convx.desktop.ui.components.reorderGestures]. */
+    listModifier: Modifier = Modifier,
     content: LazyListScope.() -> Unit,
 ) {
     TrackTopBar(state, tint)
@@ -100,7 +102,7 @@ fun PageList(
         LazyColumn(
             state = state,
             contentPadding = PaddingValues(start = insets.start, end = insets.end, top = topPadding, bottom = insets.bottom + 40.dp),
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize().then(listModifier),
         ) {
             content()
         }

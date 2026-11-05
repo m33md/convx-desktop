@@ -146,6 +146,14 @@ object Library {
         playlist.copy(songs = playlist.songs.filterNot { it.id == songId })
     }
 
+    /** Puts the playlist's songs in the order of [songIds]; any it doesn't name keep their order after them. */
+    fun reorderPlaylist(id: String, songIds: List<String>) = updatePlaylist(id) { playlist ->
+        val byId = playlist.songs.associateBy { it.id }
+        val placed = songIds.distinct().mapNotNull { byId[it] }
+        val named = placed.mapTo(HashSet()) { it.id }
+        playlist.copy(songs = placed + playlist.songs.filterNot { it.id in named })
+    }
+
     fun moveInPlaylist(id: String, from: Int, to: Int) = updatePlaylist(id) { playlist ->
         val songs = playlist.songs.toMutableList()
         if (from !in songs.indices || to !in songs.indices) return@updatePlaylist playlist

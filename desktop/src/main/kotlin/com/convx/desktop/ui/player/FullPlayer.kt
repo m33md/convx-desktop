@@ -88,6 +88,7 @@ import com.convx.desktop.ui.components.rememberMenuAnchor
 import com.convx.desktop.ui.components.rememberMeshColors
 import com.convx.desktop.ui.shell.FullPlayerMode
 import com.convx.desktop.ui.shell.UiState
+import com.convx.desktop.ui.shell.WindowTitleBar
 import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.shell.Screen
 import com.convx.desktop.ui.shell.LocalNavigator
@@ -289,6 +290,8 @@ fun PlayerStage(
                     tooltip = "Queue",
                     slot = if (v2) PlayerIconSlot.V2_QUEUE else null,
                 )
+                // Windows' minimise, maximise and close sit over this corner of the window; keep clear of them.
+                if (WindowTitleBar.active && !preview) Spacer(Modifier.width((WindowTitleBar.rightInset - 32.dp).coerceAtLeast(0.dp)))
             }
 
             AnimatedVisibility(

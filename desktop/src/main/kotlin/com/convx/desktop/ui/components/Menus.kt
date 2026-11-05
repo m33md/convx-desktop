@@ -46,6 +46,7 @@ import com.convx.desktop.ui.shell.LocalNavigator
 import com.convx.desktop.ui.shell.Screen
 import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxType
+import kotlinx.coroutines.launch
 
 /** Where a menu opens: under its button, or at the right-click point. */
 class MenuAnchor {
@@ -231,6 +232,8 @@ fun CollectionMenuContent(
     onToggleSaved: (() -> Unit)? = null,
     link: String? = null,
     extra: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
+    /** For a list only partly loaded: fetches the rest, so Download takes the whole of it. */
+    loadAll: (suspend () -> List<Song>)? = null,
 ) {
     val clipboard = LocalClipboardManager.current
     val library by Library.state.collectAsState()
@@ -266,7 +269,7 @@ fun CollectionMenuContent(
         dismiss()
     }
     MenuItem("Add to playlist", "playlist_add") { choosingPlaylist = true }
-    DownloadMenuItems(songs(), dismiss)
+    DownloadMenuItems(songs(), dismiss, loadAll)
     if (saved != null && onToggleSaved != null) {
         MenuItem(if (saved) "Remove from Library" else "Save to Library", if (saved) "library_add_check" else "library_add") {
             onToggleSaved()
@@ -291,14 +294,36 @@ fun CollectionMenuContent(
  * A list that's partly downloaded offers both: the rest, and removing what's there.
  */
 @Composable
-fun DownloadMenuItems(songs: List<Song>, dismiss: () -> Unit) {
+fun DownloadMenuItems(songs: List<Song>, dismiss: () -> Unit, loadAll: (suspend () -> List<Song>)? = null) {
     val done by Downloads.done.collectAsState()
     val active by Downloads.active.collectAsState()
     val wanted = remember(songs) { songs.filter(Downloads::canDownload) }
-    if (wanted.isEmpty()) return
+    if (wanted.isEmpty() && loadAll == null) return
     val single = songs.singleOrNull()
     val kept = wanted.filter { it.id in done }
-    when (val state = Downloads.collective(wanted, done, active)) {
+    // The rest of a long playlist is fetched first, then every song not on this PC yet is downloaded.
+    if (loadAll != null) {
+        val running = Downloads.collective(wanted, done, active) as? Downloads.Collective.Running
+        if (running == null) {
+            MenuItem("Download", "download") {
+                dismiss()
+                Overlays.toast("Getting the whole playlist…", "download")
+                com.convx.desktop.core.AppScope.launch {
+                    val all = loadAll().filter(Downloads::canDownload)
+                    val queued = Downloads.download(all)
+                    Overlays.toast(
+                        if (queued > 0) "Downloading $queued ${if (queued == 1) "song" else "songs"}" else "All ${all.size} songs are already downloaded",
+                        "download",
+                    )
+                }
+            }
+        } else {
+            MenuItem("Downloading ${running.done} of ${running.total}… Stop", "download") {
+                Downloads.cancel(wanted.map { it.id })
+                dismiss()
+            }
+        }
+    } else when (val state = Downloads.collective(wanted, done, active)) {
         is Downloads.Collective.Running -> MenuItem(
             if (single != null) "Downloading… Stop" else "Downloading ${state.done} of ${state.total}… Stop",
             "download",

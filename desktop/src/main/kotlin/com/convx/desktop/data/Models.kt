@@ -263,8 +263,10 @@ data class Settings(
     val sidebarCollapsed: Boolean = false,
     /** Your Library's pinned items, top first, by [libraryKey]. Liked Songs starts pinned, as on Spotify. */
     val pinnedLibrary: List<String> = listOf("liked"),
-    /** Your Library's order: recents, added, alphabetical or creator. */
+    /** Your Library's order: recents, added, alphabetical, creator or custom. */
     val librarySort: String = "recents",
+    /** Your Library's Custom order, by [libraryKey]; what isn't in it shows on top. */
+    val libraryOrder: List<String> = emptyList(),
     val rightPanel: String? = "nowPlaying",
     val lyricsWordSync: Boolean = true,
     /** The phone's lyric source order by its ids; empty is the phone's default order. */
