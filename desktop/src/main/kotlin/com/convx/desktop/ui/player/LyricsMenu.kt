@@ -80,6 +80,7 @@ import com.convx.desktop.ui.theme.ConvxType
 import kotlinx.coroutines.launch
 import java.net.URLEncoder
 import kotlin.math.roundToInt
+import com.convx.desktop.ui.components.ScrollbarColumn
 
 /** The button that opens the phone's lyrics menu, next to the lyrics wherever they're shown. */
 @Composable
@@ -406,7 +407,7 @@ private fun SearchResults(song: Song, title: String, artist: String) {
         loading = false
     }
     DialogCard("Search lyrics") {
-        Column(Modifier.fillMaxWidth().heightIn(max = 440.dp).verticalScroll(rememberScrollState())) {
+        ScrollbarColumn(Modifier.fillMaxWidth().heightIn(max = 440.dp)) {
             results.forEachIndexed { index, found ->
                 Row(
                     Modifier

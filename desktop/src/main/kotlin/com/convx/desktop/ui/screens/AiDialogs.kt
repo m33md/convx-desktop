@@ -57,6 +57,7 @@ import com.convx.desktop.ui.theme.ConvxShapes
 import com.convx.desktop.ui.theme.ConvxType
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
+import com.convx.desktop.ui.components.ScrollbarColumn
 
 /**
  * The phone's Track insights: a short overview of a song from its title, artist, album and
@@ -118,7 +119,7 @@ private fun TrackInsightsDialog(song: Song) {
             problem != null -> Text("Set up an AI provider and API key in Settings to create an overview.", style = ConvxType.Subhead)
         }
         summary?.takeIf { !running }?.let { text ->
-            Box(Modifier.fillMaxWidth().heightIn(max = 320.dp).verticalScroll(rememberScrollState())) {
+            ScrollbarColumn(Modifier.fillMaxWidth().heightIn(max = 320.dp)) {
                 SelectionContainer { Text(text, style = ConvxType.Body) }
             }
         }

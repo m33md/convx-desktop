@@ -17,7 +17,9 @@ import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.rememberScrollbarAdapter
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -29,6 +31,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -490,66 +493,73 @@ fun LibraryPanel(collapsed: Boolean, modifier: Modifier = Modifier) {
                 }
             }
         }
-        LazyColumn(
-            state = listState,
-            modifier = Modifier.weight(1f).fillMaxWidth().fadingEdge(14.dp).reorderGestures(reorder),
-            contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 16.dp),
-        ) {
-            items(rows, key = { it.key }) { entry ->
-                val song = entry.kind == Kind.LocalSong
-                val held = reorder.held == entry.key
-                Box(
-                    Modifier
-                        .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (reorder.active && !held) spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntOffset.VisibilityThreshold) else null)
-                        .zIndex(if (held) 1f else 0f)
-                        .graphicsLayer {
-                            translationY = reorder.shift(entry.key)
-                            if (held) {
-                                shadowElevation = 12.dp.toPx()
-                                shape = RoundedCornerShape(10.dp)
-                                clip = true
+        // A bar to drag, for a mouse or touchpad without a wheel.
+        Box(Modifier.weight(1f).fillMaxWidth()) {
+            LazyColumn(
+                state = listState,
+                modifier = Modifier.fillMaxSize().fadingEdge(14.dp).reorderGestures(reorder),
+                contentPadding = PaddingValues(start = 8.dp, end = if (collapsed) 8.dp else 12.dp, top = 4.dp, bottom = 16.dp),
+            ) {
+                items(rows, key = { it.key }) { entry ->
+                    val song = entry.kind == Kind.LocalSong
+                    val held = reorder.held == entry.key
+                    Box(
+                        Modifier
+                            .animateItem(fadeInSpec = null, fadeOutSpec = null, placementSpec = if (reorder.active && !held) spring(stiffness = Spring.StiffnessMediumLow, visibilityThreshold = IntOffset.VisibilityThreshold) else null)
+                            .zIndex(if (held) 1f else 0f)
+                            .graphicsLayer {
+                                translationY = reorder.shift(entry.key)
+                                if (held) {
+                                    shadowElevation = 12.dp.toPx()
+                                    this.shape = RoundedCornerShape(10.dp)
+                                    this.clip = true
+                                }
                             }
-                        }
-                        .background(if (held) Color(0xFF2A2A2D) else Color.Transparent, RoundedCornerShape(10.dp)),
-                ) {
-                    LibraryRow(
-                        entry = entry,
-                        collapsed = collapsed,
-                        pinned = entry.key in pins,
-                        selected = !song && navigator.current.screen == entry.screen,
-                        playing = if (song) player.current?.id == entry.id else player.queueTitle != null && player.queueTitle == entry.title && player.current != null,
-                        isPlaying = player.isPlaying,
-                        // A file plays from where it is in the list, the rest of the shown files after it.
-                        onClick = { if (song) playLocalFrom(shown, entry) else navigator.navigate(entry.screen) },
-                    )
-                }
-            }
-            if (shown.isEmpty() && !collapsed) {
-                item(key = "empty") {
-                    val noFiles = filter == LibraryFilter.Local && query.isBlank()
-                    Text(
-                        when {
-                            query.isNotBlank() -> "Nothing in your library matches \"${query.trim()}\""
-                            noFiles -> "No music files found on this PC yet. Choose your music folders in Settings."
-                            else -> "Nothing here yet"
-                        },
-                        style = TextStyle(fontFamily = ConvxType.family, fontSize = 13.sp, lineHeight = 18.sp),
-                        color = Color.White.copy(alpha = 0.5f),
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
-                    )
-                    if (noFiles) {
-                        com.convx.desktop.ui.components.PillButton(
-                            "Music folders",
-                            {
-                                navigator.navigate(Screen.Settings)
-                                com.convx.desktop.ui.screens.settings.SettingsNav.push(com.convx.desktop.ui.screens.settings.SettingsPage.LocalFolders)
-                            },
-                            modifier = Modifier.padding(start = 12.dp),
-                            icon = "storage",
+                            .background(if (held) Color(0xFF2A2A2D) else Color.Transparent, RoundedCornerShape(10.dp)),
+                    ) {
+                        LibraryRow(
+                            entry = entry,
+                            collapsed = collapsed,
+                            pinned = entry.key in pins,
+                            selected = !song && navigator.current.screen == entry.screen,
+                            playing = if (song) player.current?.id == entry.id else player.queueTitle != null && player.queueTitle == entry.title && player.current != null,
+                            isPlaying = player.isPlaying,
+                            // A file plays from where it is in the list, the rest of the shown files after it.
+                            onClick = { if (song) playLocalFrom(shown, entry) else navigator.navigate(entry.screen) },
                         )
                     }
                 }
+                if (shown.isEmpty() && !collapsed) {
+                    item(key = "empty") {
+                        val noFiles = filter == LibraryFilter.Local && query.isBlank()
+                        Text(
+                            when {
+                                query.isNotBlank() -> "Nothing in your library matches \"${query.trim()}\""
+                                noFiles -> "No music files found on this PC yet. Choose your music folders in Settings."
+                                else -> "Nothing here yet"
+                            },
+                            style = TextStyle(fontFamily = ConvxType.family, fontSize = 13.sp, lineHeight = 18.sp),
+                            color = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier.padding(horizontal = 12.dp, vertical = 16.dp),
+                        )
+                        if (noFiles) {
+                            com.convx.desktop.ui.components.PillButton(
+                                "Music folders",
+                                {
+                                    navigator.navigate(Screen.Settings)
+                                    com.convx.desktop.ui.screens.settings.SettingsNav.push(com.convx.desktop.ui.screens.settings.SettingsPage.LocalFolders)
+                                },
+                                modifier = Modifier.padding(start = 12.dp),
+                                icon = "storage",
+                            )
+                        }
+                    }
+                }
             }
+            VerticalScrollbar(
+                rememberScrollbarAdapter(listState),
+                Modifier.align(Alignment.CenterEnd).fillMaxHeight().padding(top = 4.dp, bottom = 12.dp, end = 2.dp),
+            )
         }
     }
 }
@@ -649,13 +659,35 @@ private fun HeaderIcon(icon: String, tooltip: String, tint: Color, onClick: () -
 /** Spotify's filter chips; with one picked, a close chip in front clears it. */
 @Composable
 private fun FilterRow(filter: LibraryFilter?, onFilter: (LibraryFilter?) -> Unit) {
+    val scroll = rememberScrollState()
     Row(
-        // Four chips are wider than the panel, so the row scrolls sideways, as Spotify's does.
+        // The four chips fit the panel; a wider app font can push them past it, and then the row
+        // scrolls sideways, as Spotify's does, fading out where there's more.
         Modifier
             .fillMaxWidth()
-            .horizontalScroll(rememberScrollState())
-            .padding(start = 14.dp, end = 14.dp, bottom = 6.dp, top = 2.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+            .graphicsLayer(compositingStrategy = CompositingStrategy.Offscreen)
+            .drawWithContent {
+                drawContent()
+                val fade = 28.dp.toPx()
+                if (scroll.value < scroll.maxValue) {
+                    drawRect(
+                        Brush.horizontalGradient(listOf(Color.Black, Color.Transparent), startX = size.width - fade, endX = size.width),
+                        topLeft = androidx.compose.ui.geometry.Offset(size.width - fade, 0f),
+                        size = androidx.compose.ui.geometry.Size(fade, size.height),
+                        blendMode = BlendMode.DstIn,
+                    )
+                }
+                if (scroll.value > 0) {
+                    drawRect(
+                        Brush.horizontalGradient(listOf(Color.Transparent, Color.Black), startX = 0f, endX = fade),
+                        size = androidx.compose.ui.geometry.Size(fade, size.height),
+                        blendMode = BlendMode.DstIn,
+                    )
+                }
+            }
+            .horizontalScroll(scroll)
+            .padding(start = 12.dp, end = 12.dp, bottom = 6.dp, top = 2.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         AnimatedVisibility(filter != null, enter = fadeIn() + expandHorizontally(), exit = fadeOut() + shrinkHorizontally()) {
@@ -680,7 +712,7 @@ private fun FilterChip(label: String?, selected: Boolean, icon: String? = null, 
             .glassControl(GlassShapes.Capsule, fill = if (selected) accent else null, backdrop = null)
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-            .padding(horizontal = if (label == null) 8.dp else 12.dp),
+            .padding(horizontal = if (label == null) 8.dp else 9.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) ConvxIcon(icon, tint = Color.White, size = 16.dp)

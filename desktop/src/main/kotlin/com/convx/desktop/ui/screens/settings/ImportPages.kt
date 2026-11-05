@@ -53,6 +53,7 @@ import com.convx.desktop.ui.theme.ConvxType
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import com.convx.desktop.ui.components.ScrollbarColumn
 
 /** The phone's Spotify import, on the Spotify page once you're connected. */
 @Composable
@@ -114,7 +115,7 @@ private fun spotifyImportDialog() {
                 else -> {
                     Text("${playlists!!.size} playlists available", style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel)
                     Spacer(Modifier.height(8.dp))
-                    Column(Modifier.heightIn(max = 380.dp).verticalScroll(rememberScrollState())) {
+                    ScrollbarColumn(Modifier.heightIn(max = 380.dp)) {
                         CheckRow("Select All", checked = selected.size == ids.size) {
                             selected = if (selected.size == ids.size) emptySet() else ids.toSet()
                         }
@@ -241,7 +242,7 @@ private fun ImportStages(state: PlaylistImport.State, source: String, idle: @Com
             Text("${state.songs.size} tracks matched, ${state.skipped} skipped.", style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel)
             if (choosing) {
                 Spacer(Modifier.height(10.dp))
-                Column(Modifier.heightIn(max = 300.dp).verticalScroll(rememberScrollState())) {
+                ScrollbarColumn(Modifier.heightIn(max = 300.dp)) {
                     library.localPlaylists.forEachIndexed { index, playlist ->
                         if (index > 0) RowDivider()
                         SettingsRow(playlist.name, "${playlist.songs.size} songs", icon = "queue_music", tint = SystemColors.Red, onClick = {

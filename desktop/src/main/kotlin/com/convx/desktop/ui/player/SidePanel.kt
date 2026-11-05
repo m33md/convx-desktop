@@ -91,6 +91,8 @@ import com.convx.desktop.ui.glass.GlassShapes
 import com.convx.desktop.ui.glass.liquidGlass
 import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.shell.FullPlayerMode
+import com.convx.desktop.ui.components.ScrollbarColumn
+import com.convx.desktop.ui.components.ListScrollbar
 
 /** How wide the Now Playing panel on the right of the window is. */
 val NowPlayingPanelWidth: Dp = 340.dp
@@ -189,9 +191,8 @@ private fun NowPlayingPanel(state: PlayerState) {
     val liked = library.liked.any { it.song.id == song.id }
     val navigator = LocalNavigator.current
     val menu = rememberMenuAnchor()
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(start = 16.dp, end = 16.dp, top = 8.dp),
-    ) {
+    // A bar to drag beside it, for a mouse or touchpad without a wheel.
+    ScrollbarColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp)) {
         val coverShape = RoundedCornerShape(14.dp)
         val coverModifier = Modifier.fillMaxWidth().aspectRatio(1f).shadow(18.dp, coverShape).pressable({ UiState.fullPlayer = true }, pressScale = 0.99f)
         if (settings.hidePlayerArtwork) {
@@ -327,34 +328,37 @@ fun QueueList(state: PlayerState, modifier: Modifier = Modifier, onDark: Boolean
     val listState = rememberLazyListState()
     val upNext = state.upNext
     val current = state.current
-    LazyColumn(state = listState, modifier = modifier, contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)) {
-        if (current != null) {
-            sectionTitle("Now playing")
-            item(key = "current") { QueueRow(current, state.index, true, Modifier, removable = false) }
-        }
-        if (upNext.isNotEmpty()) {
-            item(key = "next_header") {
-                Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp, top = 16.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text("Next up", style = ConvxType.Headline)
-                        state.queueTitle?.let { Text("From $it", style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    Box(modifier) {
+        LazyColumn(state = listState, modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 8.dp, end = 14.dp, top = 4.dp, bottom = 4.dp)) {
+            if (current != null) {
+                sectionTitle("Now playing")
+                item(key = "current") { QueueRow(current, state.index, true, Modifier, removable = false) }
+            }
+            if (upNext.isNotEmpty()) {
+                item(key = "next_header") {
+                    Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 4.dp, top = 16.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text("Next up", style = ConvxType.Headline)
+                            state.queueTitle?.let { Text("From $it", style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis) }
+                        }
+                        PillButton("Clear", { PlayerController.clearUpNext() }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp))
                     }
-                    PillButton("Clear", { PlayerController.clearUpNext() }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp))
+                }
+                itemsIndexed(upNext, key = { i, song -> "q${state.index + 1 + i}:${song.id}" }) { i, song ->
+                    QueueRow(song, state.index + 1 + i, false, Modifier, removable = true, draggable = true)
+                }
+            } else if (current == null) {
+                item {
+                    Text(
+                        "Your queue is empty.",
+                        style = ConvxType.Body,
+                        color = ConvxColors.SecondaryLabel,
+                        modifier = Modifier.padding(16.dp),
+                    )
                 }
             }
-            itemsIndexed(upNext, key = { i, song -> "q${state.index + 1 + i}:${song.id}" }) { i, song ->
-                QueueRow(song, state.index + 1 + i, false, Modifier, removable = true, draggable = true)
-            }
-        } else if (current == null) {
-            item {
-                Text(
-                    "Your queue is empty.",
-                    style = ConvxType.Body,
-                    color = ConvxColors.SecondaryLabel,
-                    modifier = Modifier.padding(16.dp),
-                )
-            }
         }
+        ListScrollbar(listState)
     }
 }
 

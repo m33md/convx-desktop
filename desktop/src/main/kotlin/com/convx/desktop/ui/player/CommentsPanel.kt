@@ -49,6 +49,8 @@ import com.convx.desktop.ui.theme.ConvxType
 import com.music.innertube.YouTube
 import com.music.innertube.models.comment.CommentRenderer
 import com.music.innertube.models.comment.CommentThreadRenderer
+import androidx.compose.foundation.lazy.rememberLazyListState
+import com.convx.desktop.ui.components.ListScrollbar
 
 private val Secondary = Color.White.copy(alpha = 0.6f)
 
@@ -90,27 +92,32 @@ fun CommentsPanel(videoId: String, modifier: Modifier = Modifier) {
             when {
                 loading -> Spinner()
                 comments.isEmpty() -> MessageState("No comments found", "This song has no YouTube comments, or they're turned off.", icon = "chat_msg")
-                else -> LazyColumn(
-                    Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-                    verticalArrangement = Arrangement.spacedBy(20.dp),
-                ) {
-                    items(comments, key = { it.comment?.commentRenderer?.commentId ?: "comment-${it.hashCode()}" }) { thread ->
-                        val renderer = thread.comment?.commentRenderer ?: return@items
-                        CommentItem(renderer, onShowReplies = { open = thread })
-                    }
-                    val token = next
-                    if (token != null) {
-                        item(key = "more") {
-                            LaunchedEffect(token) {
-                                YouTube.commentContinuation(token).onSuccess { (more, nextToken) ->
-                                    comments = (comments + more).distinctBy { it.comment?.commentRenderer?.commentId ?: it.hashCode() }
-                                    next = nextToken
-                                }.onFailure { next = null }
+                else -> Box(Modifier.fillMaxSize()) {
+                    val list = rememberLazyListState()
+                    LazyColumn(
+                        Modifier.fillMaxSize(),
+                        state = list,
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                        verticalArrangement = Arrangement.spacedBy(20.dp),
+                    ) {
+                        items(comments, key = { it.comment?.commentRenderer?.commentId ?: "comment-${it.hashCode()}" }) { thread ->
+                            val renderer = thread.comment?.commentRenderer ?: return@items
+                            CommentItem(renderer, onShowReplies = { open = thread })
+                        }
+                        val token = next
+                        if (token != null) {
+                            item(key = "more") {
+                                LaunchedEffect(token) {
+                                    YouTube.commentContinuation(token).onSuccess { (more, nextToken) ->
+                                        comments = (comments + more).distinctBy { it.comment?.commentRenderer?.commentId ?: it.hashCode() }
+                                        next = nextToken
+                                    }.onFailure { next = null }
+                                }
+                                Spinner(Modifier.height(64.dp))
                             }
-                            Spinner(Modifier.height(64.dp))
                         }
                     }
+                    ListScrollbar(list, bottom = 24.dp)
                 }
             }
         }
@@ -135,30 +142,35 @@ private fun Replies(thread: CommentThreadRenderer, onBack: () -> Unit) {
             Spacer(Modifier.width(6.dp))
             Text("${main.replyCount ?: 0} Replies", style = ConvxType.Title3, color = Color.White)
         }
-        LazyColumn(
-            Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-        ) {
-            item(key = "main") { CommentItem(main, onShowReplies = null) }
-            items(replies, key = { it.commentId ?: "reply-${it.hashCode()}" }) { reply ->
-                Row {
-                    Spacer(Modifier.width(36.dp))
-                    CommentItem(reply, onShowReplies = null, isReply = true)
-                }
-            }
-            val token = next
-            if (token != null) {
-                item(key = "more") {
-                    LaunchedEffect(token) {
-                        YouTube.commentReplies(token).onSuccess { (more, nextToken) ->
-                            replies = (replies + more).distinctBy { it.commentId ?: it.hashCode() }
-                            next = nextToken
-                        }.onFailure { next = null }
+        Box(Modifier.fillMaxSize()) {
+            val list = rememberLazyListState()
+            LazyColumn(
+                Modifier.fillMaxSize(),
+                state = list,
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+            ) {
+                item(key = "main") { CommentItem(main, onShowReplies = null) }
+                items(replies, key = { it.commentId ?: "reply-${it.hashCode()}" }) { reply ->
+                    Row {
+                        Spacer(Modifier.width(36.dp))
+                        CommentItem(reply, onShowReplies = null, isReply = true)
                     }
-                    Spinner(Modifier.height(56.dp))
+                }
+                val token = next
+                if (token != null) {
+                    item(key = "more") {
+                        LaunchedEffect(token) {
+                            YouTube.commentReplies(token).onSuccess { (more, nextToken) ->
+                                replies = (replies + more).distinctBy { it.commentId ?: it.hashCode() }
+                                next = nextToken
+                            }.onFailure { next = null }
+                        }
+                        Spinner(Modifier.height(56.dp))
+                    }
                 }
             }
+            ListScrollbar(list, bottom = 24.dp)
         }
     }
 }
