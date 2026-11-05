@@ -65,6 +65,13 @@ object YouTubeSync {
         val albums: Set<String> = emptySet(),
         val artists: Set<String> = emptySet(),
         val playlists: Set<String> = emptySet(),
+        /**
+         * What you took out of your Convx library yourself: unliked, removed or unfollowed. Sync
+         * doesn't bring these back while the account still has them, which it does for a playlist
+         * you made on YouTube, since YouTube Music can't drop your own playlist from your library.
+         * Each is forgotten once the account no longer lists it, or when you add it again.
+         */
+        val removed: Set<String> = emptySet(),
     )
 
     private val store = JsonFile(File(AppDirs.data, "youtube-sync.json"), Known.serializer()) { Known() }
@@ -169,7 +176,7 @@ object YouTubeSync {
 
             val known = store.value
             val now = System.currentTimeMillis()
-            fun mine(id: String) = (touched[id] ?: 0L) >= started
+            fun mine(id: String) = (touched[id] ?: 0L) >= started || id in known.removed
             // A part that couldn't be read keeps what Convx has, and what sync knew about it.
             Library.applySync { data ->
                 data.copy(
@@ -184,12 +191,19 @@ object YouTubeSync {
                     uploaded = uploaded ?: data.uploaded,
                 )
             }
+            // A removal the account now shows too is done with. While any part couldn't be read,
+            // every removal is kept, as the id may be in that part.
+            val listed = if (liked == null || albums == null || artists == null || playlists == null) null else {
+                liked.mapTo(HashSet()) { it.id } + albums.map { it.browseId } + artists.map { it.id } + playlists.map { it.id }
+            }
             store.update { old ->
                 Known(
                     liked = liked?.mapTo(HashSet()) { it.id } ?: old.liked,
                     albums = albums?.mapTo(HashSet()) { it.browseId } ?: old.albums,
                     artists = artists?.mapTo(HashSet()) { it.id } ?: old.artists,
                     playlists = playlists?.mapTo(HashSet()) { it.id } ?: old.playlists,
+                    // One made during this sync waits for the next, as the account was read before it.
+                    removed = listed?.let { ids -> old.removed.filterTo(HashSet()) { it in ids || it !in known.removed } } ?: old.removed,
                 )
             }
             _status.value = Status.Done(
@@ -228,8 +242,19 @@ object YouTubeSync {
         return added + kept
     }
 
+    /** Notes what you took out of your library, or put back, whether or not the account hears of it. */
+    private fun noteRemoved(id: String, kept: Boolean) =
+        store.update { it.copy(removed = if (kept) it.removed - id else it.removed + id) }
+
     /** Sends what you just did in Convx to YouTube Music, as the phone's entities do. */
     private suspend fun push(change: Library.Change) {
+        // Kept even while signed out or when YouTube refuses, so what you removed stays removed.
+        when (change) {
+            is Library.Change.Like -> if (!com.convx.desktop.player.LocalMusic.isLocal(change.song.id)) noteRemoved(change.song.id, change.liked)
+            is Library.Change.Album -> noteRemoved(change.album.browseId, change.saved)
+            is Library.Change.Playlist -> if (!change.playlist.id.startsWith("local-")) noteRemoved(change.playlist.id, change.saved)
+            is Library.Change.Artist -> noteRemoved(change.artist.id, change.followed)
+        }
         if (!enabled) return
         withContext(Dispatchers.IO) {
             runCatching {

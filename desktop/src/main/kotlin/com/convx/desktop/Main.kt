@@ -82,6 +82,11 @@ import java.awt.Window as AwtWindow
 fun main() {
     Log.i("Startup", "Convx ${AppInfo.VERSION} on ${System.getProperty("os.name")} ${System.getProperty("os.arch")}, Java ${System.getProperty("java.version")}")
     Thread.setDefaultUncaughtExceptionHandler { thread, error -> Log.crash(thread, error) }
+    // A second Convx would write its own copy of the library over this one's; bring this one up instead.
+    if (!com.convx.desktop.core.SingleInstance.claim()) {
+        Log.i("Startup", "Convx is already open; brought its window up instead")
+        kotlin.system.exitProcess(0)
+    }
 
     // Before any HTTP client exists, so they all go through the proxy if one is set.
     Network.apply(AppSettings.value)
@@ -149,6 +154,7 @@ fun main() {
             },
         ) {
             LaunchedEffect(Unit) {
+                com.convx.desktop.core.SingleInstance.window = window
                 window.minimumSize = Dimension(940, 600)
                 window.background = java.awt.Color.BLACK
                 // Every size of the icon, so the title bar and taskbar get a sharp one (the small
