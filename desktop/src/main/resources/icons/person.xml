@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol person.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M4.446,22L19.554,22C20.69,22 21.384,21.454 21.384,20.569C21.384,17.69 17.785,13.717 12,13.717C6.215,13.717 2.616,17.69 2.616,20.569C2.616,21.454 3.31,22 4.446,22ZM12.009,11.714C14.428,11.714 16.458,9.563 16.458,6.788C16.458,4.073 14.411,2 12.009,2C9.615,2 7.568,4.108 7.568,6.805C7.568,9.563 9.598,11.714 12.009,11.714Z" />
 </vector>

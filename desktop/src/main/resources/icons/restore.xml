@@ -1,9 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol clock.arrow.trianglehead.counterclockwise.rotate.90, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="@android:color/white" android:fillType="evenOdd"
-        android:pathData="M9.53 2.47a.75.75 0 0 1 0 1.06L4.81 8.25H15a6.75 6.75 0 0 1 0 13.5h-3a.75.75 0 0 1 0-1.5h3a5.25 5.25 0 1 0 0-10.5H4.81l4.72 4.72a.75.75 0 1 1-1.06 1.06l-6-6a.75.75 0 0 1 0-1.06l6-6a.75.75 0 0 1 1.06 0Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2.73,10.321C2.16,10.321 2,10.71 2.327,11.162L4.302,13.971C4.566,14.354 4.949,14.347 5.206,13.971L7.181,11.155C7.494,10.71 7.341,10.321 6.777,10.321ZM22,12.003C22,7.003 17.946,2.942 12.946,2.942C7.946,2.942 3.898,6.997 3.892,12.01C3.898,12.372 4.184,12.65 4.531,12.65C4.886,12.65 5.185,12.365 5.185,12.003C5.185,7.713 8.655,4.243 12.946,4.243C17.236,4.243 20.707,7.713 20.707,12.003C20.707,16.294 17.236,19.764 12.946,19.764C10.282,19.764 7.939,18.415 6.562,16.385C6.332,16.072 5.971,15.974 5.651,16.169C5.345,16.35 5.255,16.788 5.505,17.129C7.139,19.5 9.837,21.058 12.946,21.058C17.946,21.058 22,17.003 22,12.003Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12.946,6.837C12.584,6.837 12.292,7.122 12.292,7.49L12.292,12.546C12.292,12.761 12.355,12.921 12.494,13.109L14.67,15.974C14.955,16.343 15.352,16.391 15.672,16.155C15.957,15.946 15.999,15.557 15.741,15.216L12.925,11.391L13.599,13.471L13.599,7.49C13.599,7.122 13.307,6.837 12.946,6.837Z" />
 </vector>

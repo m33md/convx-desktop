@@ -320,7 +320,7 @@ data class Settings(
     val proxyType: String = "HTTP",
     val proxyUrl: String = "",
     val proxyUsername: String = "",
-    /** The phone's Party: blank for its default server, the name others see, and this PC's id there. */
+    /** The phone's Party: the name others see, and this PC's id there. [partyServer] is no longer read: the server is built in. */
     val partyServer: String = "",
     val partyName: String = "",
     val partyId: String = "",

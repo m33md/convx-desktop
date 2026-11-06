@@ -1,27 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol music.note, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M9 18V5l12-2v13" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M3.0,18.0 a3.0,3.0 0 1,0 6.0,0 a3.0,3.0 0 1,0 -6.0,0" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M15.0,16.0 a3.0,3.0 0 1,0 6.0,0 a3.0,3.0 0 1,0 -6.0,0" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17.992,6.546L17.992,2.827C17.992,2.327 17.595,2 17.103,2.101L12.066,3.201C11.474,3.326 11.154,3.653 11.154,4.175L11.177,15.263C11.224,15.786 10.967,16.136 10.507,16.23L8.908,16.565C6.936,16.971 6.008,17.961 6.008,19.458C6.008,20.955 7.154,22 8.791,22C10.25,22 12.402,20.94 12.402,18.062L12.402,8.955C12.402,8.394 12.519,8.261 13.033,8.144L17.485,7.17C17.797,7.099 17.992,6.865 17.992,6.546Z" />
 </vector>

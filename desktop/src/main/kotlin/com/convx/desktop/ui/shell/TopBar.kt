@@ -29,7 +29,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -38,7 +37,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
-import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
@@ -49,35 +47,27 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
-import androidx.compose.ui.layout.boundsInRoot
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.Library
-import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.ConvxIcon
+import com.convx.desktop.ui.components.ConvxWordmark
 import com.convx.desktop.ui.components.Tooltip
-import com.convx.desktop.ui.components.rememberMenuAnchor
 import com.convx.desktop.ui.glass.GlassCircleButton
 import com.convx.desktop.ui.glass.GlassTokens
 import com.convx.desktop.ui.glass.additiveChrome
 import com.convx.desktop.ui.glass.chromeShadow
 import com.convx.desktop.ui.glass.elasticStretch
 import com.convx.desktop.ui.glass.liquidGlass
-import com.convx.desktop.ui.glass.onSelected
 import com.convx.desktop.ui.glass.rememberInteractiveHighlight
-import com.convx.desktop.ui.glass.rememberSymbolBounce
 import com.convx.desktop.ui.shapes.NavContinuousCapsule
-import com.convx.desktop.ui.theme.ConvxFonts
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
 
@@ -86,37 +76,16 @@ val TopBarButtonSize: Dp = 48.dp
 private val NavButtonSize: Dp = 40.dp
 
 /**
- * Where the section buttons sit, so a section's strip can unfold out of its button and fold
- * back into it. In root coordinates, which the strip overlay shares.
- */
-object TopBarLayout {
-    val sectionBounds = mutableStateMapOf<Section, Rect>()
-}
-
-private fun Modifier.sectionAnchor(section: Section): Modifier =
-    onGloballyPositioned { TopBarLayout.sectionBounds[section] = it.boundsInRoot() }
-
-/**
- * Spotify's top bar in the phone's glass, standing in for the window's title bar: back and
- * forward on the left, the three sections in the middle (Home, the search field with Explore
- * inside it where Spotify keeps Browse, and Library), the account on the right, and the
- * system's window buttons in the corner. Empty space drags the window.
+ * The top bar in the phone's glass, standing in for the window's title bar: the side bar's fold,
+ * the Convx wordmark and back and forward on the left, the search field in the middle, Listen
+ * Together on the right, and the system's window buttons in the corner. Where to go lives in the
+ * side bar. Empty space drags the window.
  */
 @Composable
 fun TopBar(modifier: Modifier = Modifier) {
     val navigator = LocalNavigator.current
     val screen = navigator.current.screen
-    // Detail pages keep the section they were opened from lit, as the phone's tabs do.
-    var sticky by remember { mutableStateOf(Section.Home) }
-    screen.section()?.let { sticky = it }
-    val lit = when (screen) {
-        Screen.Search, is Screen.SearchResults, Screen.Settings -> null
-        else -> sticky
-    }
     val settings by AppSettings.state.collectAsState()
-    // The phone's navigation tabs switches: a hidden section's button goes, and so does its anchor.
-    val hidden = remember(settings.hiddenSections) { Section.entries.filter { it.name in settings.hiddenSections }.toSet() }
-    LaunchedEffect(hidden) { hidden.forEach { TopBarLayout.sectionBounds.remove(it) } }
 
     BoxWithConstraints(
         modifier
@@ -125,43 +94,32 @@ fun TopBar(modifier: Modifier = Modifier) {
             .windowDragArea(),
     ) {
         val sides = 14.dp
-        val leftWidth = 190.dp
-        val rightWidth = WindowTitleBar.rightInset + sides + NavButtonSize * 2 + 8.dp + 12.dp
-        // The middle stays centred in the window, as Spotify's does, and gives way on narrow ones.
-        val buttons = listOf(Section.Home, Section.Radio, Section.Library).count { it !in hidden }
-        val room = maxWidth - 2 * maxOf(leftWidth, rightWidth) - buttons * (TopBarButtonSize + 10.dp)
-        val fieldWidth = room.coerceIn(260.dp, 480.dp)
+        val leftWidth = sides + NavButtonSize * 3 + WordmarkHeight * WordmarkAspect + 52.dp
+        val rightWidth = WindowTitleBar.rightInset + sides + NavButtonSize + 12.dp
+        // The field stays centred in the window, as Spotify's does, and gives way on narrow ones.
+        val fieldWidth = (maxWidth - 2 * maxOf(leftWidth, rightWidth) - 24.dp).coerceIn(260.dp, 520.dp)
 
         Row(
             Modifier.align(Alignment.CenterStart).padding(start = sides + WindowTitleBar.leftInset),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(
-                "Convx",
-                style = ConvxType.Headline.copy(fontFamily = ConvxFonts.Chillax, fontWeight = FontWeight.SemiBold, fontSize = 21.sp, letterSpacing = 0.sp),
-                color = Color.White,
-                modifier = Modifier.padding(top = 2.dp, end = 16.dp),
-            )
+            GlassCircleButton(
+                onClick = { UiState.toggleSideBar() },
+                size = NavButtonSize,
+                tooltip = if (settings.sidebarCollapsed) "Show the side bar" else "Fold the side bar",
+            ) {
+                ConvxIcon("sidebar", tint = GlassTokens.Icon.copy(alpha = GlassTokens.IconDimOpacity), size = 20.dp)
+            }
+            Spacer(Modifier.width(14.dp))
+            // Aryan's wordmark, in its own grey.
+            ConvxWordmark(WordmarkHeight, Modifier.padding(top = 2.dp))
+            Spacer(Modifier.width(18.dp))
             NavArrow("chevron_leftpx", "Go back", navigator.canGoBack) { navigator.back() }
             Spacer(Modifier.width(8.dp))
             NavArrow("chevron_right_px", "Go forward", navigator.canGoForward) { navigator.forward() }
         }
 
-        Row(
-            Modifier.align(Alignment.Center),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (Section.Home !in hidden) SectionButton(Section.Home, lit == Section.Home) { UiState.openSection(Section.Home, navigator) }
-            SearchField(
-                width = fieldWidth,
-                exploreLit = lit == Section.Explore,
-                onExplore = { UiState.openSection(Section.Explore, navigator) },
-                showExplore = Section.Explore !in hidden,
-            )
-            if (Section.Radio !in hidden) SectionButton(Section.Radio, lit == Section.Radio) { UiState.openSection(Section.Radio, navigator) }
-            if (Section.Library !in hidden) SectionButton(Section.Library, lit == Section.Library) { UiState.openSection(Section.Library, navigator) }
-        }
+        SearchField(width = fieldWidth, modifier = Modifier.align(Alignment.Center))
 
         Row(
             Modifier.align(Alignment.CenterEnd).padding(end = sides + WindowTitleBar.rightInset),
@@ -176,76 +134,23 @@ fun TopBar(modifier: Modifier = Modifier) {
             ) {
                 ConvxIcon("group", tint = if (party != null || screen == Screen.Party) LocalAccent.current else GlassTokens.Icon, size = 22.dp)
             }
-            Spacer(Modifier.width(8.dp))
-            val inProfile = screen == Screen.Profile || screen == Screen.Settings
-            // Your picture, from Spotify when it's linked, opens your profile, as Spotify's does.
-            // The phone's "Enable settings popup" puts its quick popup first.
-            val identity = com.convx.desktop.ui.screens.rememberProfileIdentity()
-            val popup = rememberMenuAnchor()
-            Box {
-                GlassCircleButton(
-                    onClick = {
-                        if (settings.settingsPopup) {
-                            popup.offset = DpOffset(0.dp, NavButtonSize + 6.dp)
-                            popup.expanded = true
-                        } else {
-                            navigator.navigate(Screen.Profile)
-                        }
-                    },
-                    size = NavButtonSize,
-                    tooltip = identity.name.takeIf { identity.source != null } ?: "Profile",
-                ) {
-                    if (identity.picture != null) {
-                        com.convx.desktop.ui.components.Artwork(
-                            identity.picture,
-                            Modifier.size(NavButtonSize - 8.dp),
-                            size = 96,
-                            shape = CircleShape,
-                            placeholderIcon = "account",
-                            iconSize = 18.dp,
-                        )
-                    } else {
-                        ConvxIcon("account", tint = if (inProfile || popup.expanded) LocalAccent.current else GlassTokens.Icon, size = 22.dp)
-                    }
-                }
-                AppMenu(popup) { SettingsPopup { popup.expanded = false } }
-            }
         }
     }
 }
 
-@Composable
-private fun SectionButton(section: Section, lit: Boolean, onClick: () -> Unit) {
-    val bounce = rememberSymbolBounce().onSelected(lit)
-    GlassCircleButton(
-        onClick = onClick,
-        modifier = Modifier.sectionAnchor(section),
-        size = TopBarButtonSize,
-        tooltip = section.label,
-    ) {
-        ConvxIcon(
-            section.icon,
-            tint = if (lit) LocalAccent.current else GlassTokens.Icon,
-            size = 24.dp,
-            contentDescription = section.label,
-            modifier = bounce.modifier,
-        )
-    }
-}
+private val WordmarkHeight: Dp = 19.dp
+private const val WordmarkAspect = 796f / 152f
 
 @Composable
 private fun NavArrow(icon: String, tooltip: String, enabled: Boolean, onClick: () -> Unit) {
     GlassCircleButton(onClick = onClick, size = NavButtonSize, tooltip = tooltip, enabled = enabled) {
-        ConvxIcon(icon, tint = GlassTokens.Icon.copy(alpha = if (enabled) GlassTokens.IconDimOpacity else 0.3f), size = 22.dp)
+        ConvxIcon(icon, tint = GlassTokens.Icon.copy(alpha = if (enabled) GlassTokens.IconDimOpacity else 0.3f), size = 20.dp)
     }
 }
 
-/**
- * Spotify's "What do you want to play?" field as the phone's glass search pill. Focusing it
- * opens Search; the button at its end is Explore, where Spotify keeps Browse.
- */
+/** Spotify's "What do you want to play?" field as the phone's glass search pill. Focusing it opens Search. */
 @Composable
-private fun SearchField(width: Dp, exploreLit: Boolean, onExplore: () -> Unit, showExplore: Boolean = true) {
+private fun SearchField(width: Dp, modifier: Modifier = Modifier) {
     val navigator = LocalNavigator.current
     val focusManager = LocalFocusManager.current
     val glow = rememberInteractiveHighlight()
@@ -276,7 +181,7 @@ private fun SearchField(width: Dp, exploreLit: Boolean, onExplore: () -> Unit, s
     }
 
     Row(
-        Modifier
+        modifier
             .width(width)
             .height(TopBarButtonSize)
             .graphicsLayer(elasticStretch(glow))
@@ -360,18 +265,6 @@ private fun SearchField(width: Dp, exploreLit: Boolean, onExplore: () -> Unit, s
             FieldButton("mic", "Recognize music", if (listening) LocalAccent.current else GlassTokens.Icon) {
                 navigator.navigate(Screen.Recognition)
             }
-        }
-        if (showExplore) {
-            Box(Modifier.padding(horizontal = 4.dp).width(1.dp).height(22.dp).background(Color.White.copy(alpha = 0.18f)))
-            val bounce = rememberSymbolBounce().onSelected(exploreLit)
-            FieldButton(
-                Section.Explore.icon,
-                Section.Explore.label,
-                if (exploreLit) LocalAccent.current else GlassTokens.Icon,
-                modifier = Modifier.sectionAnchor(Section.Explore),
-                iconModifier = bounce.modifier,
-                onClick = onExplore,
-            )
         }
     }
 }

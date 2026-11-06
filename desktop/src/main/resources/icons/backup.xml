@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol externaldrive.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="@android:color/white" android:fillType="evenOdd"
-        android:pathData="M10.5 3.75a6 6 0 0 0-5.98 6.496A5.25 5.25 0 0 0 6.75 20.25H18a4.5 4.5 0 0 0 2.206-8.423 3.75 3.75 0 0 0-4.133-4.303A6.001 6.001 0 0 0 10.5 3.75Zm2.03 5.47a.75.75 0 0 0-1.06 0l-3 3a.75.75 0 1 0 1.06 1.06l1.72-1.72v4.94a.75.75 0 0 0 1.5 0v-4.94l1.72 1.72a.75.75 0 1 0 1.06-1.06l-3-3Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5.417,19.231L18.583,19.231C20.576,19.231 22,17.814 22,15.834C22,13.861 20.576,12.437 18.583,12.437L5.417,12.437C3.424,12.437 2,13.861 2,15.834C2,17.814 3.424,19.231 5.417,19.231ZM5.417,11.353L18.583,11.353C19.39,11.353 20.122,11.542 20.759,11.875L18.549,6.702C18.02,5.441 16.949,4.769 15.519,4.769L8.481,4.769C7.051,4.769 5.973,5.441 5.451,6.702L3.234,11.875C3.871,11.542 4.61,11.353 5.417,11.353ZM17.363,15.854C17.363,15.271 17.871,14.763 18.475,14.763C19.058,14.763 19.559,15.271 19.559,15.854C19.559,16.458 19.058,16.946 18.475,16.946C17.871,16.946 17.363,16.471 17.363,15.854Z" />
 </vector>

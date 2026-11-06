@@ -1,11 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- music.note.square.stack.fill, after the SF Symbol the phone's Library tab uses. -->
+<!-- SF Symbol music.note.square.stack.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="1.6" android:strokeLineCap="round" android:strokeLineJoin="round"
-        android:pathData="M6.2,2.8H17.6A3.6,3.6 0 0 1 21.2,6.4V17.8" />
-    <path android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M5.5,5.6H15A3.5,3.5 0 0 1 18.5,9.1V18.6A3.5,3.5 0 0 1 15,22.1H5.5A3.5,3.5 0 0 1 2,18.6V9.1A3.5,3.5 0 0 1 5.5,5.6ZM9.6,15.45V8.7L14.6,9.95V11.65L11,10.75V17.2A2.3,1.9 0 1 1 9.6,15.45Z" />
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M15.949,2.983L8.051,2.983C8.095,2.364 8.496,2 9.153,2L14.847,2C15.504,2 15.905,2.364 15.949,2.983Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17.711,5.365C17.469,5.329 17.212,5.312 16.944,5.312L7.056,5.312C6.786,5.312 6.527,5.329 6.282,5.366C6.376,4.646 6.876,4.24 7.678,4.24L16.322,4.24C17.124,4.24 17.619,4.646 17.711,5.365Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M19.6,9.422L19.6,19.364C19.6,21.105 18.705,22 16.944,22L7.056,22C5.288,22 4.4,21.112 4.4,19.364L4.4,9.422C4.4,7.681 5.288,6.793 7.056,6.793L16.944,6.793C18.705,6.793 19.6,7.688 19.6,9.422ZM14.581,9.996L11.836,10.679C11.365,10.781 11.276,10.884 11.276,11.444L11.276,15.848C11.276,16.271 11.242,16.346 10.757,16.483L9.863,16.715C9.002,16.94 8.285,17.452 8.285,18.367C8.285,19.18 8.9,19.76 9.842,19.76C11.201,19.76 12.096,18.798 12.096,17.432L12.096,14.011C12.096,13.67 12.171,13.574 12.376,13.526L14.622,12.994C15.08,12.891 15.216,12.775 15.216,12.229L15.216,10.399C15.216,10.03 15.086,9.873 14.581,9.996Z" />
 </vector>

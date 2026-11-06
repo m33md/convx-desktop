@@ -1,20 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol xmark, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M18 6 6 18" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m6 6 12 12" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M20.267,2.377L2.372,20.272C2.01,20.634 2,21.251 2.372,21.623C2.754,21.985 3.361,21.985 3.733,21.623L21.618,3.728C21.99,3.366 22,2.749 21.618,2.377C21.246,2.015 20.639,2.005 20.267,2.377ZM21.618,20.272L3.733,2.377C3.361,2.015 2.744,2.005 2.372,2.377C2.01,2.759 2.01,3.366 2.372,3.728L20.267,21.623C20.63,21.985 21.256,21.995 21.618,21.623C21.99,21.241 21.99,20.634 21.618,20.272Z" />
 </vector>

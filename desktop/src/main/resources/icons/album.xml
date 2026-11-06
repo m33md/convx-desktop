@@ -1,20 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol square.stack, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M2.0,12.0 a10.0,10.0 0 1,0 20.0,0 a10.0,10.0 0 1,0 -20.0,0" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M15.949,2.983L8.051,2.983C8.095,2.364 8.496,2 9.153,2L14.847,2C15.504,2 15.905,2.364 15.949,2.983Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M10.0,12.0 a2.0,2.0 0 1,0 4.0,0 a2.0,2.0 0 1,0 -4.0,0" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M17.711,5.365C17.469,5.329 17.212,5.312 16.944,5.312L7.056,5.312C6.786,5.312 6.527,5.329 6.282,5.366C6.376,4.646 6.876,4.24 7.678,4.24L16.322,4.24C17.124,4.24 17.619,4.646 17.711,5.365Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7.056,22L16.944,22C18.705,22 19.6,21.105 19.6,19.364L19.6,9.422C19.6,7.688 18.705,6.793 16.944,6.793L7.056,6.793C5.288,6.793 4.4,7.681 4.4,9.422L4.4,19.364C4.4,21.112 5.288,22 7.056,22ZM7.077,20.791C6.128,20.791 5.609,20.279 5.609,19.303L5.609,9.491C5.609,8.507 6.128,8.002 7.077,8.002L16.923,8.002C17.852,8.002 18.391,8.507 18.391,9.491L18.391,19.303C18.391,20.279 17.852,20.791 16.923,20.791Z" />
 </vector>

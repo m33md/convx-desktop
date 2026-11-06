@@ -51,7 +51,7 @@ fun ControlsLayoutSettings() {
         RowDivider()
         SwitchRow(
             "Library icons only",
-            "Show simple icons instead of artwork in Your Library",
+            "Show simple icons instead of covers in the side bar",
             settings.libraryIconsOnly,
             icon = "grid_view",
             tint = SystemColors.Orange,

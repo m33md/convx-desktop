@@ -1,27 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol info.circle, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M2.0,12.0 a10.0,10.0 0 1,0 20.0,0 a10.0,10.0 0 1,0 -20.0,0" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.996,22C17.516,22 22,17.524 22,12.004C22,6.484 17.516,2 11.996,2C6.476,2 2,6.484 2,12.004C2,17.524 6.476,22 11.996,22ZM11.996,20.572C7.259,20.572 3.428,16.741 3.428,12.004C3.428,7.267 7.259,3.436 11.996,3.436C16.733,3.436 20.564,7.267 20.564,12.004C20.564,16.741 16.733,20.572 11.996,20.572Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M12 16v-4" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M12 8h.01" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.238,17.501L14.284,17.501C14.637,17.501 14.914,17.24 14.914,16.894C14.914,16.557 14.637,16.288 14.284,16.288L12.933,16.288L12.933,10.921C12.933,10.476 12.702,10.169 12.273,10.169L10.384,10.169C10.031,10.169 9.754,10.43 9.754,10.768C9.754,11.113 10.031,11.374 10.384,11.374L11.589,11.374L11.589,16.288L10.238,16.288C9.885,16.288 9.616,16.557 9.616,16.894C9.616,17.24 9.885,17.501 10.238,17.501ZM11.927,8.418C12.58,8.418 13.086,7.896 13.086,7.259C13.086,6.607 12.58,6.084 11.927,6.084C11.282,6.084 10.768,6.607 10.768,7.259C10.768,7.896 11.282,8.418 11.927,8.418Z" />
 </vector>

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -200,7 +201,7 @@ fun AccountsHub() {
         RowDivider()
         LinkRow(
             "Spotify",
-            "Your playlists and Liked Songs in Your Library",
+            "Your playlists and Liked Songs in the side bar",
             icon = "spotify",
             tint = SystemColors.Green,
             value = when (spotify) {
@@ -309,7 +310,12 @@ fun HelpHub() {
         }
         Spacer(Modifier.width(16.dp))
         Column(Modifier.weight(1f)) {
-            Text("Convx for desktop", style = ConvxType.Title3, color = ConvxColors.Label)
+            Row(verticalAlignment = Alignment.Bottom) {
+                com.convx.desktop.ui.components.ConvxWordmark(22.dp)
+                Spacer(Modifier.width(8.dp))
+                Text("for Windows", style = ConvxType.Title3, color = ConvxColors.Label)
+            }
+            Spacer(Modifier.height(4.dp))
             Text("Version ${AppInfo.VERSION}", style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel)
         }
     }

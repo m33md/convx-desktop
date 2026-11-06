@@ -356,7 +356,7 @@ private val searchEntries: List<SearchEntry> by lazy {
         SearchEntry("Collapse controls upward", "A compact player bar over full-screen lyrics", h.player, SettingsPage.ControlsLayout, "full screen fullscreen lyrics controls bar top collapse"),
         SearchEntry("Enable settings popup", null, h.player, SettingsPage.ControlsLayout, "account popup quick settings"),
         SearchEntry("Library icons only", null, h.player, SettingsPage.ControlsLayout, "library icons artwork thumbnails"),
-        SearchEntry("Navigation tabs", "Hide Home, Explore, Radio or Library from the top bar", h.player, SettingsPage.ControlsLayout, "tabs top bar hide home explore radio library"),
+        SearchEntry("Navigation tabs", "Hide Home, Explore, Radio or Library from the side bar", h.player, SettingsPage.ControlsLayout, "tabs top bar hide home explore radio library"),
         SearchEntry("Default library chip", null, h.player, SettingsPage.ControlsLayout, "library filter chip playlists albums artists"),
         SearchEntry("Grid cell size", "Big or small cards", h.player, SettingsPage.ControlsLayout, "grid cards size big small"),
         SearchEntry("Display density", "Make everything smaller", h.player, SettingsPage.ControlsLayout, "density scale compact zoom size"),

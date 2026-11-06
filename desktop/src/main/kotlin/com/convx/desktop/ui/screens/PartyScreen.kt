@@ -97,7 +97,6 @@ fun PartyScreen() {
 private fun StartParty(busy: Boolean) {
     var name by remember { mutableStateOf(Party.displayName) }
     var code by remember { mutableStateOf("") }
-    var server by remember { mutableStateOf(Party.serverUrl) }
     val usable = name.isNotBlank() && !busy
 
     Card {
@@ -107,7 +106,6 @@ private fun StartParty(busy: Boolean) {
             if (busy) "Starting…" else "Create party",
             {
                 if (usable) {
-                    Party.serverUrl = server
                     Party.create(name)
                 }
             },
@@ -124,7 +122,6 @@ private fun StartParty(busy: Boolean) {
             if (busy) "Joining…" else "Join party",
             {
                 if (usable && code.isNotBlank()) {
-                    Party.serverUrl = server
                     Party.join(code, name)
                 }
             },
@@ -132,17 +129,9 @@ private fun StartParty(busy: Boolean) {
             filled = usable && code.isNotBlank(),
         )
     }
-    Spacer(Modifier.height(14.dp))
-    Card {
-        DialogField("Party server", server) { server = it.trim() }
-        if (server.trimEnd('/') != Party.DefaultServer) {
-            Spacer(Modifier.height(12.dp))
-            PillButton("Use the default server", { server = Party.DefaultServer; Party.serverUrl = Party.DefaultServer })
-        }
-    }
     Spacer(Modifier.height(16.dp))
     InfoNote(
-        "Phones with Convx can join a party started here, and this PC can join theirs: it's the same server and the same codes. " +
+        "Phones with Convx can join a party started here, and this PC can join theirs with the same codes. " +
             "A phone's invite link opens Convx on a phone; on this PC, paste it above. Songs from files on this PC can't be shared, " +
             "because the others don't have them.",
     )

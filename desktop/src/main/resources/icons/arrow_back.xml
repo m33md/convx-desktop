@@ -1,20 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol arrow.left, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m12 19-7-7 7-7" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M19 12H5" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.08,20.08C10.539,20.08 10.881,19.746 10.881,19.296C10.881,19.079 10.806,18.861 10.664,18.711L7.735,15.756L3.661,12L7.735,8.244L10.664,5.28C10.806,5.13 10.881,4.922 10.881,4.705C10.881,4.254 10.539,3.92 10.08,3.92C9.863,3.92 9.663,3.995 9.446,4.212L2.275,11.391C2.092,11.566 2,11.775 2,12C2,12.225 2.092,12.434 2.275,12.601L9.496,19.83C9.679,19.997 9.863,20.08 10.08,20.08ZM6.933,12.81L21.199,12.81C21.666,12.81 22,12.467 22,12C22,11.524 21.666,11.19 21.199,11.19L6.933,11.19L3.644,11.366C3.277,11.366 3.01,11.624 3.01,12C3.01,12.367 3.277,12.626 3.653,12.626Z" />
 </vector>

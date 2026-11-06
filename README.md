@@ -63,8 +63,10 @@ The app keeps its data in two places on your PC:
 
 Convx, its design and its shared YouTube Music and lyrics code are by Aryan (Cosmic Taser). Get the
 Android app, report phone bugs and join the community at
-[cosmictaserdev-creator/convx](https://github.com/cosmictaserdev-creator/convx). Code adapted
-from other open-source projects is listed in `NOTICE`.
+[cosmictaserdev-creator/convx](https://github.com/cosmictaserdev-creator/convx). The wordmark is
+his, and the icons come from his
+[SF Symbols for Compose](https://github.com/cosmictaserdev-creator/Jetpack_SF_Symbols) pack. Code
+adapted from other open-source projects is listed in `NOTICE`.
 
 ## License
 

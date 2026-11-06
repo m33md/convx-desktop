@@ -5,7 +5,9 @@
 
 package com.convx.desktop.ui.components
 
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.runtime.Composable
@@ -103,4 +105,19 @@ fun ConvxIcon(
     contentDescription: String? = null,
 ) {
     Icon(VectorIcons.get(name), contentDescription = contentDescription, tint = tint, modifier = modifier.size(size))
+}
+
+/**
+ * The Convx wordmark, Aryan's own lettering (2026-11-06), traced into a vector so it stays sharp
+ * at any size. Drawn in its own grey unless [tint] says otherwise.
+ */
+@Composable
+fun ConvxWordmark(height: Dp, modifier: Modifier = Modifier, tint: Color = Color.Unspecified) {
+    val vector = VectorIcons.get("convx_wordmark")
+    Icon(
+        vector,
+        contentDescription = "Convx",
+        tint = tint,
+        modifier = modifier.height(height).width(height * (vector.viewportWidth / vector.viewportHeight)),
+    )
 }

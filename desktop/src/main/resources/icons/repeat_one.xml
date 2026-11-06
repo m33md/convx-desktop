@@ -1,41 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol repeat.1, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m17 2 4 4-4 4" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.646,4.277L11.646,10.263C11.646,10.613 11.847,10.807 12.198,10.807C12.362,10.807 12.518,10.755 12.652,10.643L16.253,7.714C16.551,7.475 16.566,7.08 16.253,6.834L12.652,3.905C12.518,3.793 12.362,3.741 12.198,3.741C11.847,3.741 11.646,3.934 11.646,4.277ZM2.716,12.425C3.118,12.425 3.431,12.112 3.431,11.702L3.431,10.807C3.431,9.078 4.579,7.997 6.398,7.997L13.062,7.997C13.45,7.997 13.77,7.676 13.77,7.289C13.77,6.894 13.45,6.581 13.062,6.581L6.517,6.581C3.722,6.581 2,8.146 2,10.718L2,11.702C2,12.112 2.313,12.425 2.716,12.425ZM10.282,19.998L10.282,14.013C10.282,13.662 10.08,13.468 9.723,13.468C9.559,13.468 9.41,13.528 9.268,13.633L5.675,16.562C5.377,16.808 5.362,17.196 5.675,17.442L9.268,20.379C9.41,20.483 9.559,20.543 9.723,20.543C10.08,20.543 10.282,20.349 10.282,19.998ZM21.247,11.851C20.845,11.851 20.531,12.164 20.531,12.574L20.531,13.468C20.531,15.198 19.383,16.286 17.565,16.286L8.858,16.286C8.47,16.286 8.157,16.599 8.157,16.994C8.157,17.382 8.47,17.703 8.858,17.703L17.445,17.703C20.241,17.703 21.963,16.13 21.963,13.558L21.963,12.574C21.963,12.164 21.657,11.851 21.247,11.851Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M3 11v-1a4 4 0 0 1 4-4h14" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m7 22-4-4 4-4" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M21 13v1a4 4 0 0 1-4 4H3" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M11 10h1v4" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M21.255,9.697C21.717,9.697 22,9.398 22,8.929L22,4.404C22,3.83 21.627,3.457 21.083,3.457C20.658,3.457 20.382,3.599 20.039,3.867L18.72,4.844C18.534,4.985 18.482,5.12 18.482,5.291C18.482,5.545 18.675,5.746 18.981,5.746C19.108,5.746 19.22,5.709 19.339,5.612L20.397,4.799L20.494,4.799L20.494,8.929C20.494,9.398 20.785,9.697 21.255,9.697Z" />
 </vector>

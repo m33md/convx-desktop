@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- A window with its panel on the right and a cover in it: the Now Playing panel's toggle. -->
+<!-- SF Symbol sidebar.right, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-    android:width="24dp" android:height="24dp"
-    android:viewportWidth="24" android:viewportHeight="24">
-    <path android:fillColor="#00000000" android:strokeColor="#FFFFFFFF"
-        android:strokeWidth="1.8" android:strokeLineJoin="round"
-        android:pathData="M3,3.5 L21,3.5 Q22,3.5 22,4.5 L22,19.5 Q22,20.5 21,20.5 L3,20.5 Q2,20.5 2,19.5 L2,4.5 Q2,3.5 3,3.5 Z M14.5,3.5 L14.5,20.5" />
-    <path android:fillColor="#FFFFFFFF"
-        android:pathData="M16.5,6.5 L19.5,6.5 Q20,6.5 20,7 L20,10 Q20,10.5 19.5,10.5 L16.5,10.5 Q16,10.5 16,10 L16,7 Q16,6.5 16.5,6.5 Z" />
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M14.475,18.828L15.617,18.828L15.617,5.172L14.475,5.172ZM5.439,19.759L18.726,19.759C20.792,19.759 22,18.498 22,16.327L22,7.68C22,5.502 20.792,4.241 18.726,4.241L5.439,4.241C3.261,4.241 2,5.502 2,7.68L2,16.327C2,18.498 3.261,19.759 5.439,19.759ZM5.446,18.591C4.013,18.591 3.168,17.746 3.168,16.314L3.168,7.686C3.168,6.254 4.013,5.409 5.446,5.409L18.554,5.409C19.987,5.409 20.825,6.254 20.825,7.686L20.825,16.314C20.825,17.746 19.987,18.591 18.554,18.591ZM17.254,8.591L19.195,8.591C19.426,8.591 19.624,8.386 19.624,8.168C19.624,7.937 19.426,7.746 19.195,7.746L17.254,7.746C17.023,7.746 16.825,7.937 16.825,8.168C16.825,8.386 17.023,8.591 17.254,8.591ZM17.254,10.822L19.195,10.822C19.426,10.822 19.624,10.624 19.624,10.399C19.624,10.175 19.426,9.983 19.195,9.983L17.254,9.983C17.023,9.983 16.825,10.175 16.825,10.399C16.825,10.624 17.023,10.822 17.254,10.822ZM17.254,13.053L19.195,13.053C19.426,13.053 19.624,12.861 19.624,12.637C19.624,12.413 19.426,12.221 19.195,12.221L17.254,12.221C17.023,12.221 16.825,12.413 16.825,12.637C16.825,12.861 17.023,13.053 17.254,13.053Z" />
 </vector>

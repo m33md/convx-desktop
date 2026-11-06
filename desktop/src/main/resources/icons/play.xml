@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol play.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="38"
-    android:viewportHeight="38">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M7.5776,36C5.619,36 4.1567,34.6943 4,32.5008L4,5.4992C4.1567,3.3057 5.619,2 7.5776,2C8.5438,2 9.2227,2.2873 10.3195,2.8618L35.1536,15.5269C36.9293,16.4409 38,17.3287 38,19C38,20.6713 36.9293,21.5591 35.1536,22.4731L10.3195,35.1382C9.2227,35.7127 8.5438,36 7.5776,36Z" />
+        android:pathData="M3.161,20.38C3.161,21.485 3.807,22 4.566,22C4.893,22 5.24,21.897 5.567,21.71L19.65,13.433C20.521,12.927 20.839,12.571 20.839,12C20.839,11.419 20.521,11.064 19.65,10.558L5.567,2.281C5.24,2.094 4.893,2 4.566,2C3.807,2 3.161,2.506 3.161,3.61Z" />
 </vector>

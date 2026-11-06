@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol checkmark, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.74a.75.75 0 0 1 1.04-.207Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M9.412,21.986C9.842,21.986 10.163,21.794 10.401,21.446L21.743,3.663C21.927,3.379 22,3.159 22,2.939C22,2.38 21.633,2.014 21.075,2.014C20.69,2.014 20.461,2.151 20.232,2.527L9.366,19.696L3.814,12.641C3.567,12.302 3.328,12.156 2.953,12.156C2.394,12.156 2,12.541 2,13.09C2,13.328 2.092,13.576 2.293,13.823L8.386,21.427C8.688,21.812 8.99,21.986 9.412,21.986Z" />
 </vector>

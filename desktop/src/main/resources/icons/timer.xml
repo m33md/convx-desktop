@@ -1,9 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol timer, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 6a.75.75 0 0 0-1.5 0v6c0 .414.336.75.75.75h4.5a.75.75 0 0 0 0-1.5h-3.75V6Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.996,22C17.516,22 22,17.524 22,12.004C22,6.484 17.516,2 12.004,2C11.505,2 11.282,2.284 11.282,2.745L11.282,5.885C11.282,6.261 11.528,6.553 11.912,6.553C12.288,6.553 12.534,6.261 12.534,5.885L12.534,3.466C16.833,3.704 20.564,7.267 20.564,12.004C20.564,16.741 16.733,20.572 11.996,20.572C7.259,20.572 3.428,16.741 3.428,12.012C3.428,9.816 4.257,7.835 5.578,6.338C5.839,6.023 5.846,5.593 5.562,5.301C5.286,5.002 4.81,5.033 4.503,5.393C2.952,7.159 2,9.455 2,12.004C2,17.524 6.476,22 11.996,22Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.996,13.516C12.841,13.516 13.516,12.841 13.516,12.004C13.516,11.489 13.263,11.044 12.864,10.76L7.896,7.213C7.451,6.898 6.99,7.351 7.305,7.812L10.676,12.756C10.983,13.209 11.443,13.516 11.996,13.516Z" />
 </vector>
