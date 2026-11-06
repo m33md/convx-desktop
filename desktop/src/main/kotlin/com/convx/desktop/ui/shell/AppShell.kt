@@ -81,7 +81,7 @@ import com.convx.desktop.ui.theme.ConvxType
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
-/** Below this window width Your Library folds to its rail of covers on its own. */
+/** Below this window width the side bar folds to its rail of icons on its own. */
 private val AutoCollapseWidth = 1100.dp
 
 /** Space the pages leave under the bottom pill: the pill and its margins. */
@@ -94,11 +94,9 @@ private val RightPanelInset = NowPlayingPanelWidth + SideBarMargin + 8.dp
 private val MinPageWidthBesidePanel = 560.dp
 
 /**
- * The window: Spotify's arrangement (the top bar across the top, Your Library on the left, the
- * Now Playing view on the right, the player at the bottom) built from the phone's pieces. The
- * pages fill the whole window on true black and the chrome floats over them as liquid glass that
- * refracts them. A section's strip unfolds under the top bar out of its button and the pages
- * make room for it.
+ * The window: the top bar across the top, the side bar on the left, the Now Playing view on the
+ * right and the player at the bottom, built from the phone's pieces. The pages fill the whole
+ * window on true black and the chrome floats over them as liquid glass that refracts them.
  */
 @Composable
 fun AppShell(navigator: Navigator) {
@@ -134,12 +132,6 @@ fun AppShell(navigator: Navigator) {
         player.queue.getOrNull(player.index + 1)?.let(LyricsService::prefetch)
     }
 
-    val screen = navigator.current.screen
-    // Leaving a section's pages folds its strip back into its button.
-    LaunchedEffect(screen) {
-        if (screen.section() != UiState.openSection) UiState.openSection = null
-    }
-
     // Everything the glass refracts: the pages over the phone's base fill.
     val appBackdrop = rememberLayerBackdrop(
         onDraw = remember {
@@ -168,8 +160,6 @@ fun AppShell(navigator: Navigator) {
                     spring(0.9f, 400f),
                 )
                 val startInset = startInsetRaw.coerceAtLeast(0.dp)
-                val open = UiState.openSection?.takeIf { screen.section() == it }
-                val strip = rememberStripMotion(open != null)
                 val showPill = player.current != null
                 // Spotify's Now Playing view: on the right while a song is loaded and the pages keep room.
                 val panel = SidePanel.of(settings.rightPanel)
@@ -184,7 +174,7 @@ fun AppShell(navigator: Navigator) {
                 val endInset = endInsetRaw.coerceAtLeast(0.dp)
                 val insets = PageInsets(
                     start = startInset,
-                    top = TopBarHeight + SectionStripRoom * strip.room,
+                    top = TopBarHeight,
                     bottom = if (showPill) BottomChromeInset else 0.dp,
                     end = endInset,
                 )
@@ -198,7 +188,7 @@ fun AppShell(navigator: Navigator) {
 
                 // The chrome samples the recording, so it sits outside it.
                 CompositionLocalProvider(LocalAppBackdrop provides appBackdrop) {
-                    LibraryPanel(
+                    SideBar(
                         collapsed = collapsed,
                         modifier = Modifier
                             .align(Alignment.TopStart)
@@ -216,8 +206,6 @@ fun AppShell(navigator: Navigator) {
                         RightPanel(shownPanel)
                     }
 
-                    // Under the top bar, so it unfolds out from behind its button.
-                    SectionStrip(strip, open, startInset, endInset = endInset)
                     TopBar(Modifier.align(Alignment.TopCenter))
 
                     // Centred in the content between the side panels, not in the window.

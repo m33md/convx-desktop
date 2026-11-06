@@ -1,20 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol pencil, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m15 5 4 4" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5.293,20.695L19.179,6.829L17.205,4.845L3.319,18.712L2.116,21.369C2,21.639 2.289,21.947 2.558,21.832ZM20.209,5.828L21.374,4.672C21.971,4.075 22,3.449 21.47,2.92L21.124,2.573C20.604,2.053 19.968,2.101 19.381,2.679L18.206,3.834Z" />
 </vector>

@@ -1,27 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol exclamationmark.triangle.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M12 9v4" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M12 17h.01" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M14.117,4.155L21.629,17.29C21.874,17.713 22,18.174 22,18.62C22,19.994 21.064,21.079 19.511,21.079L4.481,21.079C2.936,21.079 2,19.994 2,18.62C2,18.174 2.119,17.721 2.371,17.29L9.883,4.155C10.351,3.33 11.168,2.921 12,2.921C12.825,2.921 13.649,3.33 14.117,4.155ZM11.027,16.881C11.027,17.394 11.473,17.817 12,17.817C12.52,17.817 12.973,17.401 12.973,16.881C12.973,16.354 12.527,15.938 12,15.938C11.465,15.938 11.027,16.361 11.027,16.881ZM11.205,8.79L11.324,14.021C11.331,14.467 11.569,14.719 12,14.719C12.409,14.719 12.654,14.474 12.661,14.021L12.78,8.798C12.788,8.352 12.453,8.025 11.993,8.025C11.524,8.025 11.198,8.345 11.205,8.79Z" />
 </vector>

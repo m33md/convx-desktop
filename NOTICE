@@ -31,6 +31,18 @@ See the repository LICENSE for the license text.
 Official music video matching is adapted from Square
 (https://github.com/Lelonio/Square), licensed under GPL-3.0.
 
+## SF Symbols for Compose
+
+The app's icons (desktop/src/main/resources/icons, drawn by desktop/packaging/make_sf_icons.py)
+are outlines from Jetpack_SF_Symbols (https://github.com/cosmictaserdev-creator/Jetpack_SF_Symbols),
+Copyright (c) 2026 SF Symbols Compose Contributors, licensed under the MIT License. SF Symbols is a
+trademark of Apple Inc., and the symbol designs are Apple's.
+
+## Convx wordmark
+
+The "convx" wordmark (desktop/packaging/convx-wordmark.*, icons/convx_wordmark.xml) is the Convx
+author's own artwork, traced into a vector for the Windows app with the author's permission.
+
 ## Base project
 
 Convx was originally built on an open-source GPL-3.0 music player and has since diverged

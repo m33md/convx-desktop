@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol exclamationmark.circle.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M22,12.004C22,17.509 17.509,22 11.996,22C6.491,22 2,17.509 2,12.004C2,6.491 6.491,2 11.996,2C17.509,2 22,6.491 22,12.004ZM10.99,16.065C10.99,16.595 11.459,17.033 11.996,17.033C12.541,17.033 13.002,16.603 13.002,16.065C13.002,15.52 12.549,15.09 11.996,15.09C11.451,15.09 10.99,15.528 10.99,16.065ZM11.182,7.704L11.298,13.109C11.305,13.57 11.559,13.831 11.996,13.831C12.426,13.831 12.672,13.578 12.679,13.109L12.81,7.712C12.818,7.251 12.464,6.914 11.988,6.914C11.505,6.914 11.175,7.244 11.182,7.704Z" />
 </vector>

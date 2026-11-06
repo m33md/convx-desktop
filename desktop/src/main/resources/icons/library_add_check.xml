@@ -1,15 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol checkmark.circle.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M17.58,8.41l-1.41,-1.41l-4.18,4.18l-1.58,-1.58L9,11.01L11.99,14L17.58,8.41z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M4,20h14v1H3V6h1V20zM21,3v15H6V3H21zM20,4H7v13h13V4z"
-        android:strokeWidth="1.0"
-        android:strokeColor="#FFFFFFFF"
-        android:strokeLineCap="butt" />
+        android:pathData="M22,12.004C22,17.509 17.509,22 11.996,22C6.491,22 2,17.509 2,12.004C2,6.491 6.491,2 11.996,2C17.509,2 22,6.491 22,12.004ZM15.305,8.058L10.868,15.113L8.656,12.349C8.449,12.081 8.257,11.996 8.019,11.996C7.635,11.996 7.336,12.311 7.336,12.695C7.336,12.887 7.413,13.079 7.543,13.248L10.161,16.411C10.384,16.695 10.607,16.818 10.898,16.818C11.19,16.818 11.428,16.679 11.605,16.411L16.418,8.864C16.518,8.702 16.618,8.503 16.618,8.319C16.618,7.927 16.28,7.666 15.912,7.666C15.681,7.666 15.459,7.804 15.305,8.058Z" />
 </vector>

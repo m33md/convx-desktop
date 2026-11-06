@@ -5,6 +5,7 @@
 
 package com.convx.desktop.ui.screens
 
+import com.convx.desktop.ui.components.LocalPageInsets
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -107,73 +109,67 @@ fun SearchScreen() {
         navigator.navigate(Screen.SearchResults(q))
     }
 
-    PageList {
-        if (query.isNotEmpty()) {
-            val s = suggestions
-            if (s == null) {
-                item { LoadingState() }
-            } else {
-                items(s.queries, key = { "q:$it" }) { text ->
-                    SuggestionRow(text, onClick = { submit(text) }, onFill = { navigator.searchQuery = text })
-                }
-                if (s.recommendedItems.isNotEmpty()) {
-                    item { Spacer(Modifier.height(12.dp)) }
-                    items(s.recommendedItems, key = { "r:${it.id}" }) { item -> ResultRow(item) }
-                }
-            }
-            return@PageList
-        }
-
-        if (library.searchHistory.isNotEmpty()) {
-            item(key = "recent_header") {
-                SectionHeader(
-                    "Recent searches",
-                    Modifier.padding(horizontal = Gutter),
-                    trailing = { com.convx.desktop.ui.components.PillButton("Clear", { Library.clearSearches() }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp)) },
-                )
-            }
-            item(key = "recent") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = Gutter, vertical = 12.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    items(library.searchHistory.take(20), key = { it }) { text ->
-                        Chip(text, false, { submit(text) })
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val insets = LocalPageInsets.current
+        val columns = moodColumns(maxWidth - insets.start - insets.end)
+        PageList {
+            if (query.isNotEmpty()) {
+                val s = suggestions
+                if (s == null) {
+                    item { LoadingState() }
+                } else {
+                    items(s.queries, key = { "q:$it" }) { text ->
+                        SuggestionRow(text, onClick = { submit(text) }, onFill = { navigator.searchQuery = text })
+                    }
+                    if (s.recommendedItems.isNotEmpty()) {
+                        item { Spacer(Modifier.height(12.dp)) }
+                        items(s.recommendedItems, key = { "r:${it.id}" }) { item -> ResultRow(item) }
                     }
                 }
+                return@PageList
             }
-        }
 
-        val newReleases = explore.value?.newReleaseAlbums.orEmpty()
-        if (newReleases.isNotEmpty()) {
-            item(key = "new") {
-                ItemShelf("New Releases", newReleases)
-                Spacer(Modifier.height(16.dp))
-            }
-        }
-        item(key = "browse_header") {
-            Text("Browse all", style = ConvxType.Title2, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
-        }
-        val groups = moods.value
-        when {
-            groups != null -> groups.forEach { group ->
-                item(key = "g:${group.title}") {
-                    Column(Modifier.padding(bottom = 18.dp)) {
-                        Text(group.title, style = ConvxType.Headline, color = ConvxColors.SecondaryLabel, modifier = Modifier.padding(horizontal = Gutter, vertical = 6.dp))
-                        FlowRow(
-                            Modifier.fillMaxWidth().padding(horizontal = Gutter),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(10.dp),
-                        ) {
-                            group.items.forEach { mood ->
-                                MoodTile(mood) { navigator.navigate(Screen.Browse(mood.endpoint.browseId, mood.endpoint.params, mood.title)) }
-                            }
+            if (library.searchHistory.isNotEmpty()) {
+                item(key = "recent_header") {
+                    SectionHeader(
+                        "Recent searches",
+                        Modifier.padding(horizontal = Gutter),
+                        trailing = { com.convx.desktop.ui.components.PillButton("Clear", { Library.clearSearches() }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 5.dp)) },
+                    )
+                }
+                item(key = "recent") {
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = Gutter, vertical = 12.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        items(library.searchHistory.take(20), key = { it }) { text ->
+                            Chip(text, false, { submit(text) })
                         }
                     }
                 }
             }
-            moods.error != null -> item { MessageState("Couldn't load genres", friendlyError(moods.error), actionText = "Try again", onAction = { moods.retry() }) }
-            else -> item { LoadingState() }
+
+            val newReleases = explore.value?.newReleaseAlbums.orEmpty()
+            if (newReleases.isNotEmpty()) {
+                item(key = "new") {
+                    ItemShelf("New Releases", newReleases)
+                    Spacer(Modifier.height(16.dp))
+                }
+            }
+            item(key = "browse_header") {
+                Text("Browse all", style = ConvxType.Title2, modifier = Modifier.padding(horizontal = Gutter).padding(top = 8.dp, bottom = 14.dp))
+            }
+            val groups = moods.value
+            when {
+                // One grid of every mood and genre, as the phone's search lays them out.
+                groups != null -> moodTileRows(
+                    "browse",
+                    groups.flatMap { it.items }.distinctBy { it.endpoint.browseId + "|" + it.endpoint.params },
+                    columns,
+                ) { mood -> navigator.navigate(Screen.Browse(mood.endpoint.browseId, mood.endpoint.params, mood.title)) }
+                moods.error != null -> item { MessageState("Couldn't load genres", friendlyError(moods.error), actionText = "Try again", onAction = { moods.retry() }) }
+                else -> item { LoadingState() }
+            }
         }
     }
 }

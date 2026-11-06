@@ -167,9 +167,10 @@ jobs:
           path: desktop/build/Convx-portable-windows.zip
           if-no-files-found: error
 
-      # Same rolling release as desktop-release.yml, refreshed after every build.
+      # Same rolling release as desktop-release.yml, refreshed after every build of main. Work
+      # branches build and take screenshots, but only main reaches the download page.
       - name: Publish download links
-        if: github.event_name != 'pull_request'
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}

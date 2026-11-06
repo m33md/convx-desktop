@@ -1,10 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol pin.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
-    android:viewportHeight="24"
-    android:tint="?attr/colorControlNormal">
-  <path
-      android:fillColor="#FFFFFFFF"
-      android:pathData="M16,12V4H17V2H7V4H8V12L6,14V16H11.2V22H12.8V16H18V14L16,12Z"/>
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5.432,14.336C5.432,15.002 5.896,15.445 6.615,15.445L11.328,15.445L11.328,19.835C11.328,21.005 11.812,22 12,22C12.195,22 12.672,21.005 12.672,19.835L12.672,15.445L17.392,15.445C18.111,15.445 18.568,15.002 18.568,14.336C18.568,12.487 17.109,10.598 14.716,9.745L14.434,5.724C15.597,5.052 16.632,4.245 17.089,3.647C17.297,3.365 17.398,3.096 17.398,2.854C17.398,2.363 17.029,2 16.457,2L7.55,2C6.978,2 6.602,2.363 6.602,2.854C6.602,3.096 6.703,3.365 6.918,3.647C7.368,4.245 8.41,5.059 9.566,5.724L9.284,9.745C6.897,10.598 5.432,12.487 5.432,14.336Z" />
 </vector>

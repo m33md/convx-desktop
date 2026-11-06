@@ -1,34 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol repeat, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m17 2 4 4-4 4" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M10.297,19.872L10.297,13.875C10.297,13.524 10.096,13.329 9.737,13.329C9.573,13.329 9.423,13.389 9.282,13.494L5.682,16.429C5.383,16.675 5.368,17.063 5.682,17.31L9.282,20.252C9.423,20.357 9.573,20.417 9.737,20.417C10.096,20.417 10.297,20.223 10.297,19.872ZM21.283,11.709C20.88,11.709 20.566,12.022 20.566,12.433L20.566,13.329C20.566,15.062 19.416,16.152 17.594,16.152L8.871,16.152C8.482,16.152 8.169,16.466 8.169,16.862C8.169,17.25 8.482,17.571 8.871,17.571L17.474,17.571C20.275,17.571 22,15.996 22,13.419L22,12.433C22,12.022 21.694,11.709 21.283,11.709Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M3 11v-1a4 4 0 0 1 4-4h14" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="m7 22-4-4 4-4" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M21 13v1a4 4 0 0 1-4 4H3" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M13.703,4.121L13.703,10.118C13.703,10.469 13.904,10.663 14.263,10.663C14.427,10.663 14.577,10.611 14.718,10.499L18.326,7.564C18.617,7.325 18.632,6.929 18.326,6.683L14.718,3.748C14.577,3.636 14.427,3.583 14.263,3.583C13.904,3.583 13.703,3.777 13.703,4.121ZM2.717,12.284C3.12,12.284 3.434,11.97 3.434,11.559L3.434,10.663C3.434,8.931 4.584,7.848 6.406,7.848L15.129,7.848C15.518,7.848 15.839,7.527 15.839,7.138C15.839,6.742 15.518,6.429 15.129,6.429L6.526,6.429C3.725,6.429 2,7.997 2,10.574L2,11.559C2,11.97 2.314,12.284 2.717,12.284Z" />
 </vector>

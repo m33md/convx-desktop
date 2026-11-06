@@ -1,48 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol slider.vertical.3, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M2 10v3" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M19.452,17.643C19.714,17.643 19.966,17.604 20.204,17.529L20.204,20.859C20.204,21.252 19.862,21.585 19.443,21.585C19.016,21.585 18.682,21.252 18.682,20.859L18.682,17.522C18.925,17.601 19.184,17.643 19.452,17.643ZM20.204,3.167L20.204,12.661C19.966,12.587 19.714,12.547 19.452,12.547C19.184,12.547 18.925,12.59 18.682,12.669L18.682,3.167C18.682,2.748 19.016,2.415 19.443,2.415C19.862,2.415 20.204,2.748 20.204,3.167Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M6 6v11" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M22,15.095C22,16.498 20.854,17.643 19.452,17.643C18.058,17.643 16.912,16.498 16.912,15.095C16.912,13.693 18.058,12.547 19.452,12.547C20.854,12.547 22,13.693 22,15.095ZM18.127,15.095C18.127,15.839 18.717,16.429 19.46,16.429C20.204,16.429 20.794,15.839 20.794,15.095C20.794,14.36 20.204,13.761 19.46,13.761C18.717,13.761 18.127,14.36 18.127,15.095Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M10 3v18" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M12.757,20.859C12.757,21.252 12.423,21.585 11.996,21.585C11.577,21.585 11.235,21.252 11.235,20.859L11.235,11.004C11.473,11.079 11.726,11.119 11.987,11.119C12.255,11.119 12.514,11.077 12.757,10.999ZM12.757,3.167L12.757,6.152C12.514,6.074 12.255,6.032 11.987,6.032C11.726,6.032 11.473,6.072 11.235,6.147L11.235,3.167C11.235,2.748 11.577,2.415 11.996,2.415C12.423,2.415 12.757,2.748 12.757,3.167Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M14 8v7" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M14.535,8.58C14.535,9.974 13.389,11.119 11.987,11.119C10.593,11.119 9.448,9.974 9.448,8.58C9.448,7.177 10.593,6.032 11.987,6.032C13.389,6.032 14.535,7.177 14.535,8.58ZM10.662,8.58C10.662,9.324 11.26,9.914 11.996,9.914C12.74,9.914 13.33,9.324 13.33,8.58C13.33,7.836 12.74,7.246 11.996,7.246C11.26,7.246 10.662,7.836 10.662,8.58Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M18 5v13" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M5.309,20.859C5.309,21.252 4.976,21.585 4.548,21.585C4.129,21.585 3.796,21.252 3.796,20.859L3.796,17.529C4.034,17.604 4.286,17.643 4.548,17.643C4.813,17.643 5.069,17.602 5.309,17.525ZM5.309,3.167L5.309,12.666C5.069,12.589 4.813,12.547 4.548,12.547C4.286,12.547 4.034,12.587 3.796,12.661L3.796,3.167C3.796,2.748 4.129,2.415 4.548,2.415C4.976,2.415 5.309,2.748 5.309,3.167Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M22 10v3" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2,15.095C2,16.498 3.146,17.643 4.548,17.643C5.942,17.643 7.088,16.498 7.088,15.095C7.088,13.693 5.942,12.547 4.548,12.547C3.146,12.547 2,13.693 2,15.095ZM4.548,16.429C3.813,16.429 3.214,15.839 3.214,15.095C3.214,14.36 3.813,13.761 4.548,13.761C5.301,13.761 5.882,14.36 5.882,15.095C5.882,15.839 5.301,16.429 4.548,16.429Z" />
 </vector>

@@ -1,34 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol arrow.clockwise, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M21 3v5h-5" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M8 16H3v5" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M11.996,22C16.52,22 20.188,18.332 20.188,13.801C20.188,13.453 19.898,13.163 19.543,13.163C19.195,13.163 18.905,13.453 18.905,13.801C18.905,17.614 15.809,20.71 11.996,20.71C8.183,20.71 5.095,17.614 5.095,13.801C5.095,9.988 8.183,6.9 11.996,6.9C12.888,6.9 13.736,7.067 14.512,7.379C14.925,7.538 15.396,7.306 15.411,6.828C15.425,6.429 15.142,6.262 14.911,6.175C14.033,5.827 13.04,5.624 11.996,5.624C7.473,5.624 3.812,9.285 3.812,13.809C3.812,18.332 7.473,22 11.996,22ZM14.686,6.712L11.105,10.286C10.974,10.409 10.924,10.568 10.924,10.742C10.924,11.105 11.192,11.387 11.554,11.387C11.75,11.387 11.895,11.315 12.018,11.199L15.954,7.227C16.114,7.053 16.179,6.893 16.179,6.712C16.179,6.538 16.099,6.357 15.954,6.204L12.018,2.203C11.895,2.08 11.75,2 11.547,2C11.192,2 10.924,2.297 10.924,2.66C10.924,2.826 10.974,3 11.098,3.124Z" />
 </vector>

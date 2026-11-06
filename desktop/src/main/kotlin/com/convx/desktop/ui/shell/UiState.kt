@@ -39,14 +39,11 @@ enum class LibraryTab(val label: String, val title: String) {
     Artists("Artists", "Artists"),
 }
 
-/**
- * The places the top bar leads to, the phone's tabs: most have their own sections under them,
- * which unfold in a strip; Radio is one page and has none.
- */
-enum class Section(val label: String, val icon: String, val root: Screen, val hasStrip: Boolean = true) {
+/** The places the side bar leads to, the phone's tabs; each can be hidden in Controls & layout. */
+enum class Section(val label: String, val icon: String, val root: Screen) {
     Home("Home", "sf_house_fill", Screen.Home),
     Explore("Explore", "sf_square_grid_fill", Screen.Explore),
-    Radio("Radio", "sf_dot_radiowaves", Screen.Radio, hasStrip = false),
+    Radio("Radio", "sf_dot_radiowaves", Screen.Radio),
     Library("Library", "sf_music_note_square_stack", Screen.Library),
 }
 
@@ -57,13 +54,6 @@ fun Screen.section(): Section? = when (this) {
     Screen.Radio -> Section.Radio
     Screen.Library, Screen.Liked, Screen.LocalFiles, Screen.Downloads, Screen.History, Screen.Stats, Screen.MyTop, Screen.Cached, Screen.Uploaded -> Section.Library
     else -> null
-}
-
-/** Places on the Explore page its strip can jump to. */
-enum class ExploreAnchor(val label: String, val icon: String) {
-    NewReleases("New Releases", "album"),
-    Charts("Charts", "trending_up"),
-    Moods("Moods & Genres", "grid_view"),
 }
 
 /** What the full-screen player shows beside the artwork. */
@@ -112,38 +102,12 @@ object UiState {
         if (focused) typingIn = field else if (typingIn == field) typingIn = null
     }
 
-    /** Opens on the phone's default library chip, from Controls & layout. */
+    /** Opens on the phone's default library view, from Controls & layout. */
     var libraryTab by mutableStateOf(LibraryTab.entries.firstOrNull { it.name == AppSettings.value.defaultLibraryTab } ?: LibraryTab.All)
 
-    /**
-     * The section whose strip is unfolded under the top bar, if any. Clicking a section's button
-     * unfolds it; leaving that section's pages folds it back into the button.
-     */
-    var openSection by mutableStateOf<Section?>(null)
-
-    /** Home's mood chips, which live in its strip: the titles the feed offers and the one picked. */
+    /** Home's mood chips: the titles the feed offers and the one picked. */
     var homeChips by mutableStateOf<List<String>>(emptyList())
     var homeChip by mutableStateOf<String?>(null)
-
-    /** Explore's strip asks the page to scroll to an anchor; the page reports the one in view. */
-    var exploreJump by mutableStateOf<ExploreAnchor?>(null)
-    var exploreInView by mutableStateOf<ExploreAnchor?>(null)
-
-    /** The anchors Explore has content for; null until it has loaded, when all are offered. */
-    var exploreAnchors by mutableStateOf<Set<ExploreAnchor>?>(null)
-
-    /** The top bar's buttons: go to the section, or fold and unfold its strip when already there. */
-    fun openSection(section: Section, navigator: Navigator) {
-        val here = navigator.current.screen.section()
-        when {
-            here != section -> {
-                navigator.openRoot(section.root)
-                openSection = section.takeIf { it.hasStrip }
-            }
-            openSection == section || !section.hasStrip -> openSection = null
-            else -> openSection = section
-        }
-    }
 
     fun toggleSideBar() {
         AppSettings.update { it.copy(sidebarCollapsed = !it.sidebarCollapsed) }

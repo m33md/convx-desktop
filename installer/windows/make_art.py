@@ -12,14 +12,15 @@ import sys
 from pathlib import Path
 
 import numpy as np
-from PIL import Image, ImageDraw, ImageFilter, ImageFont
+from PIL import Image, ImageDraw, ImageFilter
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2] / "desktop" / "packaging"))
 import make_icon  # noqa: E402
 
 ROOT = Path(__file__).resolve().parents[2]
 OUT = ROOT / "installer" / "windows" / "theme"
-FONT = ROOT / "desktop" / "src" / "main" / "resources" / "fonts" / "plus_jakarta_sans.ttf"
+WORDMARK = ROOT / "desktop" / "packaging" / "convx-wordmark.png"
+WORDMARK_GREY = (0xB9, 0xB9, 0xB9)
 
 W, H = 560, 360
 RED = (0xFA, 0x2D, 0x48)
@@ -42,13 +43,15 @@ def mark(size, scale):
 
 
 def wordmark(scale):
-    """ "Convx" in the app's font, Plus Jakarta Sans ExtraBold, white."""
+    """The "convx" wordmark (desktop/packaging/convx-wordmark.png), in its own grey, as the app shows it."""
     w, h = 132, 34
-    font = ImageFont.truetype(str(FONT), 30 * scale)
-    font.set_variation_by_name("ExtraBold")
+    src = Image.open(WORDMARK).getchannel("A")
+    src = src.crop(src.getbbox())
+    th = 24 * scale
+    tw = min(w * scale, round(src.width * th / src.height))
+    alpha = src.resize((tw, th), Image.LANCZOS)
     img = Image.new("RGB", (w * scale, h * scale), BLACK)
-    d = ImageDraw.Draw(img)
-    d.text((0, h * scale // 2), "Convx", font=font, fill=(255, 255, 255), anchor="lm")
+    img.paste(Image.new("RGB", alpha.size, WORDMARK_GREY), (0, (h * scale - th) // 2), alpha)
     return img
 
 

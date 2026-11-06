@@ -51,6 +51,9 @@ import com.convx.desktop.ui.components.Artwork
 import com.convx.desktop.ui.components.CardGrid
 import com.convx.desktop.ui.components.LocalCardWidth
 import com.convx.desktop.ui.components.Gutter
+import com.convx.desktop.ui.components.SectionHeader
+import com.convx.desktop.ui.components.LocalPageInsets
+import androidx.compose.foundation.layout.BoxWithConstraints
 import com.convx.desktop.ui.components.ItemCard
 import com.convx.desktop.ui.components.ItemShelf
 import com.convx.desktop.ui.components.LoadingState
@@ -59,7 +62,6 @@ import com.convx.desktop.ui.components.PlayButton
 import com.convx.desktop.ui.components.SongShelf
 import com.convx.desktop.ui.components.pressable
 import com.convx.desktop.ui.components.GradientTile
-import com.convx.desktop.ui.shell.ExploreAnchor
 import com.convx.desktop.ui.shell.LibraryTab
 import com.convx.desktop.ui.shell.LocalNavigator
 import com.convx.desktop.ui.components.MosaicArt
@@ -88,28 +90,24 @@ fun BrowseScreen(browseId: String, params: String?, title: String?) {
 
     if (browseId == "FEmusic_moods_and_genres") {
         val moods = rememberPage("moods") { YouTube.moodAndGenres().getOrThrow() }
-        PageList {
-            item { Text(title ?: "Moods & Genres", style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp)) }
-            val groups = moods.value
-            when {
-                groups != null -> groups.forEach { group ->
-                    item(key = group.title) {
-                        Column(Modifier.padding(bottom = 18.dp)) {
-                            Text(group.title, style = ConvxType.Title3, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
-                            FlowRow(
-                                Modifier.fillMaxWidth().padding(horizontal = Gutter),
-                                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                                verticalArrangement = Arrangement.spacedBy(10.dp),
-                            ) {
-                                group.items.forEach { mood ->
-                                    MoodTile(mood) { navigator.navigate(Screen.Browse(mood.endpoint.browseId, mood.endpoint.params, mood.title)) }
-                                }
-                            }
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val insets = LocalPageInsets.current
+            val columns = moodColumns(maxWidth - insets.start - insets.end)
+            PageList {
+                item { Text(title ?: "Moods & Genres", style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp)) }
+                val groups = moods.value
+                when {
+                    groups != null -> groups.forEach { group ->
+                        item(key = group.title) {
+                            Text(group.title, style = ConvxType.Title3, modifier = Modifier.padding(horizontal = Gutter).padding(top = 8.dp, bottom = 12.dp))
+                        }
+                        moodTileRows("g:${group.title}", group.items, columns) { mood ->
+                            navigator.navigate(Screen.Browse(mood.endpoint.browseId, mood.endpoint.params, mood.title))
                         }
                     }
+                    moods.error != null -> item { MessageState("Couldn't load genres", friendlyError(moods.error), actionText = "Try again", onAction = { moods.retry() }) }
+                    else -> item { LoadingState() }
                 }
-                moods.error != null -> item { MessageState("Couldn't load genres", friendlyError(moods.error), actionText = "Try again", onAction = { moods.retry() }) }
-                else -> item { LoadingState() }
             }
         }
         return
@@ -364,81 +362,54 @@ fun ExploreScreen() {
         .map { it to it.items.filtered(settings).distinctBy { item -> item.id } }
         .filter { it.second.isNotEmpty() }
     val moods = explore.value?.moodAndGenres.orEmpty().distinctBy { it.title }
-
-    // Where each anchor of Explore's strip sits in the list: the title is row 0.
-    val anchors = buildMap {
-        var row = 1
-        if (releases.isNotEmpty()) put(ExploreAnchor.NewReleases, row++)
-        if (chartShelves.isNotEmpty()) put(ExploreAnchor.Charts, row)
-        row += chartShelves.size
-        if (moods.isNotEmpty()) put(ExploreAnchor.Moods, row)
-    }
-    LaunchedEffect(anchors.keys) {
-        if (anchors.isNotEmpty()) UiState.exploreAnchors = anchors.keys
-    }
     val listState = rememberLazyListState()
-    // While the strip's jump scrolls, the chip that was picked stays lit; scrolling by hand
-    // lights the shelf at the top (the first one while the title is still showing).
-    var jumping by remember { mutableStateOf(false) }
-    val jump = UiState.exploreJump
-    LaunchedEffect(jump, anchors) {
-        val target = jump ?: return@LaunchedEffect
-        val row = anchors[target] ?: return@LaunchedEffect
-        UiState.exploreJump = null
-        UiState.exploreInView = target
-        jumping = true
-        try {
-            listState.animateScrollToItem(row)
-        } finally {
-            jumping = false
-        }
-    }
-    LaunchedEffect(listState, anchors) {
-        snapshotFlow { listState.firstVisibleItemIndex }.collect { first ->
-            if (jumping) return@collect
-            UiState.exploreInView = anchors.entries.filter { it.value <= maxOf(first, 1) }.maxByOrNull { it.value }?.key
-        }
-    }
 
-    PageList(state = listState) {
-        item(key = "title") {
-            Text("Explore", style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
-        }
-        if (releases.isNotEmpty()) {
-            item(key = "new_releases") {
-                ItemShelf("New Releases", releases, onTitleClick = { navigator.navigate(Screen.Browse("FEmusic_new_releases_albums", null, "New Releases")) })
-                Spacer(Modifier.height(20.dp))
+    BoxWithConstraints(Modifier.fillMaxSize()) {
+        val insets = LocalPageInsets.current
+        val columns = moodColumns(maxWidth - insets.start - insets.end)
+        PageList(state = listState) {
+            item(key = "title") {
+                Text("Explore", style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
             }
-        }
-        chartShelves.forEachIndexed { index, (section, items) ->
-            item(key = "chart-$index-${section.title}") {
-                if (items.isSongShelf()) {
-                    val songs = items.filterIsInstance<SongItem>().map { it.toSong() }
-                    SongShelf(section.title, songs) { i -> PlayerController.playSongs(songs, i, section.title) }
-                } else {
-                    ItemShelf(section.title, items, onTitleClick = { navigator.navigate(Screen.Browse("FEmusic_charts", null, "Charts")) })
+            if (releases.isNotEmpty()) {
+                item(key = "new_releases") {
+                    ItemShelf("New Releases", releases, onTitleClick = { navigator.navigate(Screen.Browse("FEmusic_new_releases_albums", null, "New Releases")) })
+                    Spacer(Modifier.height(20.dp))
                 }
-                Spacer(Modifier.height(20.dp))
             }
-        }
-        if (moods.isNotEmpty()) {
-            item(key = "moods") { MoodGrid("Moods & Genres", moods) }
-        }
-        when {
-            explore.value != null || charts.value != null -> Unit
-            explore.error != null -> item {
-                MessageState(
-                    "Couldn't reach YouTube Music",
-                    friendlyError(explore.error),
-                    icon = "offline",
-                    actionText = "Try again",
-                    onAction = {
-                        explore.retry()
-                        charts.retry()
-                    },
-                )
+            chartShelves.forEachIndexed { index, (section, items) ->
+                item(key = "chart-$index-${section.title}") {
+                    if (items.isSongShelf()) {
+                        val songs = items.filterIsInstance<SongItem>().map { it.toSong() }
+                        SongShelf(section.title, songs) { i -> PlayerController.playSongs(songs, i, section.title) }
+                    } else {
+                        ItemShelf(section.title, items, onTitleClick = { navigator.navigate(Screen.Browse("FEmusic_charts", null, "Charts")) })
+                    }
+                    Spacer(Modifier.height(20.dp))
+                }
             }
-            else -> item { LoadingState() }
+            if (moods.isNotEmpty()) {
+                item(key = "moods") {
+                    SectionHeader("Moods & Genres", Modifier.padding(horizontal = Gutter).padding(bottom = 10.dp))
+                }
+                moodTileRows("moods", moods, columns) { mood -> navigator.navigate(Screen.Browse(mood.endpoint.browseId, mood.endpoint.params, mood.title)) }
+            }
+            when {
+                explore.value != null || charts.value != null -> Unit
+                explore.error != null -> item {
+                    MessageState(
+                        "Couldn't reach YouTube Music",
+                        friendlyError(explore.error),
+                        icon = "offline",
+                        actionText = "Try again",
+                        onAction = {
+                            explore.retry()
+                            charts.retry()
+                        },
+                    )
+                }
+                else -> item { LoadingState() }
+            }
         }
     }
 }

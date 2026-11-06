@@ -1,41 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol music.note.list, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M16 5H3" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2.585,13.983L11.596,13.983C11.927,13.983 12.181,13.729 12.181,13.398C12.181,13.082 11.919,12.82 11.596,12.82L2.585,12.82C2.262,12.82 2,13.082 2,13.398C2,13.729 2.254,13.983 2.585,13.983Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M11 12H3" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2.585,10.494L11.596,10.494C11.927,10.494 12.181,10.233 12.181,9.909C12.181,9.593 11.919,9.339 11.596,9.339L2.585,9.339C2.262,9.339 2,9.593 2,9.909C2,10.233 2.254,10.494 2.585,10.494Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M11 19H3" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2.585,7.013L11.596,7.013C11.919,7.013 12.181,6.752 12.181,6.428C12.181,6.112 11.919,5.851 11.596,5.851L2.585,5.851C2.262,5.851 2,6.112 2,6.428C2,6.752 2.262,7.013 2.585,7.013Z" />
     <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M21 16V5" />
-    <path
-        android:fillColor="#00000000"
-        android:strokeColor="#FF000000"
-        android:strokeWidth="2"
-        android:strokeLineCap="round"
-        android:strokeLineJoin="round"
-        android:pathData="M15.0,16.0 a3.0,3.0 0 1,0 6.0,0 a3.0,3.0 0 1,0 -6.0,0" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M22,6.613L22,2.94C22,2.447 21.6,2.123 21.122,2.223L16.147,3.309C15.562,3.432 15.246,3.756 15.246,4.272L15.269,15.223C15.308,15.739 15.061,16.085 14.599,16.178L13.028,16.509C11.08,16.909 10.163,17.888 10.163,19.366C10.163,20.845 11.295,21.877 12.905,21.877C14.345,21.877 16.478,20.829 16.478,17.988L16.478,8.993C16.478,8.438 16.594,8.307 17.094,8.192L21.499,7.229C21.808,7.16 22,6.929 22,6.613Z" />
 </vector>

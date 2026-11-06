@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol e.square.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="960.0"
-    android:viewportHeight="960.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
         android:fillColor="#FFFFFFFF"
-        android:pathData="M360,680h240v-80L440,600v-80h160v-80L440,440v-80h160v-80L360,280v400ZM200,840q-33,0 -56.5,-23.5T120,760v-560q0,-33 23.5,-56.5T200,120h560q33,0 56.5,23.5T840,200v560q0,33 -23.5,56.5T760,840L200,840ZM200,760h560v-560L200,200v560ZM200,200v560,-560Z" />
+        android:pathData="M22,5.284L22,18.725C22,20.886 20.886,22 18.682,22L5.309,22C3.114,22 2,20.903 2,18.725L2,5.284C2,3.106 3.114,2 5.309,2L18.682,2C20.886,2 22,3.114 22,5.284ZM9.384,6.832C8.882,6.832 8.627,7.181 8.627,7.7L8.627,16.13C8.627,16.658 8.882,17.006 9.384,17.006L14.735,17.006C15.126,17.006 15.39,16.751 15.39,16.36C15.39,15.969 15.126,15.722 14.735,15.722L10.175,15.722L10.175,12.447L14.454,12.447C14.837,12.447 15.101,12.217 15.101,11.834C15.101,11.434 14.837,11.213 14.454,11.213L10.175,11.213L10.175,8.117L14.735,8.117C15.126,8.117 15.39,7.853 15.39,7.47C15.39,7.07 15.126,6.832 14.735,6.832Z" />
 </vector>

@@ -102,12 +102,12 @@ object Party {
     /** Things to say wherever the listener is: who joined, a removal, the party ending. */
     val notices: SharedFlow<String> = _notices.asSharedFlow()
 
-    var serverUrl: String
-        get() = AppSettings.value.partyServer.trim().ifBlank { DefaultServer }
-        set(value) {
-            val url = value.trim().trimEnd('/')
-            AppSettings.update { it.copy(partyServer = url.takeIf { u -> u != DefaultServer }.orEmpty()) }
-        }
+    /**
+     * The party server: Convx's own, built in and never shown. Only an
+     * invite link that names another server moves this PC there, for that party, and nothing is saved.
+     */
+    var serverUrl: String = DefaultServer
+        private set
 
     /**
      * The name others see. The phone offers its model name; a PC's own name is usually something
@@ -176,6 +176,7 @@ object Party {
     fun create(name: String) {
         scope.launch {
             leaveCurrent()
+            serverUrl = DefaultServer
             enter { PartyClient.create(serverUrl, request(name)) }
         }
     }
@@ -188,7 +189,7 @@ object Party {
         }
         scope.launch {
             leaveCurrent()
-            invite.server?.let { serverUrl = it }
+            serverUrl = invite.server?.trim()?.trimEnd('/')?.ifBlank { null } ?: DefaultServer
             enter { PartyClient.join(serverUrl, invite.code, request(name)) }
         }
     }
@@ -225,7 +226,8 @@ object Party {
     }
 
     /** The link that opens this party in Convx on a phone. */
-    fun inviteLink(code: String): String = "convx://party/$code?server=" + URLEncoder.encode(serverUrl, "UTF-8")
+    fun inviteLink(code: String): String =
+        if (serverUrl == DefaultServer) "convx://party/$code" else "convx://party/$code?server=" + URLEncoder.encode(serverUrl, "UTF-8")
 
     /** A typed code, or the phone's invite link; null when it's neither. */
     fun parseInvite(text: String): Invite? {

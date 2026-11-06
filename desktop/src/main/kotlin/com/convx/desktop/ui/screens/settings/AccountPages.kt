@@ -138,7 +138,7 @@ fun SpotifySettings() {
             "In Your Library",
             footer = problem?.let { "Couldn't read your Spotify library: $it" }
                 ?: waiting?.takeIf { loading }
-                ?: "Your Spotify lists sit in Your Library next to your Convx ones, marked with Spotify's logo.",
+                ?: "Your Spotify lists sit under Playlists in the side bar next to your Convx ones, marked with Spotify's logo.",
         ) {
             LinkRow("Liked Songs", icon = "favorite", tint = Color(0xFF6A3DE8), value = liked?.toString() ?: if (problem != null) "–" else "…") {
                 navigator.navigate(Screen.SpotifyLiked)

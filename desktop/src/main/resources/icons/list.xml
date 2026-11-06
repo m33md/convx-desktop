@@ -1,9 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol list.bullet, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M2.625 6.75a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0A.75.75 0 0 1 8.25 6h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75ZM2.625 12a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0ZM7.5 12a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12A.75.75 0 0 1 7.5 12Zm-4.875 5.25a1.125 1.125 0 1 1 2.25 0 1.125 1.125 0 0 1-2.25 0Zm4.875 0a.75.75 0 0 1 .75-.75h12a.75.75 0 0 1 0 1.5h-12a.75.75 0 0 1-.75-.75Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7.544,18.715L21.3,18.715C21.689,18.715 22,18.411 22,18.023C22,17.634 21.689,17.338 21.3,17.338L7.544,17.338C7.156,17.338 6.86,17.634 6.86,18.023C6.86,18.411 7.156,18.715 7.544,18.715Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3.221,19.243C3.897,19.243 4.442,18.699 4.442,18.023C4.442,17.346 3.897,16.802 3.221,16.802C2.544,16.802 2,17.346 2,18.023C2,18.699 2.544,19.243 3.221,19.243Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7.544,12.688L21.3,12.688C21.689,12.688 22,12.393 22,12.004C22,11.615 21.689,11.312 21.3,11.312L7.544,11.312C7.156,11.312 6.86,11.615 6.86,12.004C6.86,12.393 7.156,12.688 7.544,12.688Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3.221,13.225C3.897,13.225 4.442,12.68 4.442,12.004C4.442,11.327 3.897,10.783 3.221,10.783C2.544,10.783 2,11.327 2,12.004C2,12.68 2.544,13.225 3.221,13.225Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M7.544,6.67L21.3,6.67C21.689,6.67 22,6.366 22,5.977C22,5.589 21.689,5.293 21.3,5.293L7.544,5.293C7.156,5.293 6.86,5.589 6.86,5.977C6.86,6.366 7.156,6.67 7.544,6.67Z" />
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M3.221,7.198C3.897,7.198 4.442,6.654 4.442,5.977C4.442,5.301 3.897,4.757 3.221,4.757C2.544,4.757 2,5.301 2,5.977C2,6.654 2.544,7.198 3.221,7.198Z" />
 </vector>

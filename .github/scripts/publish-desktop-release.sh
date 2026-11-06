@@ -51,7 +51,15 @@ git -C "$tmp" -c user.name="github-actions[bot]" -c user.email="41898282+github-
   commit -qm "Convx for Windows, built from ${sha::7}"
 git -C "$tmp" push -qf "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}" "release:refs/tags/$tag"
 
+# The version's commit message is its "What's new". It comes after the line the updater reads,
+# which takes the first "Version" and the first /tree/ link in the notes.
+notes="${download} If Windows says it protected your PC, click More info, then Run anyway. Version ${version}. Source: https://github.com/${GITHUB_REPOSITORY}/tree/${sha}"
+changes=$(git log -1 --format=%B "$sha" 2>/dev/null | grep -viE '^(co-authored-by|claude-session):' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' || true)
+if [ -n "$changes" ]; then
+  notes+=$'\n\n'"## What's new"$'\n\n'"${changes}"
+fi
+
 gh release create "$tag" --verify-tag --latest \
   --title "Convx for Windows ${version}" \
-  --notes "${download} If Windows says it protected your PC, click More info, then Run anyway. Version ${version}. Source: https://github.com/${GITHUB_REPOSITORY}/tree/${sha}" \
+  --notes "$notes" \
   "${files[@]}"

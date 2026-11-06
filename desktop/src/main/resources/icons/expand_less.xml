@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol chevron.up, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M11.47 7.72a.75.75 0 0 1 1.06 0l7.5 7.5a.75.75 0 1 1-1.06 1.06L12 9.31l-6.97 6.97a.75.75 0 0 1-1.06-1.06l7.5-7.5Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M2.275,16.075C2.11,16.24 2,16.469 2,16.725C2,17.247 2.394,17.641 2.916,17.641C3.163,17.641 3.401,17.549 3.557,17.375L12.568,8.017L11.441,8.017L20.434,17.375C20.599,17.549 20.846,17.641 21.084,17.641C21.606,17.641 22,17.247 22,16.725C22,16.469 21.899,16.249 21.725,16.075L12.696,6.67C12.513,6.478 12.266,6.359 12,6.359C11.734,6.359 11.496,6.469 11.304,6.67Z" />
 </vector>

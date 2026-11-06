@@ -57,6 +57,7 @@ import com.convx.desktop.integrations.youtube.YouTubeAccount
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.CompactSongRow
 import com.convx.desktop.ui.components.ConvxIcon
+import com.convx.desktop.ui.components.Chip
 import com.convx.desktop.ui.components.Gutter
 import com.convx.desktop.ui.components.IconButton
 import com.convx.desktop.ui.components.ItemActions
@@ -114,7 +115,7 @@ fun HomeScreen() {
     val account by YouTubeAccount.state.collectAsState()
     val feed by HomeFeed.state.collectAsState()
     LaunchedEffect(Unit) { HomeFeed.load() }
-    // The mood chips live in Home's strip under the top bar.
+    // The phone's mood chips, in a row under the greeting.
     val selectedChip = UiState.homeChip
 
     val charts = rememberPage("charts") { YouTube.getChartsPage().getOrThrow() }
@@ -148,6 +149,22 @@ fun HomeScreen() {
                             charts.retry()
                             explore.retry()
                         }, size = 36.dp, iconSize = 20.dp)
+                    }
+                }
+            }
+
+            if (chipTitles.isNotEmpty()) {
+                item(key = "chips") {
+                    val bleed = LocalPageInsets.current.start
+                    androidx.compose.foundation.lazy.LazyRow(
+                        contentPadding = PaddingValues(start = bleed + Gutter, end = Gutter, top = 4.dp, bottom = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.bleedStart(bleed).fillMaxWidth(),
+                    ) {
+                        item(key = "all") { Chip("All", selectedChip == null, { UiState.homeChip = null }) }
+                        items(chipTitles, key = { it }) { title ->
+                            Chip(title, selectedChip == title, { UiState.homeChip = if (selectedChip == title) null else title })
+                        }
                     }
                 }
             }
@@ -484,49 +501,3 @@ private fun TrendingShelf(items: List<YTItem>) {
     }
 }
 
-/** Mood and genre tiles: the stripe colour down the left, as on the phone. */
-@Composable
-fun MoodGrid(title: String, moods: List<MoodAndGenres.Item>, onTitleClick: (() -> Unit)? = null) {
-    val navigator = LocalNavigator.current
-    Column(Modifier.fillMaxWidth().padding(bottom = 20.dp)) {
-        SectionHeader(title, Modifier.padding(horizontal = Gutter), onAction = onTitleClick)
-        Spacer(Modifier.height(10.dp))
-        val bleed = LocalPageInsets.current.start
-        LazyHorizontalGrid(
-            rows = GridCells.Fixed(3),
-            contentPadding = PaddingValues(start = bleed + Gutter, end = Gutter),
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
-            modifier = Modifier.bleedStart(bleed).fillMaxWidth().height(60.dp * 3 + 20.dp),
-        ) {
-            items(moods, key = { it.title }) { mood ->
-                MoodTile(mood) { navigator.navigate(Screen.Browse(mood.endpoint.browseId, mood.endpoint.params, mood.title)) }
-            }
-        }
-    }
-}
-
-@Composable
-fun MoodTile(mood: MoodAndGenres.Item, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val stripe = Color(mood.stripeColor)
-    Box(
-        modifier
-            .width(196.dp)
-            .height(60.dp)
-            .clip(RoundedCornerShape(10.dp))
-            .background(Brush.horizontalGradient(listOf(stripe.copy(alpha = if (hovered) 0.55f else 0.38f), Color.White.copy(alpha = 0.06f))))
-            .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.97f),
-    ) {
-        Box(Modifier.width(6.dp).fillMaxHeight().background(stripe))
-        Text(
-            mood.title,
-            style = ConvxType.BodyStrong,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.align(Alignment.CenterStart).padding(start = 18.dp, end = 10.dp),
-        )
-    }
-}

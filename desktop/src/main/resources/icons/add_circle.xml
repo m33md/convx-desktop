@@ -1,9 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SF Symbol plus.circle.fill, from Jetpack_SF_Symbols (MIT); drawn by make_sf_icons.py. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
-    android:viewportWidth="24.0"
-    android:viewportHeight="24.0">
+    android:viewportWidth="24"
+    android:viewportHeight="24">
     <path
-        android:fillColor="#FFFFFFFF" android:fillType="evenOdd"
-        android:pathData="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25ZM12.75 9a.75.75 0 0 0-1.5 0v2.25H9a.75.75 0 0 0 0 1.5h2.25V15a.75.75 0 0 0 1.5 0v-2.25H15a.75.75 0 0 0 0-1.5h-2.25V9Z" />
+        android:fillColor="#FFFFFFFF"
+        android:pathData="M22,12.004C22,17.509 17.509,22 11.996,22C6.491,22 2,17.509 2,12.004C2,6.491 6.491,2 11.996,2C17.509,2 22,6.491 22,12.004ZM11.267,8.088L11.267,11.259L8.096,11.259C7.658,11.259 7.344,11.559 7.344,12.004C7.344,12.426 7.658,12.718 8.096,12.718L11.267,12.718L11.267,15.896C11.267,16.326 11.566,16.641 11.988,16.641C12.426,16.641 12.726,16.334 12.726,15.896L12.726,12.718L15.912,12.718C16.334,12.718 16.649,12.426 16.649,12.004C16.649,11.559 16.342,11.259 15.912,11.259L12.726,11.259L12.726,8.088C12.726,7.643 12.426,7.336 11.988,7.336C11.566,7.336 11.267,7.651 11.267,8.088Z" />
 </vector>

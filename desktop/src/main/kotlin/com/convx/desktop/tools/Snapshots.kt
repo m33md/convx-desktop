@@ -30,7 +30,6 @@ import com.convx.desktop.player.Downloads
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.player.ResolvedStream
 import com.convx.desktop.ui.shell.AppShell
-import com.convx.desktop.ui.shell.ExploreAnchor
 import com.convx.desktop.ui.screens.replay.Replay
 import com.convx.desktop.ui.screens.replay.ReplayPage
 import com.convx.desktop.ui.screens.settings.SettingsHubs
@@ -167,11 +166,11 @@ fun main(args: Array<String>) {
 
     runCatching {
         shoot("01-home", seconds = 20)
-        // Home's strip unfolding out of its button, then settled with the feed's mood chips.
-        film("01a-home-strip", listOf(60L, 140L, 240L, 470L)) { UiState.openSection(Section.Home, navigator) }
-        shoot("01b-home-strip", seconds = 3)
-        film("01c-home-strip-folding", listOf(120L, 300L)) { UiState.openSection(Section.Home, navigator) }
-        shoot("01d-home", seconds = 2)
+        // One of the feed's mood chips picked, in the row under the greeting.
+        UiState.homeChips.firstOrNull()?.let { chip ->
+            shoot("01b-home-chip", seconds = 6) { UiState.homeChip = chip }
+            UiState.homeChip = null
+        }
         shoot("02-search") { navigator.navigate(Screen.Search) }
         // The phone's Radio tab before anything has played.
         shoot("02a-radio-empty", seconds = 2) { navigator.navigate(Screen.Radio) }
@@ -242,8 +241,8 @@ fun main(args: Array<String>) {
         shoot("07n-party-in", seconds = 30) { com.convx.desktop.integrations.party.Party.create("Convx CI") }
         com.convx.desktop.integrations.party.Party.leave()
         shoot("08-explore", seconds = 12) { navigator.navigate(Screen.Explore) }
-        shoot("08a-explore-strip", seconds = 3) { UiState.openSection(Section.Explore, navigator) }
-        shoot("08b-explore-jump", seconds = 3) { UiState.exploreJump = ExploreAnchor.Moods }
+        // Every mood and genre as the phone's tiles: the colour, and a photo from its page.
+        shoot("08a-moods", seconds = 15) { navigator.navigate(Screen.Browse("FEmusic_moods_and_genres", null, "Moods & Genres")) }
         if (songs.isNotEmpty()) {
             shoot("09-home-playing") {
                 PlayerController.cue(songs, 0, positionMs = 62_000)
@@ -263,7 +262,11 @@ fun main(args: Array<String>) {
                 shoot("10b-now-playing-panel-home", seconds = 4) { navigator.navigate(Screen.Home) }
                 shoot("10c-now-playing-panel-queue", seconds = 2) { AppSettings.update { s -> s.copy(rightPanel = "queue") } }
                 AppSettings.update { s -> s.copy(rightPanel = null) }
-                film("11-library-strip", listOf(100L, 220L)) { UiState.openSection(Section.Library, navigator) }
+                shoot("11-library-artists", seconds = 4) {
+                    UiState.libraryTab = com.convx.desktop.ui.shell.LibraryTab.Artists
+                    navigator.navigate(Screen.Library)
+                }
+                UiState.libraryTab = com.convx.desktop.ui.shell.LibraryTab.All
             }
             shoot("12-full-player-lyrics", seconds = 12) {
                 UiState.fullPlayerMode = FullPlayerMode.Lyrics
