@@ -7,13 +7,24 @@ this the official Windows version of Convx. It is maintained here by
 
 It looks and works like the phone app, sized for a PC:
 
-- Liquid glass on true black, in Convx's red, with a glass top bar, a library panel and a
-  now-playing bar.
+- Liquid glass on true black, in Convx's red, with a glass top bar, a simple side bar and a
+  now-playing bar, and the phone's SF Symbols icons.
 - Your YouTube Music account: Home, search, library, liked songs and playlists.
 - The phone's lyrics styles, with word- and letter-synced lyrics.
 - AutoMix transitions, an equalizer, Replay, and the AI features.
 - Discord status, Last.fm and ListenBrainz scrobbling, and importing playlists from Spotify.
 - Windows media keys and the taskbar's play controls.
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Home](docs/screenshots/home.jpg) | ![Moods & Genres](docs/screenshots/moods-and-genres.jpg) |
+| Home and the side bar | Moods & Genres |
+| ![A song's menu](docs/screenshots/song-menu.jpg) | ![Your library](docs/screenshots/library.jpg) |
+| A song's menu, with the side bar folded | Your library, with the CD covers Convx draws for playlists |
+| ![Listen Together](docs/screenshots/listen-together.jpg) | ![The setup](docs/screenshots/setup.jpg) |
+| Listen Together | The setup |
 
 ## Download
 
