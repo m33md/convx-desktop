@@ -108,20 +108,26 @@ object StreamResolver {
     /**
      * [preferAac] puts AAC first, as the phone does for downloads it also saves to the Music
      * folder, since every Windows player opens .m4a. Such a stream isn't kept for playback.
+     * [avoidClient] is tried last: its stream just failed to play.
      */
     suspend fun resolve(
         videoId: String,
         quality: AudioQuality,
         forceRefresh: Boolean = false,
         preferAac: Boolean = false,
+        avoidClient: String? = null,
     ): Result<ResolvedStream> =
         withContext(Dispatchers.IO) {
             if (!forceRefresh && !preferAac) cached(videoId)?.let { return@withContext Result.success(it) }
+            // YouTube's own reason ("Video unavailable") when that was the last word: fine to show.
+            // Anything else goes only to the log.
+            var youTubeReason: String? = null
             var lastReason: String? = null
             var signatureTimestamp: Int? = null
             var signatureTimestampFetched = false
+            val order = clients.sortedBy { it.clientName == avoidClient }
 
-            for (client in clients) {
+            for (client in order) {
                 currentCoroutineContext().ensureActive()
                 if (client.loginRequired && YouTube.cookie == null) continue
                 try {
@@ -136,10 +142,12 @@ object StreamResolver {
                     val response = YouTube.player(videoId, null, client, timestamp, null).getOrNull()
                     if (response == null) {
                         lastReason = "No response from ${client.clientName}"
+                        youTubeReason = null
                         continue
                     }
                     if (response.playabilityStatus.status != "OK") {
                         lastReason = response.playabilityStatus.reason ?: response.playabilityStatus.status
+                        youTubeReason = response.playabilityStatus.reason
                         Log.i(Tag, "$videoId: ${client.clientName} -> ${response.playabilityStatus.status} ($lastReason)")
                         continue
                     }
@@ -173,14 +181,21 @@ object StreamResolver {
                         return@withContext Result.success(stream)
                     }
                     lastReason = "${client.clientName} returned no reachable audio"
+                    youTubeReason = null
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     lastReason = e.message
+                    youTubeReason = null
                     Log.w(Tag, "$videoId: ${client.clientName} failed", e)
                 }
             }
-            Result.failure(IllegalStateException(lastReason ?: "This song can't be played right now"))
+            Log.w(Tag, "$videoId: no client gave a stream (last: $lastReason)")
+            Result.failure(
+                IllegalStateException(
+                    youTubeReason ?: "Couldn't get this song from YouTube. Check your connection and try again.",
+                ),
+            )
         }
 
     private fun rankedAudioFormats(

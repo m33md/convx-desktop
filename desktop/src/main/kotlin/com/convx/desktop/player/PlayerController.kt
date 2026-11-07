@@ -637,15 +637,20 @@ object PlayerController : AudioEngine.Listener {
         scope.launch {
             if (token != engineToken) return@launch
             val song = _state.value.current ?: return@launch
-            if (!retriedCurrent) {
-                // Most failures are an expired or rejected URL: resolve again and carry on from here.
+            // A full disk fails the same way again; anything else is worth one more try.
+            if (!retriedCurrent && !AudioCache.isDiskFull(error)) {
+                // Most failures are an expired or rejected URL: fetch the song afresh from another
+                // of YouTube's clients and carry on from here.
                 retriedCurrent = true
-                Log.w(Tag, "Retrying ${song.id} at $positionMs after: ${error.message}")
+                val client = _state.value.stream?.client
+                Log.w(Tag, "Retrying ${song.id} at $positionMs without $client after: $error")
                 StreamResolver.invalidate(song.id)
-                AudioCache.cancel(song.id)
-                loadCurrent(positionMs, playWhenReady = true, forceRefresh = true)
+                // The saved copy may be what's broken; not when it was the speakers that failed.
+                if (isOutputProblem(error)) AudioCache.cancel(song.id) else AudioCache.discard(song.id)
+                loadCurrent(positionMs, playWhenReady = true, forceRefresh = true, avoidClient = client)
             } else {
-                failCurrent(error.message ?: "Playback failed")
+                Log.w(Tag, "Gave up on ${song.id}: $error")
+                failCurrent(describePlaybackError(error))
             }
         }
     }
@@ -730,7 +735,13 @@ object PlayerController : AudioEngine.Listener {
         prefetchNext()
     }
 
-    private fun loadCurrent(startMs: Long, playWhenReady: Boolean, forceRefresh: Boolean = false, fadeInMs: Int = 0) {
+    private fun loadCurrent(
+        startMs: Long,
+        playWhenReady: Boolean,
+        forceRefresh: Boolean = false,
+        fadeInMs: Int = 0,
+        avoidClient: String? = null,
+    ) {
         val queued = _state.value.current ?: return
         if (!forceRefresh) retriedCurrent = false
         loadJob?.cancel()
@@ -781,7 +792,7 @@ object PlayerController : AudioEngine.Listener {
             } else if (offline != null) {
                 offline.first
             } else {
-                StreamResolver.resolve(song.id, quality, forceRefresh).getOrElse { error ->
+                StreamResolver.resolve(song.id, quality, forceRefresh, avoidClient = avoidClient).getOrElse { error ->
                     Log.e(Tag, "Couldn't resolve ${song.id}", error)
                     failCurrent(error.message ?: "This song can't be played right now")
                     return@launch

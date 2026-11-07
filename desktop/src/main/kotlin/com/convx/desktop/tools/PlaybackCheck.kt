@@ -20,13 +20,11 @@ import com.convx.desktop.data.Song
 import com.convx.desktop.lyrics.toLyricsText
 import com.convx.desktop.player.AudioCache
 import com.convx.desktop.player.CachedAudio
-import com.convx.desktop.player.GrowingFileInputStream
+import com.convx.desktop.player.Decoder
 import com.convx.desktop.player.StreamResolver
+import com.convx.desktop.player.describePlaybackError
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import org.bytedeco.ffmpeg.global.avutil
-import org.bytedeco.javacv.FFmpegFrameGrabber
-import org.bytedeco.javacv.FrameGrabber
 import kotlin.system.exitProcess
 
 /**
@@ -43,7 +41,7 @@ fun main(args: Array<String>) {
             "kJQP7kiw5Fk",
         )
     }
-    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck()
+    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck() and streamFailureCheck()
     partyServerCheck()
     runBlocking(Dispatchers.IO) { initYouTube() }
     var passed = 0
@@ -922,21 +920,13 @@ private fun tryPlay(id: String): String {
     val stream = runBlocking(Dispatchers.IO) { StreamResolver.resolve(id, AudioQuality.AUTO) }.getOrThrow()
     val resolvedMs = System.currentTimeMillis() - started
 
-    var input: GrowingFileInputStream? = null
-    val grabber = when (val source = AudioCache.open(stream)) {
-        is CachedAudio.Complete -> FFmpegFrameGrabber(source.file.absolutePath)
-        is CachedAudio.Growing -> FFmpegFrameGrabber(GrowingFileInputStream(source.download).also { input = it })
-    }
-    try {
-        grabber.sampleMode = FrameGrabber.SampleMode.SHORT
-        grabber.sampleFormat = avutil.AV_SAMPLE_FMT_S16
-        grabber.sampleRate = 48_000
-        grabber.audioChannels = 2
-        grabber.start()
+    Decoder(AudioCache.open(stream), 48_000, 2).use { decoder ->
+        val grabber = decoder.grabber
+        decoder.start()
         var samples = 0L
         var firstAudioMs = -1L
         while (samples < 48_000L * 10) {
-            val frame = grabber.grabSamples() ?: break
+            val frame = decoder.grabSamples() ?: break
             val buffer = frame.samples?.firstOrNull() ?: continue
             if (firstAudioMs < 0) firstAudioMs = System.currentTimeMillis() - started
             samples += (buffer.limit() - buffer.position()) / 2
@@ -945,18 +935,86 @@ private fun tryPlay(id: String): String {
 
         // Jump ahead the way a click on the seek bar does.
         val seekStarted = System.currentTimeMillis()
-        grabber.timestamp = 60_000_000L
-        val afterSeek = grabber.grabSamples()?.samples?.firstOrNull()
+        decoder.seek(60_000_000L)
+        val afterSeek = decoder.grabSamples()?.samples?.firstOrNull()
         checkNotNull(afterSeek) { "nothing after seeking to 1:00" }
         val seekMs = System.currentTimeMillis() - seekStarted
 
         return "${stream.badge} via ${stream.client}, resolved in ${resolvedMs}ms, first audio at ${firstAudioMs}ms, " +
             "seek to 1:00 took ${seekMs}ms, length ${grabber.lengthInTime / 1_000_000}s"
-    } finally {
-        runCatching { grabber.stop() }
-        runCatching { grabber.release() }
-        runCatching { input?.close() }
     }
+}
+
+/**
+ * Downloads that go wrong, against a local server: a refused song has to fail with the refusal
+ * (not FFmpeg's unrelated "could not open input") and in plain words; a server that ignores
+ * the byte range must still give one copy of the file; a full disk must be named as such.
+ */
+private fun streamFailureCheck(): Boolean {
+    var ok = true
+    fun expect(name: String, pass: Boolean, detail: String) {
+        if (!pass) ok = false
+        println("${if (pass) "PASS" else "FAIL"} stream failure $name: $detail")
+    }
+    val body = ByteArray(3 * 1024 * 1024 + 123) { (it * 31).toByte() }
+    val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+    server.createContext("/refused") { exchange ->
+        exchange.sendResponseHeaders(403, -1)
+        exchange.close()
+    }
+    // A plain 200 with no length, whatever range was asked for.
+    server.createContext("/whole") { exchange ->
+        exchange.sendResponseHeaders(200, 0)
+        exchange.responseBody.use { it.write(body) }
+    }
+    server.start()
+    fun stream(id: String, path: String) = com.convx.desktop.player.ResolvedStream(
+        videoId = id,
+        url = "http://127.0.0.1:${server.address.port}$path",
+        mimeType = "audio/webm; codecs=\"opus\"",
+        bitrate = 0,
+        sampleRate = null,
+        contentLength = -1,
+        loudnessDb = null,
+        durationMs = null,
+        client = "CI",
+        expiresAt = Long.MAX_VALUE,
+    )
+    try {
+        runCatching {
+            val download = AudioCache.Download(stream("ci-refused", "/refused")).also { it.start() }
+            Decoder(CachedAudio.Growing(download), 48_000, 2).use { it.start() }
+        }.onSuccess {
+            expect("refused", false, "a 403 opened as if it played")
+        }.onFailure { error ->
+            val words = describePlaybackError(error)
+            expect(
+                "refused",
+                error is AudioCache.HttpStatusException && "avformat" !in words,
+                "${error::class.simpleName}: ${error.message} -> \"$words\"",
+            )
+        }
+
+        runCatching {
+            val download = AudioCache.Download(stream("ci-whole", "/whole")).also { it.start() }
+            val deadline = System.currentTimeMillis() + 30_000
+            while (download.running && System.currentTimeMillis() < deadline) Thread.sleep(50)
+            val size = download.file.length()
+            expect(
+                "range ignored",
+                download.finished && size == body.size.toLong() && download.totalBytes == body.size.toLong(),
+                "finished=${download.finished}, file $size of ${body.size} bytes",
+            )
+            AudioCache.discard("ci-whole")
+            download.file.delete()
+        }.onFailure { expect("range ignored", false, "${it::class.simpleName}: ${it.message}") }
+
+        val full = describePlaybackError(java.io.IOException("There is not enough space on the disk"))
+        expect("disk full", "space" in full, "\"$full\"")
+    } finally {
+        server.stop(0)
+    }
+    return ok
 }
 
 /**

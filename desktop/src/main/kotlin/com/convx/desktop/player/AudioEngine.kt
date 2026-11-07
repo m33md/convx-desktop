@@ -14,7 +14,6 @@ import com.convx.desktop.audio.softClip
 import com.convx.desktop.core.Log
 import org.bytedeco.ffmpeg.global.avutil
 import org.bytedeco.javacv.FFmpegFrameGrabber
-import org.bytedeco.javacv.FrameGrabber
 import java.nio.ShortBuffer
 import java.util.concurrent.CopyOnWriteArraySet
 import java.util.concurrent.atomic.AtomicLong
@@ -327,21 +326,13 @@ class AudioEngine(private val listener: Listener) {
         }
 
         private fun run() {
-            var grabber: FFmpegFrameGrabber? = null
-            var input: GrowingFileInputStream? = null
+            var decoder: Decoder? = null
             try {
-                grabber = when (source) {
-                    is CachedAudio.Complete -> FFmpegFrameGrabber(source.file.absolutePath)
-                    is CachedAudio.Growing -> FFmpegFrameGrabber(GrowingFileInputStream(source.download).also { input = it })
-                }
-                grabber.sampleMode = FrameGrabber.SampleMode.SHORT
-                grabber.sampleFormat = avutil.AV_SAMPLE_FMT_S16
-                grabber.sampleRate = SampleRate
-                grabber.audioChannels = Channels
-                grabber.start()
+                val reader = Decoder(source, SampleRate, Channels).also { decoder = it }
+                reader.start()
                 if (closed) return
-                grabber.lengthInTime.takeIf { it > 0 }?.let { durationMs = it / 1000 }
-                if (baseMs > 0) grabber.timestamp = baseMs * 1000
+                reader.grabber.lengthInTime.takeIf { it > 0 }?.let { durationMs = it / 1000 }
+                if (baseMs > 0) reader.seek(baseMs * 1000)
 
                 val l = openLine()
                 l.open(Format, SampleRate * Channels * 2 * BufferMs / 1000)
@@ -360,7 +351,7 @@ class AudioEngine(private val listener: Listener) {
                     val seekTo = pendingSeekMs
                     if (seekTo >= 0) {
                         l.flush()
-                        grabber.timestamp = seekTo * 1000
+                        reader.seek(seekTo * 1000)
                         baseMs = seekTo
                         framesAtBase = l.longFramePosition
                         synchronized(marks) {
@@ -380,7 +371,7 @@ class AudioEngine(private val listener: Listener) {
                         synchronized(signal) { signal.wait(100) }
                         continue
                     }
-                    val frame = grabber.grabSamples()
+                    val frame = reader.grabSamples()
                     if (frame == null) {
                         // End of stream: let the buffer play out unless we were interrupted.
                         if (pendingSeekMs >= 0) continue
@@ -449,9 +440,7 @@ class AudioEngine(private val listener: Listener) {
                 return
             } finally {
                 runCatching { line?.close() }
-                runCatching { grabber?.stop() }
-                runCatching { grabber?.release() }
-                runCatching { input?.close() }
+                decoder?.close()
                 fading -= this
             }
             if (finished && !closed) listener.onEnded(token)
