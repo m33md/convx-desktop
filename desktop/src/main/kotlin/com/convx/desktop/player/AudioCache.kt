@@ -32,6 +32,12 @@ object AudioCache {
     private const val Tag = "AudioCache"
     private const val ChunkBytes = 1024L * 1024L
 
+    /** Room left free on the disk beside the song being saved, for Windows and the log. */
+    private const val SpareBytes = 64L * 1024L * 1024L
+
+    /** No song's audio comes near this; a download that passes it is going wrong. */
+    private const val MaxSongBytes = 2L * 1024L * 1024L * 1024L
+
     /** The phone's "Max song cache size": 1 GB unless changed, -1 for no cap. */
     private val maxBytes: Long
         get() = AppSettings.value.maxSongCacheMb.let { if (it < 0) Long.MAX_VALUE else it * 1024L * 1024L }
@@ -115,6 +121,49 @@ object AudioCache {
         active.remove(videoId)?.cancel()
     }
 
+    /** Cancels [videoId]'s download and drops any saved copy, so the next play fetches it afresh. */
+    fun discard(videoId: String) {
+        cancel(videoId)
+        dir.listFiles { f -> f.name.startsWith("$videoId.") && f.name.endsWith(".ok") }?.forEach { marker ->
+            runCatching {
+                marker.delete()
+                File(dir, marker.name.removeSuffix(".ok")).delete()
+            }
+        }
+    }
+
+    /** Free space on the cache's disk, or null when Windows won't say. */
+    fun freeBytes(): Long? = runCatching { java.nio.file.Files.getFileStore(dir.toPath()).usableSpace }.getOrNull()
+
+    /**
+     * Makes sure [bytes] more fit on the disk, giving up the songs played longest ago if that's
+     * what it takes. Throws [DiskFullException] when even an empty cache wouldn't make room.
+     */
+    private fun makeRoom(bytes: Long, keep: String) {
+        val needed = bytes + SpareBytes
+        val free = freeBytes() ?: return
+        if (free >= needed) return
+        var short = needed - free
+        val songs = dir.listFiles { f -> f.name.endsWith(".ok") }
+            ?.map { File(dir, it.name.removeSuffix(".ok")) }
+            ?.sortedBy { it.lastModified() }.orEmpty()
+        for (file in songs) {
+            if (short <= 0) break
+            val id = file.name.substringBefore('.')
+            if (id == keep || active.containsKey(id)) continue
+            val size = file.length()
+            // A song open in the player can't be deleted on Windows; it keeps its marker then.
+            if (file.delete()) {
+                File(dir, file.name + ".ok").delete()
+                short -= size
+            }
+        }
+        if (short > 0) {
+            Log.w(Tag, "Only ${free / 1_048_576} MB free on the disk; ${needed / 1_048_576} MB needed for $keep")
+            throw DiskFullException()
+        }
+    }
+
     /** Drops data files a previous run left unfinished. */
     fun cleanupPartials() {
         dir.listFiles()?.forEach { f ->
@@ -163,6 +212,9 @@ object AudioCache {
     class Download(stream: ResolvedStream) {
         val videoId = stream.videoId
         val url = stream.url
+
+        /** "webm" or "m4a": also the name FFmpeg knows the container by. */
+        val container = stream.container
         val file = File(dir, "${stream.videoId}.${stream.container}")
         private val marker = File(dir, "${stream.videoId}.${stream.container}.ok")
         private val lock = ReentrantLock()
@@ -195,12 +247,14 @@ object AudioCache {
         private fun run() {
             try {
                 marker.delete()
+                makeRoom(totalBytes.takeIf { it > 0 } ?: (8 * ChunkBytes), keep = videoId)
                 RandomAccessFile(file, "rw").use { out ->
                     out.setLength(0)
                     var position = 0L
                     while (!cancelled) {
                         val known = totalBytes > 0
                         if (known && position >= totalBytes) break
+                        if (position > MaxSongBytes) throw IOException("Stopped a download that went past ${MaxSongBytes / 1_048_576} MB")
                         val end = if (known) minOf(position + ChunkBytes, totalBytes) - 1 else position + ChunkBytes - 1
                         val request = Request.Builder().url(url)
                             .header("Range", "bytes=$position-$end")
@@ -239,10 +293,15 @@ object AudioCache {
                 active.remove(videoId, this)
                 trim(keep = videoId)
             } catch (e: Exception) {
-                Log.w(Tag, "Download of $videoId failed at $downloaded/$totalBytes", e)
+                val failure = when {
+                    e is DiskFullException -> e
+                    isDiskFull(e) -> DiskFullException(e)
+                    else -> e as? IOException ?: IOException(e)
+                }
+                Log.w(Tag, "Download of $videoId failed at $downloaded/$totalBytes (${freeBytes()?.let { "${it / 1_048_576} MB free" } ?: "free space unknown"})", e)
                 lock.withLock {
                     failed = true
-                    error = e as? IOException ?: IOException(e)
+                    error = failure
                     progress.signalAll()
                 }
                 active.remove(videoId, this)
@@ -253,10 +312,26 @@ object AudioCache {
             Http.client.newCall(request).execute().use { response ->
                 if (response.code == 416) return 0
                 if (!response.isSuccessful) throw HttpStatusException(response.code)
+                // A 200 is the whole file: the server ignored the range.
+                val whole = response.code == 200
                 if (totalBytes <= 0) {
-                    response.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull()?.let { totalBytes = it }
+                    val size = if (whole) response.body.contentLength()
+                    else response.header("Content-Range")?.substringAfterLast('/')?.toLongOrNull()
+                    size?.takeIf { it > 0 }?.let { totalBytes = it }
                 }
                 val body = response.body.byteStream()
+                if (whole && position > 0) {
+                    var left = position
+                    while (left > 0 && !cancelled) {
+                        val skipped = body.skip(left)
+                        if (skipped <= 0) {
+                            if (body.read() < 0) return 0
+                            left--
+                        } else {
+                            left -= skipped
+                        }
+                    }
+                }
                 val buffer = ByteArray(64 * 1024)
                 var written = 0L
                 out.seek(position)
@@ -293,6 +368,16 @@ object AudioCache {
     }
 
     class HttpStatusException(val code: Int) : IOException("HTTP $code")
+
+    /** The disk has no room for the song. */
+    class DiskFullException(cause: Throwable? = null) : IOException("Not enough free disk space", cause)
+
+    /** Whether [e] is Windows (or Linux) saying the disk is full. */
+    fun isDiskFull(e: Throwable): Boolean =
+        generateSequence(e) { it.cause }.any { cause ->
+            val text = cause.message.orEmpty().lowercase()
+            cause is DiskFullException || "not enough space" in text || "no space left" in text || "disk full" in text
+        }
 }
 
 /** The source the decoder reads: a finished file, or a download still in flight. */
@@ -310,6 +395,13 @@ class GrowingFileInputStream(private val download: AudioCache.Download) : InputS
     private var position = 0L
     private var file: RandomAccessFile? = null
 
+    /**
+     * Why the last read failed, or null after one that worked. FFmpeg is only told "-1" and then
+     * reports something unrelated, so the player asks here for the real reason.
+     */
+    @Volatile var failure: IOException? = null
+        private set
+
     private fun handle(): RandomAccessFile = file ?: RandomAccessFile(download.file, "r").also { file = it }
 
     override fun read(): Int {
@@ -319,15 +411,21 @@ class GrowingFileInputStream(private val download: AudioCache.Download) : InputS
 
     override fun read(b: ByteArray, off: Int, len: Int): Int {
         if (len == 0) return 0
-        val total = download.totalBytes
-        if (total > 0 && position >= total) return -1
-        val available = download.awaitAvailable(position)
-        if (available <= 0) return -1
-        val raf = handle()
-        raf.seek(position)
-        val n = raf.read(b, off, minOf(len.toLong(), available).toInt())
-        if (n > 0) position += n
-        return n
+        try {
+            val total = download.totalBytes
+            if (total > 0 && position >= total) return -1
+            val available = download.awaitAvailable(position)
+            if (available <= 0) return -1
+            val raf = handle()
+            raf.seek(position)
+            val n = raf.read(b, off, minOf(len.toLong(), available).toInt())
+            if (n > 0) position += n
+            failure = null
+            return n
+        } catch (e: IOException) {
+            failure = e
+            throw e
+        }
     }
 
     override fun skip(n: Long): Long {

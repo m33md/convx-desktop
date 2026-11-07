@@ -80,7 +80,11 @@ import java.awt.Window as AwtWindow
 
 @OptIn(FlowPreview::class)
 fun main() {
-    Log.i("Startup", "Convx ${AppInfo.VERSION} on ${System.getProperty("os.name")} ${System.getProperty("os.arch")}, Java ${System.getProperty("java.version")}")
+    Log.i(
+        "Startup",
+        "Convx ${AppInfo.VERSION} on ${System.getProperty("os.name")} ${System.getProperty("os.arch")}, " +
+            "Java ${System.getProperty("java.version")}, ${AudioCache.freeBytes()?.let { "${it / 1_073_741_824} GB" } ?: "unknown space"} free",
+    )
     Thread.setDefaultUncaughtExceptionHandler { thread, error -> Log.crash(thread, error) }
     // A second Convx would write its own copy of the library over this one's; bring this one up instead.
     if (!com.convx.desktop.core.SingleInstance.claim()) {
