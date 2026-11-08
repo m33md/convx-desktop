@@ -79,6 +79,8 @@ data class LocalPlaylist(
     val cover: String? = null,
     /** Raised by "New cover design", so the drawn CD cover comes out differently. */
     val coverSeed: Int = 0,
+    /** The Disc Studio design its [cover] was drawn from (DiscDesigns), so saving the design redraws it. */
+    val design: String? = null,
 )
 
 @Serializable

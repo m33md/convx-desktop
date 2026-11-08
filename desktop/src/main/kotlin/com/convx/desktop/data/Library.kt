@@ -121,8 +121,19 @@ object Library {
 
     /** Sets the playlist's picture, or takes it off with null; a picture file nothing uses any more is deleted. */
     fun setPlaylistCover(id: String, cover: String?) {
-        updatePlaylist(id) { it.copy(cover = cover) }
+        updatePlaylist(id) { it.copy(cover = cover, design = null) }
         PlaylistCovers.prune(value.localPlaylists)
+    }
+
+    /** Puts a Disc Studio design's picture on the playlist, remembering the design so it can be redrawn. */
+    fun setPlaylistDesign(id: String, cover: String, design: String) {
+        updatePlaylist(id) { it.copy(cover = cover, design = design) }
+        PlaylistCovers.prune(value.localPlaylists)
+    }
+
+    /** A deleted design's playlists keep its picture, no longer tied to it. */
+    fun forgetDesign(design: String) = store.update { data ->
+        data.copy(localPlaylists = data.localPlaylists.map { if (it.design == design) it.copy(design = null) else it })
     }
 
     fun renamePlaylist(id: String, name: String) = updatePlaylist(id) { it.copy(name = name) }

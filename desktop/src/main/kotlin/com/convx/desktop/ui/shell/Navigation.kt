@@ -16,6 +16,8 @@ import androidx.compose.runtime.staticCompositionLocalOf
 /** Every place the content area can show. */
 sealed interface Screen {
     data object Home : Screen
+    /** Disc Studio: the CD and vinyl designs you make for your playlists. */
+    data object DiscStudio : Screen
     data object Search : Screen
     data class SearchResults(val query: String) : Screen
     data object Explore : Screen

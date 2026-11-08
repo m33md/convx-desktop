@@ -228,7 +228,7 @@ object CoverArt {
     // ---- The case ----------------------------------------------------------------------------
 
     /** A clear jewel case seen from the front, with its hinge on the left and the disc in its tray. */
-    private class Case(val s: Float) {
+    internal class Case(val s: Float) {
         val left = s * 0.035f
         val top = s * 0.035f
         val right = s * 0.965f
@@ -251,7 +251,31 @@ object CoverArt {
 
         fun fill(color: Int) = Paint().apply { isAntiAlias = true; this.color = color }
 
-        fun draw(canvas: Canvas, print: (cx: Float, cy: Float, r: Float) -> Unit) {
+        fun draw(canvas: Canvas, print: (cx: Float, cy: Float, r: Float) -> Unit) = frame(canvas) {
+            // The disc, its shadow first.
+            canvas.drawCircle(cx, cy + s * 0.008f, r, Paint().apply {
+                isAntiAlias = true
+                color = withAlpha(Color.BLACK, 0.7f)
+                maskFilter = MaskFilter.makeBlur(FilterBlurMode.NORMAL, s * 0.014f, true)
+            })
+            canvas.save()
+            canvas.clipPath(Path().addCircle(cx, cy, r), ClipMode.INTERSECT, true)
+            canvas.drawCircle(cx, cy, r, fill(Color.makeRGB(200, 200, 205)))
+            print(cx, cy, r)
+            sheen(canvas)
+            canvas.restore()
+            hub(canvas)
+            canvas.drawCircle(cx, cy, r, line(0.45f, s * 0.003f))
+            canvas.drawCircle(cx, cy, r * 0.988f, Paint().apply {
+                isAntiAlias = true
+                mode = PaintMode.STROKE
+                strokeWidth = s * 0.004f
+                color = withAlpha(Color.BLACK, 0.25f)
+            })
+        }
+
+        /** The case and its tray, with [disc] drawing the disc in the tray (at [cx], [cy], radius [r]) before the hinge and the front go on. */
+        fun frame(canvas: Canvas, disc: () -> Unit) {
             canvas.clear(Color.makeRGB(7, 7, 8))
             val outer = RRect.makeLTRB(left, top, right, bottom, s * 0.016f)
             // The plastic: a faint fill and a soft shadow under the case.
@@ -285,26 +309,7 @@ object CoverArt {
             }
             canvas.drawArc(trayLeft - s * 0.045f, cy - s * 0.06f, trayLeft + s * 0.045f, cy + s * 0.06f, -90f, 180f, false, line(0.3f))
 
-            // The disc, its shadow first.
-            canvas.drawCircle(cx, cy + s * 0.008f, r, Paint().apply {
-                isAntiAlias = true
-                color = withAlpha(Color.BLACK, 0.7f)
-                maskFilter = MaskFilter.makeBlur(FilterBlurMode.NORMAL, s * 0.014f, true)
-            })
-            canvas.save()
-            canvas.clipPath(Path().addCircle(cx, cy, r), ClipMode.INTERSECT, true)
-            canvas.drawCircle(cx, cy, r, fill(Color.makeRGB(200, 200, 205)))
-            print(cx, cy, r)
-            sheen(canvas)
-            canvas.restore()
-            hub(canvas)
-            canvas.drawCircle(cx, cy, r, line(0.45f, s * 0.003f))
-            canvas.drawCircle(cx, cy, r * 0.988f, Paint().apply {
-                isAntiAlias = true
-                mode = PaintMode.STROKE
-                strokeWidth = s * 0.004f
-                color = withAlpha(Color.BLACK, 0.25f)
-            })
+            disc()
 
             // The hinge down the left side, with its two knuckles.
             canvas.drawRect(Rect.makeLTRB(left, top, hinge, bottom), fill(withAlpha(Color.WHITE, 0.06f)))
@@ -348,8 +353,13 @@ object CoverArt {
 
         /** The clear middle of the disc and the case's hub through it. */
         fun hub(canvas: Canvas) {
+            clearRing(canvas)
+            spindle(canvas)
+        }
+
+        /** Where the print stops: clear plastic, frosted, with the tray showing through. */
+        fun clearRing(canvas: Canvas) {
             val clear = r * 0.36f
-            // Where the print stops: clear plastic, frosted, with the tray showing through.
             canvas.drawCircle(cx, cy, clear, fill(Color.makeRGB(26, 26, 29)))
             canvas.drawCircle(cx, cy, clear, Paint().apply {
                 isAntiAlias = true
@@ -364,7 +374,10 @@ object CoverArt {
             canvas.drawCircle(cx, cy, clear, line(0.55f, s * 0.003f))
             canvas.drawCircle(cx, cy, r * 0.315f, line(0.14f, s * 0.006f))
             canvas.drawCircle(cx, cy, r * 0.255f, line(0.34f, s * 0.004f))
-            // The hole, and the case's hub through it: a ring of teeth and the button in the middle.
+        }
+
+        /** The hole in the disc and the case's hub through it: a ring of teeth and the button in the middle. */
+        fun spindle(canvas: Canvas) {
             canvas.drawCircle(cx, cy, r * 0.2f, fill(Color.makeRGB(14, 14, 16)))
             canvas.drawCircle(cx, cy, r * 0.2f, line(0.4f))
             canvas.drawCircle(cx, cy, r * 0.185f, fill(withAlpha(Color.WHITE, 0.13f)))

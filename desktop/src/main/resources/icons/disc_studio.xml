@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- A compact disc with a printed label and two shines, for Disc Studio. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M2,12A10,10 0 1,0 22,12A10,10 0 1,0 2,12ZM7.7,12A4.3,4.3 0 1,0 16.3,12A4.3,4.3 0 1,0 7.7,12ZM8.8,12A3.2,3.2 0 1,0 15.2,12A3.2,3.2 0 1,0 8.8,12ZM10.75,12A1.25,1.25 0 1,0 13.25,12A1.25,1.25 0 1,0 10.75,12ZM4.949,10.111A7.3,7.3 0 0,1 8.915,5.384L9.507,6.653A5.9,5.9 0 0,0 6.301,10.473ZM19.051,13.889A7.3,7.3 0 0,1 15.085,18.616L14.493,17.347A5.9,5.9 0 0,0 17.699,13.527Z" />
+</vector>

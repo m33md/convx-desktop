@@ -653,6 +653,10 @@ fun LocalPlaylistScreen(id: String) {
                         dismiss()
                         com.convx.desktop.ui.components.choosePlaylistCover(id)
                     }
+                    MenuItem(if (playlist.design != null) "Edit disc design" else "Design disc", "disc_studio") {
+                        dismiss()
+                        com.convx.desktop.ui.studio.DiscEditor.openFor(id)
+                    }
                     if (playlist.cover != null) {
                         MenuItem("Remove picture", "hide_image") {
                             dismiss()

@@ -42,6 +42,7 @@ enum class LibraryTab(val label: String, val title: String) {
 /** The places the side bar leads to, the phone's tabs; each can be hidden in Controls & layout. */
 enum class Section(val label: String, val icon: String, val root: Screen) {
     Home("Home", "sf_house_fill", Screen.Home),
+    Studio("Disc Studio", "disc_studio", Screen.DiscStudio),
     Explore("Explore", "sf_square_grid_fill", Screen.Explore),
     Radio("Radio", "sf_dot_radiowaves", Screen.Radio),
     Library("Library", "sf_music_note_square_stack", Screen.Library),
@@ -50,6 +51,7 @@ enum class Section(val label: String, val icon: String, val root: Screen) {
 /** Which section a screen is one of the pages of; detail pages belong to none. */
 fun Screen.section(): Section? = when (this) {
     Screen.Home -> Section.Home
+    Screen.DiscStudio -> Section.Studio
     Screen.Explore -> Section.Explore
     Screen.Radio -> Section.Radio
     Screen.Library, Screen.Liked, Screen.LocalFiles, Screen.Downloads, Screen.History, Screen.Stats, Screen.MyTop, Screen.Cached, Screen.Uploaded -> Section.Library
