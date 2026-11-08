@@ -44,7 +44,8 @@ fun YouTubeAccountSettings() {
     val settings by AppSettings.state.collectAsState()
     val sync by YouTubeSync.status.collectAsState()
     val signedIn = state as? YouTubeAccount.State.SignedIn
-    val hasBrowser = remember { BrowserSignIn.findBrowser() != null }
+    val browsers = remember { BrowserSignIn.browsers() }
+    val browser = remember(browsers, settings.signInBrowser) { BrowserSignIn.chosen(browsers) }
     LaunchedEffect(Unit) { YouTubeAccount.refresh() }
 
     AccountHeader(
@@ -52,10 +53,10 @@ fun YouTubeAccountSettings() {
         title = signedIn?.profile?.name ?: "YouTube Music",
         status = when (val s = state) {
             YouTubeAccount.State.SignedOut ->
-                if (!hasBrowser) "Not logged in. Install Chrome or Edge to log in, or use a token from the phone."
-                else "Not logged in. You sign in on Google's own page; Convx never sees your password."
+                if (browser == null) "Not logged in. Install a browser such as Chrome, Edge, Firefox or Opera to log in, or use a token below."
+                else "Not logged in. You sign in on Google's own page in ${browser.name}; Convx never sees your password."
             YouTubeAccount.State.WaitingForBrowser ->
-                "Log in to Google in the window that opened. When YouTube Music shows your account, close that window (or press Done) and Convx finishes logging in."
+                "Log in to Google in the ${browser?.name ?: "browser"} window that opened. When YouTube Music shows your account, close that window (or press Done) and Convx finishes logging in."
             YouTubeAccount.State.Checking -> "Checking your account with YouTube Music…"
             is YouTubeAccount.State.ChoosingChannel -> "Choose which channel Convx uses."
             is YouTubeAccount.State.SignedIn -> listOfNotNull(s.profile.email, s.profile.handle).joinToString(" · ").ifEmpty { "Logged in" }
@@ -140,19 +141,30 @@ fun YouTubeAccountSettings() {
     }
 
     SectionGap()
-    SettingsSection("Login with token") {
+    SettingsSection("Logging in") {
+        if (browsers.size > 1 && browser != null) {
+            ChoiceRow(
+                "Browser",
+                "Where Google's login page opens",
+                options = browsers.map { it.path to if (it.isDefault) "${it.name} (default)" else it.name },
+                selected = browser.path,
+            ) { path -> AppSettings.update { it.copy(signInBrowser = path) } }
+            RowDivider(PlainInset)
+        }
         SettingsRow(
             if (signedIn != null) "Show token" else "Login with token",
-            if (signedIn != null) "Copy it to log in on another device" else "Paste the token from the phone: Settings, Account, Login with token",
+            if (signedIn != null) "Copy it to log in on another device"
+            else "Paste the token from the phone (Settings, Account, Login with token), or a browser's cookie for music.youtube.com",
             onClick = { tokenDialog() },
         ) { ConvxIcon("chevron_right_px", tint = ConvxColors.TertiaryLabel, size = 14.dp) }
     }
     Spacer(Modifier.height(12.dp))
     InfoNote(
-        "Logging in opens Chrome, Edge or Brave with a new, empty profile that belongs to Convx, because Google " +
-            "doesn't allow sign-ins inside apps' own browsers. Convx reads only music.youtube.com's cookies from it, then " +
-            "closes the window and deletes that profile. Your login is kept on this PC, encrypted for your Windows account. " +
-            "Songs you liked in Convx before logging in stay in Convx and aren't sent to YouTube Music.",
+        "Logging in opens your browser with a new, empty profile that belongs to Convx, because Google doesn't allow " +
+            "sign-ins inside apps' own browsers. Chrome, Edge, Brave, Opera, Opera GX, Vivaldi, Firefox and browsers built " +
+            "on them work. Convx reads only music.youtube.com's cookies from that profile, then closes the window and " +
+            "deletes it. Your login is kept on this PC, encrypted for your Windows account. Songs you liked in Convx before " +
+            "logging in stay in Convx and aren't sent to YouTube Music.",
     )
 }
 
@@ -206,7 +218,9 @@ private fun tokenDialog() {
             Spacer(Modifier.height(10.dp))
             Text(
                 "This is an ADVANCED login method. As an alternative to the web portal, you may directly enter or update " +
-                    "your login token here. Anyone with this token can use your YouTube account, so keep it private.",
+                    "your login token here. A browser's Cookie header for music.youtube.com works too: open YouTube Music " +
+                    "signed in, open the developer tools (F12), Network, click any request to music.youtube.com and copy " +
+                    "its \"cookie\" request header. Anyone with this token can use your YouTube account, so keep it private.",
                 style = ConvxType.Subhead,
                 color = ConvxColors.SecondaryLabel,
             )

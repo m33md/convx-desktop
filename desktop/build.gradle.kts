@@ -116,7 +116,18 @@ sourceSets["main"].resources.srcDir(buildInfo)
 compose.desktop {
     application {
         mainClass = "com.convx.desktop.MainKt"
-        jvmArgs += listOf("-Xmx1g", "-Dfile.encoding=UTF-8")
+        jvmArgs += listOf(
+            "-Xmx1g",
+            "-Dfile.encoding=UTF-8",
+            // A small floor, and G1 tidies up after a minute without a collection and hands what it
+            // doesn't need back to Windows: a music player mostly sits there, and the heap it grew
+            // while pages loaded would otherwise stay counted against it.
+            "-Xms64m",
+            "-XX:G1PeriodicGCInterval=60000",
+            "-XX:MinHeapFreeRatio=10",
+            "-XX:MaxHeapFreeRatio=30",
+            "-XX:+UseStringDeduplication",
+        )
         // The installer bundles this Java. CI points it at the JetBrains Runtime, whose custom
         // title bar the app uses; without it the app keeps the Windows title bar.
         System.getenv("CONVX_JBR")?.takeIf { it.isNotBlank() }?.let { javaHome = it }

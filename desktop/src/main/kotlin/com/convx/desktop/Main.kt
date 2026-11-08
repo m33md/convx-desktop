@@ -19,6 +19,7 @@ import androidx.compose.ui.input.key.isCtrlPressed
 import androidx.compose.ui.input.key.isShiftPressed
 import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Window
@@ -182,9 +183,14 @@ fun main() {
                     delay(100)
                     WindowTitleBar.updateInsets()
                 }
+                com.convx.desktop.core.Perf.watch(window)
                 // Media keys, the Windows media box and the taskbar preview's buttons, once the frame is settled.
                 withContext(Dispatchers.IO) { com.convx.desktop.integrations.MediaControls.install(window) }
             }
+            // Views that move on their own stop while minimised and slow down behind other apps (see Motion.kt).
+            val focused = LocalWindowInfo.current.isWindowFocused
+            LaunchedEffect(focused) { UiState.windowFocused = focused }
+            LaunchedEffect(windowState) { snapshotFlow { windowState.isMinimized }.collect { UiState.windowShown = !it } }
             // Ambient mode and F11 fill the screen (ambient also keeps it on, as on the phone), then put the window back.
             val beforeFullscreen = remember { arrayOfNulls<WindowPlacement>(1) }
             val wantFullscreen = Ambient.on || UiState.windowFullscreen

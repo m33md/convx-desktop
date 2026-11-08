@@ -5,11 +5,7 @@
 
 package com.convx.desktop.ui.player
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -29,7 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameMillis
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -57,32 +53,43 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import com.convx.desktop.ui.components.awaitPacedFrameMillis
+import com.convx.desktop.ui.components.rememberLoopingPhase
+import com.convx.desktop.ui.shell.UiState
 import kotlin.math.PI
 import kotlin.math.floor
 import kotlin.math.sin
 import kotlin.random.Random
 
 /**
- * Playback position at frame rate. The controller reports every 100 ms; between
- * reports this runs the clock forward so the lyric sweep and the bar glide instead
- * of stepping.
+ * The playback position for a view to draw. The controller reports every 100 ms while playing;
+ * with [stepMs] 0 this runs the clock forward between reports at frame rate, so the lyric sweep
+ * and the big bar glide. With a step it changes only when the position crosses a multiple of it
+ * (the small bar's pixel, the clock's second), so the window draws a few times a second instead
+ * of every frame. Neither moves while paused or minimised.
  */
 @Composable
-fun rememberSmoothPosition(): State<Long> {
-    val smooth = remember { mutableLongStateOf(PlayerController.position.value) }
+fun rememberSmoothPosition(stepMs: Long = 0): State<Long> {
+    fun snap(ms: Long, step: Long) = if (step > 0) ms - ms % step else ms
+    val smooth = remember { mutableLongStateOf(snap(PlayerController.position.value, stepMs)) }
+    val step by rememberUpdatedState(stepMs)
     LaunchedEffect(Unit) {
         val playing = PlayerController.state.map { it.isPlaying && !it.isLoading }.distinctUntilChanged()
-        combine(PlayerController.position, playing) { base, isPlaying -> base to isPlaying }
-            .collectLatest { (base, isPlaying) ->
-                smooth.longValue = base
-                if (!isPlaying) return@collectLatest
-                val start = withFrameMillis { it }
+        val shown = snapshotFlow { UiState.windowShown }
+        combine(PlayerController.position, playing, shown) { base, isPlaying, isShown -> Triple(base, isPlaying, isShown) }
+            .collectLatest { (base, isPlaying, isShown) ->
+                if (!isShown) return@collectLatest
+                val s = step
+                val at = snap(base, s)
+                if (smooth.longValue != at) smooth.longValue = at
+                // A step is coarser than the controller's reports already; only the frame clock runs ahead.
+                if (!isPlaying || s > 0) return@collectLatest
+                val start = awaitPacedFrameMillis()
                 val tempo = PlayerController.state.value.tempo
                 while (true) {
-                    withFrameMillis { now ->
-                        // Never run more than a little ahead of the last report.
-                        smooth.longValue = base + ((now - start) * tempo).toLong().coerceAtMost(250)
-                    }
+                    val now = awaitPacedFrameMillis()
+                    // Never run more than a little ahead of the last report.
+                    smooth.longValue = base + ((now - start) * tempo).toLong().coerceAtMost(250)
                 }
             }
     }
@@ -119,8 +126,8 @@ fun SeekBar(
     val currentOnSeek by rememberUpdatedState(onSeek)
 
     val amplitude by animateFloatAsState(if (wavy && playing && dragFraction == null) 1f else 0f, tween(400))
-    val transition = rememberInfiniteTransition()
-    val phase by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(1300, easing = LinearEasing)))
+    // The squiggle travels only while it shows; a flat bar asks for no frames.
+    val phase by rememberLoopingPhase(1300, running = amplitude > 0f)
 
     val engaged = hovered || dragFraction != null
 

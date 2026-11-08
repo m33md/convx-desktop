@@ -24,7 +24,6 @@ import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isPrimaryPressed
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -188,13 +187,18 @@ fun rememberInteractiveHighlight(radiusScale: Float = 1.5f): InteractiveHighligh
 
 /**
  * The phone's elastic stretch (GlassCircleButton.kt, elasticStretchLayerBlock), shared by every
- * small floating glass control: pressing swells it by 4dp, dragging pulls it after the pointer
- * on a tanh leash and stretches it along the drag. Bar pills pass [magnitude] 2 so the same feel
- * travels far enough to read at their size. Draw-only, so the hit target never moves.
+ * floating glass control: pressing swells it by 4dp, dragging pulls it after the pointer on a
+ * tanh leash and stretches it along the drag. Bar pills pass [magnitude] 2 so the same feel
+ * travels far enough to read at their size.
  *
  * Hovering, which the phone has no finger for, plays the same motion at half: the glass swells
  * 2dp and leans up to 1.5dp toward the pointer, stretching a touch that way. A press takes over
  * from it smoothly, since both feed the same scale.
+ *
+ * The swell is the same few dp on every side whatever the shape, so a long bar grows by what a
+ * button does, not by its width. Only compact shapes lean and follow a drag: a bar holds still,
+ * so the control under the pointer (a slider being dragged, a button about to be clicked) stays
+ * where it is.
  */
 fun elasticStretch(highlight: InteractiveHighlight, magnitude: Float = 1f): GraphicsLayerScope.() -> Unit = {
     val width = size.width
@@ -205,28 +209,39 @@ fun elasticStretch(highlight: InteractiveHighlight, magnitude: Float = 1f): Grap
         val held = progress.coerceIn(0f, 1f)
         // The hover's share fades as the press comes in, so the two never add past a full press.
         val swell = progress + HoverSwell * hover * (1f - held)
-        val scale = lerp(1f, 1f + magnitude * 4.dp.toPx() / height, swell)
+        val grow = magnitude * 4.dp.toPx() * swell
+        var sx = 1f + grow / width
+        var sy = 1f + grow / height
+        var tx = 0f
+        var ty = 0f
 
-        val maxOffset = size.minDimension
-        val initialDerivative = 0.05f
-        val offset = highlight.offset
-        val lean = highlight.hoverLean * (hover.coerceAtLeast(0f) * (1f - held))
-        val leanPx = magnitude * HoverLean.toPx()
-        translationX = magnitude * maxOffset * tanh(initialDerivative * offset.x / maxOffset) + leanPx * lean.x
-        translationY = magnitude * maxOffset * tanh(initialDerivative * offset.y / maxOffset) + leanPx * lean.y
+        if (width <= height * CompactAspect && height <= width * CompactAspect) {
+            val maxOffset = size.minDimension
+            val initialDerivative = 0.05f
+            val offset = highlight.offset
+            val lean = highlight.hoverLean * (hover.coerceAtLeast(0f) * (1f - held))
+            val leanPx = magnitude * HoverLean.toPx()
+            tx = magnitude * maxOffset * tanh(initialDerivative * offset.x / maxOffset) + leanPx * lean.x
+            ty = magnitude * maxOffset * tanh(initialDerivative * offset.y / maxOffset) + leanPx * lean.y
 
-        val maxDragScale = magnitude * 4.dp.toPx() / height
-        val offsetAngle = atan2(offset.y, offset.x)
-        val leanScale = maxDragScale * HoverSwell
-        scaleX = scale +
-            maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).coerceAtMost(1f) +
-            leanScale * abs(lean.x) * (width / height).coerceAtMost(1f)
-        scaleY = scale +
-            maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).coerceAtMost(1f) +
-            leanScale * abs(lean.y) * (height / width).coerceAtMost(1f)
+            val maxDragScale = magnitude * 4.dp.toPx() / height
+            val offsetAngle = atan2(offset.y, offset.x)
+            val leanScale = maxDragScale * HoverSwell
+            sx += maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) * (width / height).coerceAtMost(1f) +
+                leanScale * abs(lean.x) * (width / height).coerceAtMost(1f)
+            sy += maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) * (height / width).coerceAtMost(1f) +
+                leanScale * abs(lean.y) * (height / width).coerceAtMost(1f)
+        }
+        translationX = tx
+        translationY = ty
+        scaleX = sx
+        scaleY = sy
     }
 }
 
 /** How much of a press's swell a hover plays, and how far the glass leans toward the pointer. */
 private const val HoverSwell = 0.5f
 private val HoverLean = 1.5.dp
+
+/** Wider (or taller) than this many times the other side, glass is a bar: it swells but never leans. */
+private const val CompactAspect = 3f

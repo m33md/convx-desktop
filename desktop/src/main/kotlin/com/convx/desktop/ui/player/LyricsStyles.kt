@@ -72,6 +72,8 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.convx.desktop.ui.components.LocalPlayback
+import com.convx.desktop.ui.components.rememberLoopingPhase
 import com.convx.desktop.data.LyricsPosition
 import com.convx.desktop.data.LyricsStyle
 import com.convx.desktop.data.Settings
@@ -496,19 +498,14 @@ private fun WordSpanLine(line: LyricLine, live: LongState, active: Boolean, past
 @Composable
 private fun GlowingLine(line: LyricLine, look: LineLook, align: TextAlign) {
     val fill = remember { Animatable(0f) }
-    val pulse = remember { Animatable(0f) }
+    // It breathes every three seconds while the song plays, and holds its breath while paused.
+    val pulse by rememberLoopingPhase(3000, running = LocalPlayback.current.isPlaying)
     LaunchedEffect(line) {
         fill.snapTo(0f)
         fill.animateTo(1f, tween(1200, easing = FastOutSlowInEasing))
     }
-    LaunchedEffect(Unit) {
-        while (true) {
-            pulse.animateTo(1f, tween(3000, easing = LinearEasing))
-            pulse.snapTo(0f)
-        }
-    }
     val f = fill.value
-    val pulseEffect = (sin(pulse.value * PI.toFloat()) * 0.15f).coerceIn(0f, 0.15f)
+    val pulseEffect = (sin(pulse * PI.toFloat()) * 0.15f).coerceIn(0f, 0.15f)
     val glow = (f + pulseEffect).coerceIn(0f, 1.2f)
     val text = buildAnnotatedString {
         withStyle(

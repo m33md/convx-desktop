@@ -6,12 +6,6 @@
 package com.convx.desktop.ui.components
 
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
@@ -44,6 +38,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -82,29 +78,44 @@ import com.music.innertube.models.ArtistItem
 import com.music.innertube.models.PlaylistItem
 import com.music.innertube.models.SongItem
 import com.music.innertube.models.YTItem
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Page edge inset inside the content panel. */
 val Gutter = 24.dp
 
-/** Three bouncing bars: the "now playing" mark on the current row. */
+/**
+ * Three bouncing bars: the "now playing" mark on the current row. They move only while music
+ * plays and twenty times a second, which reads the same for bars this small and keeps a list
+ * from redrawing the window on every frame.
+ */
 @Composable
 fun EqualizerBars(color: Color, playing: Boolean, modifier: Modifier = Modifier, height: Dp = 14.dp) {
-    val transition = rememberInfiniteTransition()
-    val phases = listOf(0, 180, 360).map { offset ->
-        transition.animateFloat(
-            initialValue = 0.25f,
-            targetValue = 1f,
-            animationSpec = infiniteRepeatable(tween(420 + offset, easing = LinearEasing), RepeatMode.Reverse),
-        )
+    val clock = remember { mutableLongStateOf(0L) }
+    val moving = playing && com.convx.desktop.ui.shell.UiState.windowShown
+    LaunchedEffect(moving) {
+        if (!moving) return@LaunchedEffect
+        val start = System.nanoTime() / 1_000_000 - clock.longValue
+        while (true) {
+            clock.longValue = System.nanoTime() / 1_000_000 - start
+            delay(1000L / EqualizerFps)
+        }
     }
     Row(modifier.height(height), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.Bottom) {
-        phases.forEachIndexed { index, phase ->
-            val fraction = if (playing) phase.value else listOf(0.45f, 0.8f, 0.6f)[index]
+        for (index in 0..2) {
+            val fraction = if (playing) {
+                // Up and down over 420, 600 and 780 ms, as three reversing tweens.
+                val leg = 420 + index * 180
+                0.25f + 0.75f * pingPong((clock.longValue % (2L * leg)) / (2f * leg))
+            } else {
+                listOf(0.45f, 0.8f, 0.6f)[index]
+            }
             Box(Modifier.width(3.dp).height(height * fraction).clip(RoundedCornerShape(1.dp)).background(color))
         }
     }
 }
+
+private const val EqualizerFps = 20
 
 /** Header over a [SongRow] table: # · Title · Album · duration. */
 @Composable
