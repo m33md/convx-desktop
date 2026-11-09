@@ -6,13 +6,20 @@
 package com.convx.desktop.ui.glass
 
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.State
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithCache
@@ -31,6 +38,8 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
+import kotlinx.coroutines.flow.collectLatest
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.drawBackdrop
@@ -43,6 +52,7 @@ import com.kyant.backdrop.shadow.Shadow
 import kotlin.math.PI
 import kotlin.math.abs
 import kotlin.math.cos
+import kotlin.math.exp
 import kotlin.math.sin
 
 /*
@@ -167,6 +177,68 @@ val LocalMenuBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 /** The pages under the full player, for its Glass background only; null everywhere else. */
 val LocalPagesBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 
+/**
+ * Fast scrolling. While the pages fly past, glass over them can't be seen refracting anything, so
+ * every surface over the pages turns to its plain tint and the pages stop being drawn again under
+ * each one. Slow scrolling keeps the glass; it comes back as soon as the scroll slows.
+ */
+object GlassMotion {
+    /** True while the pages scroll faster than glass is worth drawing. */
+    var fast by mutableStateOf(false)
+        private set
+
+    /** Wheel notches a second (a touchpad's small steps add up the same way), fading as time passes. */
+    private var rate = 0f
+    private var lastNanos = 0L
+
+    /** Notches a second above which the glass turns flat, and below which it comes back. */
+    private const val FastRate = 14f
+    private const val SlowRate = 6f
+    private const val WindowSeconds = 0.25f
+
+    /** A wheel or touchpad step of [notches] over the pages. */
+    fun onScroll(notches: Float) {
+        val now = System.nanoTime()
+        rate = rateAt(now) + notches / WindowSeconds
+        lastNanos = now
+        if (!fast && rate > FastRate) fast = true
+    }
+
+    /** Waits for the scroll to slow, then brings the glass back. */
+    suspend fun settle() {
+        while (fast) {
+            kotlinx.coroutines.delay(60)
+            val now = System.nanoTime()
+            // The wheel's smooth scroll runs on for a moment after its last step.
+            if (rateAt(now) < SlowRate && now - lastNanos > 200_000_000L) fast = false
+        }
+    }
+
+    private fun rateAt(now: Long): Float {
+        if (lastNanos == 0L) return 0f
+        val seconds = (now - lastNanos) / 1e9f
+        return rate * exp(-seconds / WindowSeconds)
+    }
+}
+
+/** How far a glass surface has turned into its plain tint for [GlassMotion.fast]: 0 glass, 1 flat. */
+@Composable
+private fun rememberFlatness(): State<Float> {
+    val flat = remember { Animatable(if (GlassMotion.fast) 1f else 0f) }
+    LaunchedEffect(Unit) {
+        snapshotFlow { GlassMotion.fast }.collectLatest { fast ->
+            flat.animateTo(if (fast) 1f else 0f, tween(if (fast) FlatInMillis else FlatOutMillis))
+        }
+    }
+    return flat.asState()
+}
+
+private const val FlatInMillis = 140
+private const val FlatOutMillis = 260
+
+/** The tint's opacity once flat: dense enough that the sharp pages under it read as a dark panel. */
+private const val FlatTintAlpha = 0.9f
+
 /** The phone's menu material: its glass with a charcoal tint at 82% and a softer blur. */
 val MenuGlass = GlassConfig.Default.copy(surfaceTint = Color(0xFF1C1C1E), surfaceOpacity = 0.82f, blurRadius = 8f)
 
@@ -236,10 +308,14 @@ fun Modifier.liquidGlass(
     val lensHeightPx = with(density) { (config.lensHeight * LensMaxDp).dp.toPx() }
     val lensAmountPx = with(density) { (config.lensAmount * LensMaxDp).dp.toPx() }
 
+    val flatness = rememberFlatness()
+    val flat = remember { derivedStateOf { flatness.value >= 1f } }
     val effects: BackdropEffectScope.() -> Unit = remember(
         saturation, blurPx, lensHeightPx, lensAmountPx, applyEdgeEffects, config.depthEffect, config.chromaticAberration,
     ) {
-        {
+        glass@{
+            // Flat, nothing is refracted, so there is nothing to blur or bend.
+            if (flat.value) return@glass
             if (saturation != 1f) colorControls(saturation = saturation)
             if (blurPx > 0f) blur(blurPx)
             if (applyEdgeEffects && (lensHeightPx > 0f || lensAmountPx > 0f)) {
@@ -279,9 +355,13 @@ fun Modifier.liquidGlass(
     val surface: DrawScope.() -> Unit = remember {
         {
             if (base.alpha > 0f) drawRect(base)
-            if (tint.alpha > 0f) drawRect(tint)
+            val f = flatness.value
+            val shown = if (f > 0f) tint.copy(alpha = lerp(tint.alpha, maxOf(tint.alpha, FlatTintAlpha), f)) else tint
+            if (shown.alpha > 0f) drawRect(shown)
         }
     }
+    // The pages are drawn under the glass only while it isn't fully flat.
+    val onDrawBackdrop: DrawScope.(DrawScope.() -> Unit) -> Unit = remember { { draw -> if (flatness.value < 1f) draw() } }
     val shapeBlock: () -> Shape = remember(shape) { { shape } }
     val darkRimAlpha = (DarkRimAlpha * (config.highlightOpacity / EdgeHighlightAlpha)).coerceIn(0f, 1f)
 
@@ -292,6 +372,7 @@ fun Modifier.liquidGlass(
             effects = effects,
             highlight = highlight,
             shadow = shadow,
+            onDrawBackdrop = onDrawBackdrop,
             onDrawSurface = surface,
         )
         .then(
@@ -320,8 +401,11 @@ fun Modifier.glassPuck(
     val blurPx = with(density) { blurRadius.toPx() }
     val heightPx = with(density) { 32.dp.toPx() }
     val amountPx = with(density) { 28.dp.toPx() }
+    val flatness = rememberFlatness()
+    val flat = remember { derivedStateOf { flatness.value >= 1f } }
     val effects: BackdropEffectScope.() -> Unit = remember(blurPx, heightPx, amountPx) {
-        {
+        glass@{
+            if (flat.value) return@glass
             blur(blurPx)
             lens(heightPx, amountPx, chromaticAberration = true)
         }
@@ -333,6 +417,7 @@ fun Modifier.glassPuck(
         effects = effects,
         highlight = { null },
         shadow = { Shadow(alpha = shadowAlpha) },
+        onDrawBackdrop = { draw -> if (flatness.value < 1f) draw() },
         onDrawSurface = { drawRect(wash) },
     )
 }

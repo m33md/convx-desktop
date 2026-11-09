@@ -80,6 +80,11 @@ import com.convx.desktop.ui.theme.ConvxTheme
 import com.convx.desktop.ui.theme.ConvxType
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.pointerInput
+import com.convx.desktop.ui.glass.GlassMotion
+import kotlin.math.abs
 
 /** Below this window width the side bar folds to its rail of icons on its own. */
 private val AutoCollapseWidth = 1100.dp
@@ -133,6 +138,8 @@ fun AppShell(navigator: Navigator) {
     }
 
     // Everything the glass refracts: the pages over the phone's base fill.
+    // The recording is what shows on screen too (the window is black under it), so the pages are
+    // drawn once a frame rather than once for the screen and again for the glass.
     val appBackdrop = rememberLayerBackdrop(
         onDraw = remember {
             {
@@ -140,7 +147,9 @@ fun AppShell(navigator: Navigator) {
                 drawContent()
             }
         },
+        showRecording = true,
     )
+    LaunchedEffect(GlassMotion.fast) { if (GlassMotion.fast) GlassMotion.settle() }
 
     // Convx red on black, always: the app keeps its identity whatever is playing.
     ConvxTheme(ConvxColors.AccentRed) {
@@ -180,7 +189,22 @@ fun AppShell(navigator: Navigator) {
                 )
 
                 // The pages, recorded as the backdrop every glass surface samples.
-                Box(Modifier.fillMaxSize().layerBackdrop(appBackdrop)) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(appBackdrop)
+                        // How fast the pages scroll, for the glass over them; the scroll itself goes on to the page.
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    val event = awaitPointerEvent(PointerEventPass.Initial)
+                                    if (event.type != PointerEventType.Scroll) continue
+                                    val delta = event.changes.firstOrNull()?.scrollDelta ?: continue
+                                    GlassMotion.onScroll(abs(delta.x) + abs(delta.y))
+                                }
+                            }
+                        },
+                ) {
                     CompositionLocalProvider(LocalPageInsets provides insets) {
                         Pages(navigator)
                     }

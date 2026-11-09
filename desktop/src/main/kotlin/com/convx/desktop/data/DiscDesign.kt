@@ -60,7 +60,13 @@ enum class ImageLook(val label: String) {
 }
 
 @Serializable
-enum class ImageFrame(val label: String) { SQUARE("Square"), CIRCLE("Circle"), PHOTO("Photo print") }
+enum class ImageFrame(val label: String) {
+    /** The picture as it is, its own shape kept. */
+    WHOLE("Whole picture"),
+    SQUARE("Square"),
+    CIRCLE("Circle"),
+    PHOTO("Photo print"),
+}
 
 @Serializable
 enum class TextPath(val label: String) {
@@ -142,6 +148,9 @@ enum class EffectKind(val label: String, val tip: String, val colored: Boolean =
     GRAIN("Grain", "Film grain on the layer"),
     INK("Ink texture", "Rough brush edges, dry streaks and ink specks"),
     SKETCH("Sketch lines", "Only its outlines, drawn as lines", colored = true),
+    CUT_WHITE("Cut out white", "White and light parts turn see-through, so the disc shows there"),
+    CUT_BLACK("Cut out black", "Black and dark parts turn see-through"),
+    SOFT_EDGES("Soft edges", "Its edges fade into the disc"),
 }
 
 @Serializable

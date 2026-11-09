@@ -7,7 +7,8 @@
  * the Skia actuals are merged into the common declarations (expect/actual
  * removed) and use Compose 1.9's names for the Skia accessors, the lens no longer
  * accepts io.github.kyant0:shapes' RoundedRectangularShape, and IDE-only
- * annotations were dropped.
+ * annotations were dropped. A layer backdrop can also show its own recording on
+ * screen (showRecording), so its content is drawn once a frame.
  */
 package com.kyant.backdrop.backdrops
 
@@ -35,17 +36,24 @@ private val DefaultOnDraw: ContentDrawScope.() -> Unit = { drawContent() }
 @Composable
 fun rememberLayerBackdrop(
     graphicsLayer: GraphicsLayer = rememberGraphicsLayer(),
-    onDraw: ContentDrawScope.() -> Unit = DefaultOnDraw
+    onDraw: ContentDrawScope.() -> Unit = DefaultOnDraw,
+    showRecording: Boolean = false
 ): LayerBackdrop {
-    return remember(graphicsLayer, onDraw) {
-        LayerBackdrop(graphicsLayer, onDraw)
+    return remember(graphicsLayer, onDraw, showRecording) {
+        LayerBackdrop(graphicsLayer, onDraw, showRecording)
     }
 }
 
 @Stable
 class LayerBackdrop internal constructor(
     val graphicsLayer: GraphicsLayer,
-    internal val onDraw: ContentDrawScope.() -> Unit
+    internal val onDraw: ContentDrawScope.() -> Unit,
+    /**
+     * Desktop addition: the recording is what shows on screen too, so the content is drawn once
+     * a frame instead of once for the screen and again for the glass. Only for an [onDraw] whose
+     * output looks the same as the content where it is drawn.
+     */
+    internal val showRecording: Boolean = false
 ) : Backdrop {
 
     override val isCoordinatesDependent: Boolean = true

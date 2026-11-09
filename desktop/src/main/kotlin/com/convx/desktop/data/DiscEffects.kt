@@ -78,7 +78,35 @@ internal object DiscEffects {
             EffectKind.GRAIN -> grain(input, r, a, ox, oy)
             EffectKind.INK -> ink(input, r, a, layer.rotation, ox, oy)
             EffectKind.SKETCH -> sketch(input, r, a, color)
+            EffectKind.CUT_WHITE -> cut(input, a, light = true)
+            EffectKind.CUT_BLACK -> cut(input, a, light = false)
+            EffectKind.SOFT_EDGES -> softEdges(input, r, a)
         }
+    }
+
+    /**
+     * Light (or dark) parts see-through: a mask from brightness, cut where it crosses a level the
+     * strength sets, over a soft band so edges stay smooth, keeping the layer's own colours and
+     * its own see-through parts.
+     */
+    private fun cut(input: ImageFilter?, a: Float, light: Boolean): ImageFilter {
+        val sharp = 7f
+        val (sign, level) = if (light) -1f to (0.93f - 0.4f * a) else 1f to (0.07f + 0.4f * a)
+        val mask = ImageFilter.makeColorFilter(matrix(
+            0f, 0f, 0f, 0f, 0f,
+            0f, 0f, 0f, 0f, 0f,
+            0f, 0f, 0f, 0f, 0f,
+            sign * sharp * 0.2126f, sign * sharp * 0.7152f, sign * sharp * 0.0722f, 0f, -sign * sharp * level,
+        ), input, null)
+        return ImageFilter.makeBlend(BlendMode.DST_IN, input, mask, null)
+    }
+
+    /** The edges faded in: the layer's shape shrunk by the fade's width, blurred back out, used as its mask. */
+    private fun softEdges(input: ImageFilter?, r: Float, a: Float): ImageFilter {
+        val width = r * (0.008f + 0.06f * a)
+        val shrunk = ImageFilter.makeErode(width, width, input, null)
+        val mask = ImageFilter.makeBlur(width * 0.8f, width * 0.8f, FilterTileMode.DECAL, shrunk, null)
+        return ImageFilter.makeBlend(BlendMode.DST_IN, input, mask, null)
     }
 
     private fun matrix(vararg values: Float) = ColorFilter.makeMatrix(ColorMatrix(*values))

@@ -459,8 +459,9 @@ object DiscArt {
 
     private fun imageLayer(canvas: Canvas, layer: DiscLayer, palette: List<Int>, res: Resources, r: Float) {
         val side = 2f * r * layer.scale
-        val dst = Rect.makeXYWH(-side / 2f, -side / 2f, side, side)
         val image = layer.asset?.let { runCatching { res.image(it) }.getOrNull() }
+        val (hw, hh) = imageHalf(layer, image, r)
+        val dst = Rect.makeLTRB(-hw, -hh, hw, hh)
         if (layer.frame == ImageFrame.PHOTO) {
             val border = side * 0.055f
             canvas.drawRect(Rect.makeLTRB(dst.left - border, dst.top - border, dst.right + border, dst.bottom + border * 3.2f), fill(Color.makeRGB(250, 249, 245)))
@@ -469,7 +470,8 @@ object DiscArt {
             placeholder(canvas, dst, layer.frame == ImageFrame.CIRCLE)
             return
         }
-        val picture = if (layer.look == ImageLook.PIXEL) pixelate(image, layer.amount) else image
+        val whole = layer.frame == ImageFrame.WHOLE
+        val picture = if (layer.look == ImageLook.PIXEL) pixelate(image, layer.amount, whole) else image
         val paint = Paint().apply {
             colorFilter = lookFilter(layer, palette)
             if (layer.look == ImageLook.GLOW) imageFilter = ImageFilter.makeBlur(side * 0.03f * layer.amount, side * 0.03f * layer.amount, FilterTileMode.CLAMP, null, null)
@@ -478,10 +480,10 @@ object DiscArt {
         if (layer.frame == ImageFrame.CIRCLE) {
             canvas.save()
             canvas.clipPath(Path().addCircle(0f, 0f, side / 2f), ClipMode.INTERSECT, true)
-            cover(canvas, picture, dst, paint, sampling)
+            place(canvas, picture, dst, paint, sampling, whole)
             canvas.restore()
         } else {
-            cover(canvas, picture, dst, paint, sampling)
+            place(canvas, picture, dst, paint, sampling, whole)
         }
         if (layer.look == ImageLook.GLOW) {
             // The sharp picture again over its own glow.
@@ -489,7 +491,7 @@ object DiscArt {
                 canvas.save()
                 canvas.clipPath(Path().addCircle(0f, 0f, side / 2f), ClipMode.INTERSECT, true)
             }
-            cover(canvas, picture, dst, Paint().apply { alpha = 150; blendMode = BlendMode.SCREEN; colorFilter = lookFilter(layer, palette) }, sampling)
+            place(canvas, picture, dst, Paint().apply { alpha = 150; blendMode = BlendMode.SCREEN; colorFilter = lookFilter(layer, palette) }, sampling, whole)
             if (layer.frame == ImageFrame.CIRCLE) canvas.restore()
         }
     }
@@ -502,6 +504,22 @@ object DiscArt {
         canvas.drawLine(dst.right, dst.top, dst.left, dst.bottom, line)
     }
 
+    /**
+     * Half a picture layer's width and height: a square [scale] wide, or for [ImageFrame.WHOLE] the
+     * picture's own shape, its long side that wide.
+     */
+    private fun imageHalf(layer: DiscLayer, image: Image?, r: Float): Pair<Float, Float> {
+        val half = r * layer.scale
+        if (layer.frame != ImageFrame.WHOLE || image == null || image.width <= 0 || image.height <= 0) return half to half
+        return if (image.width >= image.height) half to half * image.height / image.width else half * image.width / image.height to half
+    }
+
+    /** The whole of [image] into [dst] when [whole], else cropped from the middle to cover it. */
+    private fun place(canvas: Canvas, image: Image, dst: Rect, paint: Paint?, sampling: SamplingMode, whole: Boolean) {
+        if (whole) canvas.drawImageRect(image, Rect.makeWH(image.width.toFloat(), image.height.toFloat()), dst, sampling, paint, true)
+        else cover(canvas, image, dst, paint, sampling)
+    }
+
     /** Draws [image] to cover [dst], cropping the middle. */
     private fun cover(canvas: Canvas, image: Image, dst: Rect, paint: Paint?, sampling: SamplingMode) {
         val side = min(image.width, image.height).toFloat()
@@ -509,10 +527,12 @@ object DiscArt {
         canvas.drawImageRect(image, src, dst, sampling, paint, true)
     }
 
-    private fun pixelate(image: Image, amount: Float): Image {
+    private fun pixelate(image: Image, amount: Float, whole: Boolean): Image {
         val n = (64 - amount.coerceIn(0f, 1f) * 54).roundToInt().coerceAtLeast(6)
-        val small = Surface.makeRasterN32Premul(n, n)
-        cover(small.canvas, image, Rect.makeWH(n.toFloat(), n.toFloat()), null, SamplingMode.LINEAR)
+        // The whole picture keeps its shape: n blocks along its long side.
+        val (w, h) = if (!whole) n to n else if (image.width >= image.height) n to (n * image.height / image.width).coerceAtLeast(1) else (n * image.width / image.height).coerceAtLeast(1) to n
+        val small = Surface.makeRasterN32Premul(w, h)
+        place(small.canvas, image, Rect.makeWH(w.toFloat(), h.toFloat()), null, SamplingMode.LINEAR, whole)
         return small.makeImageSnapshot()
     }
 
@@ -1538,7 +1558,14 @@ object DiscArt {
         val (hw, hh, dy) = when (layer.kind) {
             LayerKind.IMAGE -> {
                 val half = r * layer.scale
-                if (layer.frame == ImageFrame.PHOTO) Triple(half * 1.11f, half * 1.2f, half * 0.1f) else Triple(half, half, 0f)
+                when (layer.frame) {
+                    ImageFrame.PHOTO -> Triple(half * 1.11f, half * 1.2f, half * 0.1f)
+                    ImageFrame.WHOLE -> {
+                        val (hw, hh) = imageHalf(layer, layer.asset?.let { runCatching { res.image(it) }.getOrNull() }, r)
+                        Triple(hw, hh, 0f)
+                    }
+                    else -> Triple(half, half, 0f)
+                }
             }
             LayerKind.STICKER -> Triple(r * layer.scale, r * layer.scale, 0f)
             LayerKind.SHAPE -> {
