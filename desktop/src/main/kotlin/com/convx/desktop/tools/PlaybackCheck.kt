@@ -56,8 +56,44 @@ fun main(args: Array<String>) {
         }
     }
     println("$passed of ${ids.size} songs played")
+    signInBrowsersCheck()
     mediaControlsCheck()
     exitProcess(if (passed > 0 && dspOk) 0 else 1)
+}
+
+/**
+ * The YouTube Music login's browser side, with every browser on this machine: Convx opens it on a
+ * profile of its own, follows the window by that profile, closes it as Done does, then reads the
+ * cookies (over the debugging port, or Firefox's file) and the page's visitor data. A guest visit
+ * to YouTube Music stands in for the Google login, which a build machine has no account for.
+ */
+private fun signInBrowsersCheck() {
+    if (!System.getProperty("os.name").lowercase().contains("win") || java.awt.GraphicsEnvironment.isHeadless()) {
+        println("Sign-in browsers: skipped (no Windows desktop)")
+        return
+    }
+    val browsers = com.convx.desktop.integrations.youtube.BrowserSignIn.browsers()
+    println("Sign-in browsers found: " + browsers.joinToString { "${it.name} (${java.io.File(it.path).name}, ${it.engine}${if (it.isDefault) ", default" else ""})" })
+    println("Sign-in would open: ${com.convx.desktop.integrations.youtube.BrowserSignIn.chosen(browsers)?.name}")
+    for (browser in browsers) {
+        val started = System.currentTimeMillis()
+        val result = runCatching {
+            runBlocking {
+                kotlinx.coroutines.withTimeout(150_000) {
+                    com.convx.desktop.integrations.youtube.BrowserSignIn.signIn(browser, "https://music.youtube.com/", requireAccount = false, closeAfterMs = 20_000)
+                }
+            }
+        }
+        val seconds = (System.currentTimeMillis() - started) / 1000
+        result.onSuccess { session ->
+            val names = session.cookie.split(';').map { it.trim().substringBefore('=') }.filter { it.isNotEmpty() }
+            val ok = "VISITOR_INFO1_LIVE" in names && session.visitorData != null
+            println("${if (ok) "PASS" else "FAIL"} sign-in with ${browser.name}: ${names.size} cookies (${names.joinToString(" ")}), visitor data ${if (session.visitorData != null) "found" else "missing"}, ${seconds}s")
+        }.onFailure {
+            Log.e("PlaybackCheck", "Sign-in with ${browser.name} failed", it)
+            println("FAIL sign-in with ${browser.name}: ${it::class.simpleName}: ${it.message}, ${seconds}s")
+        }
+    }
 }
 
 /**

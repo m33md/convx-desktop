@@ -99,7 +99,7 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
     BoxWithConstraints(
         modifier
             .height(NowPlayingPillHeight)
-            // The phone pill's press swell and drag stretch.
+            // The phone pill's press swell, a couple of dp; a bar this long neither leans nor follows a drag.
             .graphicsLayer(elasticStretch(glow))
             .shadow(10.dp, shape)
             .clip(shape)
@@ -305,7 +305,8 @@ fun GlassGlyph(
 /** Elapsed and total, small and quiet beside the title. */
 @Composable
 private fun PillTimes(state: PlayerState, modifier: Modifier = Modifier) {
-    val position = rememberSmoothPosition()
+    // Whole seconds are all it shows, so it changes once a second.
+    val position = rememberSmoothPosition(stepMs = 1000)
     val seconds by remember { derivedStateOf { position.value / 1000 } }
     val duration = state.durationMs.takeIf { it > 0 } ?: ((state.current?.duration ?: 0) * 1000L)
     Text(
@@ -320,8 +321,9 @@ private fun PillTimes(state: PlayerState, modifier: Modifier = Modifier) {
 /** A hairline of progress that thickens under the cursor and seeks on click or drag. */
 @Composable
 private fun PillProgress(state: PlayerState, modifier: Modifier = Modifier) {
-    val position = rememberSmoothPosition()
     val duration = state.durationMs.takeIf { it > 0 } ?: ((state.current?.duration ?: 0) * 1000L)
+    // A few hundred steps across a bar a few hundred pixels wide: it moves when a pixel would.
+    val position = rememberSmoothPosition(stepMs = (duration / 800).coerceIn(100, 1000))
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val stroke by animateFloatAsState(if (hovered) 5f else 3f)

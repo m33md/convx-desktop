@@ -9,13 +9,9 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.EaseInOutQuad
-import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -116,6 +112,17 @@ import com.convx.music.lyrics.bitchord.LyricAlignment
 import com.convx.music.lyrics.bitchord.LyricLine
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import androidx.compose.ui.util.lerp
+import com.convx.desktop.ui.components.LocalPlayback
+import com.convx.desktop.ui.components.pingPong
+import com.convx.desktop.ui.components.rememberLoopingPhase
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.collectLatest
+import com.convx.desktop.ui.components.awaitPacedFrameMillis
+import com.convx.desktop.ui.components.playheadMoving
 import kotlinx.coroutines.flow.first
 import kotlin.math.abs
 import kotlin.math.max
@@ -162,6 +169,8 @@ fun LyricsView(
     style: TextStyle = ConvxType.Lyrics,
     horizontalPadding: Dp = 0.dp,
     clock: () -> Long = PlayerController::livePositionMs,
+    /** When [clock] moves; null follows the player. */
+    clockMoving: Flow<Boolean>? = null,
 ) {
     val state by remember(song?.id) { song?.let(LyricsService::state) ?: MutableStateFlow<LyricsState>(LyricsState.Missing) }
         .collectAsState()
@@ -186,42 +195,44 @@ fun LyricsView(
         )
     }
     Box(modifier) {
-        when (val s = state) {
-            LyricsState.Loading -> LoadingState()
-            LyricsState.Missing -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Text(
-                    "Lyrics not found",
-                    style = textStyle.copy(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
-                    color = Color.White.copy(alpha = 0.5f),
-                )
-            }
-            // A better source landing later (word timing after line timing) cross-fades in.
-            is LyricsState.Ready -> {
-                val romanized = rememberRomanized(s.lyrics, settings, enabled = tweaks?.romanize != false)
-                val translations = rememberTranslations(song, s.lyrics, settings, tweaks)
-                Crossfade(s.lyrics to settings.lyricsStyle, animationSpec = tween(300)) { (found, chosen) ->
-                    // Romanized lines go under the originals, or, as the phone's "as main", over them.
-                    val roman = romanized?.takeIf { it.first === found }?.second
-                    val translated = translations?.takeIf { it.first === found }?.second
-                    val (lyrics, subs) = remember(found, roman, translated, settings.lyricsRomanizeAsMain) {
-                        val (shown, romanSubs) = when {
-                            roman == null -> found to emptyList()
-                            settings.lyricsRomanizeAsMain -> found.romanizedAsMain(roman)
-                            else -> found to roman
+        CompositionLocalProvider(LocalLyricsClockMoving provides clockMoving) {
+            when (val s = state) {
+                LyricsState.Loading -> LoadingState()
+                LyricsState.Missing -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        "Lyrics not found",
+                        style = textStyle.copy(fontSize = 20.sp, lineHeight = 26.sp, fontWeight = FontWeight.Bold),
+                        color = Color.White.copy(alpha = 0.5f),
+                    )
+                }
+                // A better source landing later (word timing after line timing) cross-fades in.
+                is LyricsState.Ready -> {
+                    val romanized = rememberRomanized(s.lyrics, settings, enabled = tweaks?.romanize != false)
+                    val translations = rememberTranslations(song, s.lyrics, settings, tweaks)
+                    Crossfade(s.lyrics to settings.lyricsStyle, animationSpec = tween(300)) { (found, chosen) ->
+                        // Romanized lines go under the originals, or, as the phone's "as main", over them.
+                        val roman = romanized?.takeIf { it.first === found }?.second
+                        val translated = translations?.takeIf { it.first === found }?.second
+                        val (lyrics, subs) = remember(found, roman, translated, settings.lyricsRomanizeAsMain) {
+                            val (shown, romanSubs) = when {
+                                roman == null -> found to emptyList()
+                                settings.lyricsRomanizeAsMain -> found.romanizedAsMain(roman)
+                                else -> found to roman
+                            }
+                            shown to shown.lines.indices.map { i ->
+                                val r = romanSubs.getOrNull(i)
+                                val t = translated?.getOrNull(i)
+                                if (r == null && t == null) null else LineSubs(r, t)
+                            }
                         }
-                        shown to shown.lines.indices.map { i ->
-                            val r = romanSubs.getOrNull(i)
-                            val t = translated?.getOrNull(i)
-                            if (r == null && t == null) null else LineSubs(r, t)
+                        when {
+                            chosen == LyricsStyle.Flamingo && lyrics.synced -> FlamingoLyrics(lyrics, subs, textStyle, settings, horizontalPadding, shifted)
+                            chosen == LyricsStyle.Flamingo -> PlainLyrics(lyrics, subs, textStyle, horizontalPadding)
+                            // Accompanist only earns its cost with word timing; without, the list does the same.
+                            chosen == LyricsStyle.KaraokeApple && lyrics.wordSynced && settings.lyricsWordSync ->
+                                KaraokeAppleLyrics(lyrics, translated, textStyle, settings, horizontalPadding, shifted)
+                            else -> StyledLyrics(lyrics, subs, chosen, textStyle, settings, horizontalPadding, shifted)
                         }
-                    }
-                    when {
-                        chosen == LyricsStyle.Flamingo && lyrics.synced -> FlamingoLyrics(lyrics, subs, textStyle, settings, horizontalPadding, shifted)
-                        chosen == LyricsStyle.Flamingo -> PlainLyrics(lyrics, subs, textStyle, horizontalPadding)
-                        // Accompanist only earns its cost with word timing; without, the list does the same.
-                        chosen == LyricsStyle.KaraokeApple && lyrics.wordSynced && settings.lyricsWordSync ->
-                            KaraokeAppleLyrics(lyrics, translated, textStyle, settings, horizontalPadding, shifted)
-                        else -> StyledLyrics(lyrics, subs, chosen, textStyle, settings, horizontalPadding, shifted)
                     }
                 }
             }
@@ -451,15 +462,29 @@ object LyricsFonts {
     }
 }
 
-/** The playhead every frame, like the phone's player.currentPosition. */
+/**
+ * Whether the lyrics' clock is moving: the song playing, unless a caller (the style page's
+ * preview, whose clock runs on while paused) says otherwise.
+ */
+internal val LocalLyricsClockMoving = staticCompositionLocalOf<Flow<Boolean>?> { null }
+
+/**
+ * The playhead every frame while it moves, like the phone's player.currentPosition. Paused, it
+ * waits instead of asking for frames, and catches up on a seek.
+ */
 @Composable
 internal fun rememberLiveClock(clock: () -> Long): LongState {
     val live = remember { mutableLongStateOf(clock()) }
     val current by rememberUpdatedState(clock)
-    LaunchedEffect(Unit) {
-        while (true) {
-            withFrameNanos { }
+    val moving = LocalLyricsClockMoving.current ?: remember { playheadMoving() }
+    LaunchedEffect(moving) {
+        combine(moving, PlayerController.position) { on, _ -> on }.collectLatest { on ->
             live.longValue = current()
+            if (!on) return@collectLatest
+            while (true) {
+                awaitPacedFrameMillis()
+                live.longValue = current()
+            }
         }
     }
     return live
@@ -994,8 +1019,9 @@ private fun Interlude(line: LyricLine, nextTimeMs: Long, isCurrent: () -> Boolea
 
 @Composable
 private fun CountdownDots(progress: () -> Float) {
-    val transition = rememberInfiniteTransition()
-    val scale by transition.animateFloat(0.95f, 1.12f, infiniteRepeatable(tween(1800, easing = YosEasing), RepeatMode.Reverse))
+    // Breathing in and out over 1.8 s each way, while the song plays.
+    val breath by rememberLoopingPhase(3600, running = LocalPlayback.current.isPlaying)
+    val scale = lerp(0.95f, 1.12f, YosEasing.transform(pingPong(breath)))
     Row(
         Modifier
             .graphicsLayer {

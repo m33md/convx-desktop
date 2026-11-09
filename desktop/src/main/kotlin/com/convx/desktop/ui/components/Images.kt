@@ -69,9 +69,14 @@ fun artworkUrl(url: String?, size: Int): String? {
  * duplicate requests share one download.
  */
 object ImageCache {
-    private val memory = object : LinkedHashMap<String, ImageBitmap>(256, 0.75f, true) {
-        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, ImageBitmap>) = size > 400
-    }
+    /**
+     * Decoded covers kept for reuse, least recently drawn first out. Held by size, not count: a
+     * cover is up to several MB of pixels once decoded, and the ones still on screen stay drawn
+     * whether or not they're kept here.
+     */
+    private const val MemoryBudget = 96L * 1024 * 1024
+    private val memory = LinkedHashMap<String, ImageBitmap>(256, 0.75f, true)
+    private var memoryBytes = 0L
     private val inFlight = ConcurrentHashMap<String, CompletableDeferred<ImageBitmap?>>()
     private val palettes = ConcurrentHashMap<String, HeroColors>()
     private val meshes = ConcurrentHashMap<String, List<Color>>()
@@ -79,6 +84,23 @@ object ImageCache {
     private val failed = ConcurrentHashMap.newKeySet<String>()
 
     fun peek(url: String): ImageBitmap? = synchronized(memory) { memory[url] }
+
+    /** What the kept covers' pixels take, in bytes. */
+    fun memoryBytes(): Long = synchronized(memory) { memoryBytes }
+
+    private fun keep(url: String, image: ImageBitmap) = synchronized(memory) {
+        memory.put(url, image)?.let { memoryBytes -= it.byteCount() }
+        memoryBytes += image.byteCount()
+        val entries = memory.entries.iterator()
+        while (memoryBytes > MemoryBudget && entries.hasNext()) {
+            val eldest = entries.next()
+            if (eldest.key == url) continue
+            memoryBytes -= eldest.value.byteCount()
+            entries.remove()
+        }
+    }
+
+    private fun ImageBitmap.byteCount(): Long = width.toLong() * height * 4
 
     suspend fun load(url: String): ImageBitmap? {
         peek(url)?.let { return it }
@@ -88,7 +110,7 @@ object ImageCache {
         if (existing != null) return existing.await()
         val outcome = runCatching { withContext(Dispatchers.IO) { fetch(url) } }
         val result = outcome.getOrNull()
-        if (result != null) synchronized(memory) { memory[url] = result }
+        if (result != null) keep(url, result)
         // Only a definite "not there" is remembered; network blips retry on the next ask.
         else if (outcome.isSuccess) failed += url
         mine.complete(result)
@@ -116,7 +138,7 @@ object ImageCache {
         // Covers of music files on this PC are read where they are.
         if (url.startsWith("file:")) {
             val bytes = File(java.net.URI(url)).takeIf { it.isFile }?.readBytes() ?: return null
-            return SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+            return decode(bytes)
         }
         val file = File(AppDirs.images, sha1(url))
         val keep = AppSettings.value.maxImageCacheMb != 0
@@ -137,8 +159,11 @@ object ImageCache {
                 }
             } ?: return null
         }
-        return SkiaImage.makeFromEncoded(bytes).toComposeImageBitmap()
+        return decode(bytes)
     }
+
+    /** The pixels, copied out of Skia's encoded image, which is let go of at once rather than at the next GC. */
+    private fun decode(bytes: ByteArray): ImageBitmap = SkiaImage.makeFromEncoded(bytes).use { it.toComposeImageBitmap() }
 
     private fun download(url: String): ByteArray? {
         val request = Request.Builder().url(url).header("User-Agent", Http.USER_AGENT).build()

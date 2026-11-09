@@ -137,11 +137,17 @@ object YouTubeAccount {
         ***ACCOUNT CHANNEL HANDLE*** =${profile().handle.takeIf { signedIn }.orEmpty()}
     """.trimIndent()
 
-    /** The cookie from a pasted token, or null when it has no SAPISID (the phone's own check). */
-    fun cookieOf(token: String): String? =
-        field(token, "***INNERTUBE COOKIE*** =")?.takeIf { cookie ->
-            cookie.split(';').any { it.trim().substringBefore('=') == "SAPISID" }
-        }
+    /**
+     * The cookie from a pasted token, or null when it has no SAPISID (the phone's own check). The
+     * phone's token works, and so does a browser's own Cookie header for music.youtube.com, copied
+     * from its developer tools (with or without "cookie:" in front, or among the other headers).
+     */
+    fun cookieOf(token: String): String? {
+        val cookie = field(token, "***INNERTUBE COOKIE*** =")
+            ?: token.lines().firstOrNull { it.trim().startsWith("cookie:", ignoreCase = true) }?.trim()?.substringAfter(':')?.trim()
+            ?: token.trim().takeIf { '\n' !in it && '=' in it }
+        return cookie?.takeIf { text -> text.split(';').any { it.trim().substringBefore('=') == "SAPISID" } }
+    }
 
     fun signInWithToken(token: String) {
         val cookie = cookieOf(token) ?: return

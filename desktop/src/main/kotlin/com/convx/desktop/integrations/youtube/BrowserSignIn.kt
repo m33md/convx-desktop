@@ -8,9 +8,17 @@ package com.convx.desktop.integrations.youtube
 import com.convx.desktop.core.AppDirs
 import com.convx.desktop.core.Http
 import com.convx.desktop.core.Log
+import com.convx.desktop.core.WinProcess
+import com.convx.desktop.data.AppSettings
+import com.sun.jna.platform.win32.Advapi32Util
+import com.sun.jna.platform.win32.Crypt32Util
+import com.sun.jna.platform.win32.Kernel32Util
+import com.sun.jna.platform.win32.WinReg
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
@@ -32,6 +40,12 @@ import okhttp3.WebSocketListener
 import java.io.File
 import java.io.IOException
 import java.net.Proxy
+import java.nio.file.Files
+import java.util.Base64
+import javax.crypto.Cipher
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.SecretKeySpec
+import java.sql.DriverManager
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
@@ -41,12 +55,20 @@ import java.util.concurrent.atomic.AtomicInteger
  *
  * The phone signs in inside Android's WebView and reads the cookies and `ytcfg` values from it.
  * A PC has no WebView, and Google turns away sign-ins from embedded browsers such as CEF, and
- * from a browser something is driving over its debugging port. So it happens in two steps.
- * First Convx opens Chrome, Edge or Brave with a fresh, empty profile of its own and nothing
- * else: an ordinary window, which Google accepts. You sign in, and close the window once YouTube
- * Music shows your account (or press Done in Convx, which closes it for you). Then Convx opens
- * that profile once more, out of sight, reads music.youtube.com's cookies and the page's visitor
- * data and channel id (exactly what the phone keeps), closes it and deletes the profile.
+ * from a browser something is driving over its debugging port. So Convx opens a browser of yours
+ * (Windows' default if it can, or the one picked on the Account page) with a fresh, empty profile
+ * of its own and nothing else: an ordinary window, which Google accepts. You sign in, and close
+ * the window once YouTube Music shows your account (or press Done in Convx, which closes it for
+ * you). Then Convx reads music.youtube.com's cookies from that profile and deletes it:
+ *
+ * - Chrome, Edge, Brave, Opera, Vivaldi and the other Chromium browsers encrypt their cookies, so
+ *   Convx opens the profile once more, out of sight, and asks the browser for them over its
+ *   debugging port, with the page's visitor data and channel id (exactly what the phone keeps).
+ * - Firefox and the browsers built on it keep cookies in a plain database, which Convx reads
+ *   itself; the visitor data and channel id then come from YouTube Music's page.
+ *
+ * The window is followed by its profile rather than the process Convx started, because some
+ * browsers (Opera's launcher, Firefox) hand the window to another process and exit.
  */
 object BrowserSignIn {
     private const val Tag = "BrowserSignIn"
@@ -62,46 +84,159 @@ object BrowserSignIn {
 
     data class Session(val cookie: String, val visitorData: String?, val dataSyncId: String?)
 
-    class NoBrowserException : Exception("Convx needs Chrome, Edge or Brave to sign in to Google")
+    /** How a browser keeps its cookies, which decides how Convx reads them. */
+    enum class Engine { Chromium, Firefox }
+
+    /** A browser on this PC the sign-in can open. */
+    data class Browser(val name: String, val path: String, val engine: Engine, val isDefault: Boolean = false)
+
+    class NoBrowserException : Exception("Convx needs a browser such as Chrome, Edge, Firefox or Opera to sign in to Google")
     class ClosedException : Exception("The sign-in window was closed before you signed in")
 
     /** The sign-in window while it's open, for [finish]. */
-    @Volatile private var window: Process? = null
+    @Volatile private var window: Window? = null
 
-    /** The browsers Google is happy to sign in on, in the order Convx prefers them. */
-    fun findBrowser(): File? {
-        val programFiles = listOfNotNull(System.getenv("ProgramFiles"), System.getenv("ProgramFiles(x86)"), System.getenv("LOCALAPPDATA"))
-        val relative = listOf(
-            "Google/Chrome/Application/chrome.exe",
-            "Microsoft/Edge/Application/msedge.exe",
-            "BraveSoftware/Brave-Browser/Application/brave.exe",
+    private val isWindows = System.getProperty("os.name").lowercase().contains("win")
+
+    /** The browsers on this PC Convx can sign in with, Windows' default first. */
+    fun browsers(): List<Browser> {
+        if (!isWindows) return emptyList()
+        val found = LinkedHashMap<String, Browser>()
+        for ((name, exe) in registered() + knownPaths()) {
+            if (!exe.isFile) continue
+            val engine = engineOf(exe) ?: continue
+            found.getOrPut(exe.absolutePath.lowercase()) { Browser(name, exe.absolutePath, engine) }
+        }
+        val default = defaultBrowser()?.absolutePath?.lowercase()
+        return found.values.map { it.copy(isDefault = it.path.lowercase() == default) }.sortedByDescending { it.isDefault }
+    }
+
+    /** The browser a sign-in opens: the one picked on the Account page, else Windows' default, else any. */
+    fun chosen(browsers: List<Browser> = browsers()): Browser? {
+        val picked = AppSettings.value.signInBrowser?.lowercase()
+        return browsers.firstOrNull { it.path.lowercase() == picked } ?: browsers.firstOrNull { it.isDefault } ?: browsers.firstOrNull()
+    }
+
+    /** Browsers registered with Windows (Settings, Default apps), by the name they give themselves. */
+    private fun registered(): List<Pair<String, File>> = buildList {
+        val places = listOf(
+            WinReg.HKEY_CURRENT_USER to "SOFTWARE\\Clients\\StartMenuInternet",
+            WinReg.HKEY_LOCAL_MACHINE to "SOFTWARE\\Clients\\StartMenuInternet",
+            WinReg.HKEY_LOCAL_MACHINE to "SOFTWARE\\WOW6432Node\\Clients\\StartMenuInternet",
         )
-        return relative.firstNotNullOfOrNull { path -> programFiles.map { File(it, path) }.firstOrNull { it.isFile } }
+        for ((root, path) in places) {
+            val keys = runCatching { Advapi32Util.registryGetKeys(root, path) }.getOrNull() ?: continue
+            for (key in keys) {
+                val exe = registryText(root, "$path\\$key\\shell\\open\\command")?.let(::exeOf) ?: continue
+                val name = registryText(root, "$path\\$key")?.takeIf { it.isNotBlank() } ?: key
+                add(name to exe)
+            }
+        }
+    }
+
+    /** Where the usual browsers install, for any that didn't register. */
+    private fun knownPaths(): List<Pair<String, File>> {
+        val roots = listOfNotNull(System.getenv("ProgramFiles"), System.getenv("ProgramFiles(x86)"), System.getenv("LOCALAPPDATA"))
+        return listOf(
+            "Google Chrome" to "Google/Chrome/Application/chrome.exe",
+            "Microsoft Edge" to "Microsoft/Edge/Application/msedge.exe",
+            "Brave" to "BraveSoftware/Brave-Browser/Application/brave.exe",
+            "Opera GX" to "Programs/Opera GX/launcher.exe",
+            "Opera GX" to "Opera GX/launcher.exe",
+            "Opera" to "Programs/Opera/launcher.exe",
+            "Opera" to "Opera/launcher.exe",
+            "Vivaldi" to "Vivaldi/Application/vivaldi.exe",
+            "Chromium" to "Chromium/Application/chrome.exe",
+            "Firefox" to "Mozilla Firefox/firefox.exe",
+            "LibreWolf" to "LibreWolf/librewolf.exe",
+            "Waterfox" to "Waterfox/waterfox.exe",
+            "Zen" to "Zen Browser/zen.exe",
+            "Floorp" to "Ablaze Floorp/floorp.exe",
+        ).flatMap { (name, path) -> roots.map { name to File(it, path) } }
+    }
+
+    /** The program Windows opens https links with. */
+    private fun defaultBrowser(): File? {
+        for (key in listOf("UserChoiceLatest", "UserChoice")) {
+            val progId = registryText(WinReg.HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\Shell\\Associations\\UrlAssociations\\https\\$key", "ProgId")
+                ?: continue
+            registryText(WinReg.HKEY_CLASSES_ROOT, "$progId\\shell\\open\\command")?.let(::exeOf)?.let { return it }
+        }
+        return null
+    }
+
+    private fun registryText(root: WinReg.HKEY, key: String, value: String = ""): String? =
+        runCatching { Advapi32Util.registryGetValue(root, key, value) as? String }.getOrNull()
+
+    /** The program in a registered command line: `"C:\...\x.exe" --flags "%1"`. */
+    private fun exeOf(command: String): File? {
+        val text = runCatching { Kernel32Util.expandEnvironmentStrings(command.trim()) }.getOrDefault(command.trim())
+        val path = if (text.startsWith("\"")) text.drop(1).substringBefore('"') else Regex("""^(.*?\.exe)""", RegexOption.IGNORE_CASE).find(text)?.value
+        return path?.let(::File)?.takeIf { it.isFile }
+    }
+
+    private val FirefoxPrograms = setOf("firefox.exe", "librewolf.exe", "waterfox.exe", "zen.exe", "floorp.exe", "mullvadbrowser.exe")
+    private val ChromiumPrograms = setOf("chrome.exe", "msedge.exe", "brave.exe", "vivaldi.exe", "opera.exe", "chromium.exe", "thorium.exe")
+
+    /** Firefox ships omni.ja beside its program; Chromium browsers ship .pak files, there or in a version folder. */
+    private fun engineOf(exe: File): Engine? {
+        val name = exe.name.lowercase()
+        val dir = exe.parentFile ?: return null
+        val here = dir.list()?.map { it.lowercase() }.orEmpty()
+        if (name in FirefoxPrograms || "omni.ja" in here) return Engine.Firefox
+        if (name in ChromiumPrograms) return Engine.Chromium
+        val below = dir.listFiles { f -> f.isDirectory }.orEmpty().flatMap { sub -> sub.list()?.map { it.lowercase() }.orEmpty() }
+        return if ((here + below).any { it.endsWith(".pak") }) Engine.Chromium else null
     }
 
     /**
      * Opens the window, waits for you to sign in and close it (up to fifteen minutes), then reads
      * the account from the profile it leaves.
      */
-    suspend fun run(): Session = withContext(Dispatchers.IO) {
-        val browser = findBrowser() ?: throw NoBrowserException()
+    suspend fun run(): Session {
+        val browser = chosen() ?: throw NoBrowserException()
+        return signIn(browser, StartUrl, requireAccount = true)
+    }
+
+    /**
+     * The whole sign-in with [browser], opening [startUrl]. The browser check passes a guest page
+     * and [closeAfterMs], to run every step but the Google account itself.
+     */
+    internal suspend fun signIn(browser: Browser, startUrl: String, requireAccount: Boolean, closeAfterMs: Long? = null): Session = withContext(Dispatchers.IO) {
         val profile = File(AppDirs.cache, "sign-in-browser")
+        stopAll(profile)
         profile.deleteRecursively()
         profile.mkdirs()
         try {
-            Log.i(Tag, "Opening ${browser.name} for Google sign-in")
-            val shown = openBrowser(browser, profile, "--window-size=520,780", "--new-window", StartUrl)
+            Log.i(Tag, "Opening ${browser.name} (${File(browser.path).name}, ${browser.engine}) for Google sign-in")
+            val shown = Window(browser, profile, open(browser, profile, visible = true, startUrl))
             window = shown
             try {
+                if (closeAfterMs != null) {
+                    delay(closeAfterMs)
+                    finish()
+                }
                 awaitClosed(shown)
             } finally {
                 window = null
-                stop(shown)
+                shown.stop()
             }
-            readAccount(browser, profile)
+            when (browser.engine) {
+                Engine.Chromium -> try {
+                    readOverDevTools(browser, profile, requireAccount)
+                } catch (e: Exception) {
+                    if (e is ClosedException) throw e
+                    currentCoroutineContext().ensureActive()
+                    Log.w(Tag, "${browser.name} didn't answer on its debugging port (${e.message}); reading its cookie file instead")
+                    stopAll(profile)
+                    readChromiumDatabase(profile, requireAccount)
+                }
+                Engine.Firefox -> readFirefoxProfile(profile, requireAccount)
+            }
         } finally {
             withContext(NonCancellable) {
-                // Chrome's helpers can hold files for a moment after the browser exits.
+                stopAll(profile)
+                // Browsers' helpers can hold files for a moment after the browser exits.
                 repeat(10) {
                     if (profile.deleteRecursively()) return@withContext
                     delay(500)
@@ -116,10 +251,49 @@ object BrowserSignIn {
      * on the way out; [run] then reads them.
      */
     fun finish() {
-        window?.let { closeWindows(it.pid()) }
+        window?.close()
     }
 
-    /** Asks every window of the browser process [pid] to close, as its close button does. */
+    /** The sign-in browser: the process Convx started and whatever runs on the same profile. */
+    private class Window(val browser: Browser, val profile: File, val started: Process) {
+        /** Every process on the profile: the one started, if it still runs, and those naming the profile. */
+        fun processes(): List<ProcessHandle> {
+            val named = WinProcess.withCommandLine(profile.absolutePath)
+            return (listOfNotNull(started.toHandle().takeIf { it.isAlive }) + named).distinctBy { it.pid() }
+        }
+
+        val isOpen: Boolean get() = started.isAlive || processes().isNotEmpty()
+
+        fun close() = processes().forEach { closeWindows(it.pid()) }
+
+        /** Closes it if it's still open, then ends what's left. */
+        fun stop() {
+            if (!isOpen) return
+            close()
+            val deadline = System.currentTimeMillis() + 8_000
+            while (isOpen && System.currentTimeMillis() < deadline) Thread.sleep(250)
+            if (isOpen) kill(processes())
+        }
+    }
+
+    /** Ends anything still running on [profile] (a sign-in that was cancelled, or Convx closing mid-way). */
+    private fun stopAll(profile: File) {
+        val left = WinProcess.withCommandLine(profile.absolutePath)
+        if (left.isEmpty()) return
+        left.forEach { closeWindows(it.pid()) }
+        val deadline = System.currentTimeMillis() + 5_000
+        while (left.any { it.isAlive } && System.currentTimeMillis() < deadline) Thread.sleep(250)
+        kill(left)
+    }
+
+    private fun kill(processes: List<ProcessHandle>) {
+        processes.forEach { process ->
+            process.descendants().forEach { it.destroyForcibly() }
+            process.destroyForcibly()
+        }
+    }
+
+    /** Asks every window of process [pid] to close, as its close button does. */
     private fun closeWindows(pid: Long) {
         runCatching {
             val user32 = com.sun.jna.platform.win32.User32.INSTANCE
@@ -134,46 +308,88 @@ object BrowserSignIn {
         }.onFailure { Log.w(Tag, "Couldn't close the sign-in window: ${it.message}") }
     }
 
-    private fun openBrowser(browser: File, profile: File, vararg extra: String): Process =
-        ProcessBuilder(
-            listOf(
-                browser.path,
+    /**
+     * Starts [browser] on [profile]: a small ordinary window, or with [visible] false a hidden one
+     * that answers on a debugging port.
+     */
+    private fun open(browser: Browser, profile: File, visible: Boolean, vararg urls: String, headless: Boolean = true): Process {
+        val args = when (browser.engine) {
+            Engine.Chromium -> listOf(
                 "--user-data-dir=${profile.path}",
                 "--no-first-run",
                 "--no-default-browser-check",
                 "--disable-sync",
-            ) + extra,
-        ).redirectErrorStream(true).redirectOutput(ProcessBuilder.Redirect.DISCARD).start()
-
-    /** Waits for the window to close; nothing looks inside it meanwhile. */
-    private suspend fun awaitClosed(process: Process) {
-        val deadline = System.currentTimeMillis() + TimeoutMs
-        while (process.isAlive) {
-            if (System.currentTimeMillis() > deadline) throw IOException("Sign-in timed out after fifteen minutes. Try again.")
-            delay(400)
+            ) + if (visible) {
+                listOf("--window-size=520,780", "--new-window")
+            } else if (headless) {
+                listOf("--headless=new", "--remote-debugging-port=0", "--mute-audio")
+            } else {
+                // For a browser without a headless mode: a real window, parked off the screen.
+                listOf("--remote-debugging-port=0", "--mute-audio", "--window-position=-32000,-32000", "--window-size=400,300")
+            }
+            Engine.Firefox -> {
+                writeFirefoxPrefs(profile)
+                listOf("-no-remote", "-new-instance", "-profile", profile.path, "-width", "520", "-height", "780")
+            }
         }
+        return ProcessBuilder(listOf(browser.path) + args + urls)
+            .redirectErrorStream(true)
+            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .start()
     }
 
-    private fun stop(process: Process) {
-        if (!process.isAlive) return
-        closeWindows(process.pid())
-        if (!process.waitFor(8, TimeUnit.SECONDS)) {
-            process.descendants().forEach { it.destroy() }
-            process.destroyForcibly()
-            process.waitFor(5, TimeUnit.SECONDS)
+    /** A new Firefox profile goes straight to the page: no welcome tour, no default-browser question. */
+    private fun writeFirefoxPrefs(profile: File) {
+        val prefs = mapOf(
+            "browser.shell.checkDefaultBrowser" to "false",
+            "browser.aboutwelcome.enabled" to "false",
+            "browser.startup.homepage_override.mstone" to "\"ignore\"",
+            "startup.homepage_welcome_url" to "\"\"",
+            "startup.homepage_welcome_url.additional" to "\"\"",
+            "datareporting.policy.dataSubmissionEnabled" to "false",
+            "toolkit.telemetry.reportingpolicy.firstRun" to "false",
+            "browser.sessionstore.resume_from_crash" to "false",
+            "privacy.sanitize.sanitizeOnShutdown" to "false",
+            "privacy.clearOnShutdown.cookies" to "false",
+            "privacy.clearOnShutdown_v2.cookiesAndStorage" to "false",
+        )
+        File(profile, "user.js").writeText(prefs.entries.joinToString("") { (key, value) -> "user_pref(\"$key\", $value);\n" })
+    }
+
+    /** Waits for the window to close; nothing looks inside it meanwhile. */
+    private suspend fun awaitClosed(window: Window) {
+        val deadline = System.currentTimeMillis() + TimeoutMs
+        // A launcher hands over to the browser and exits; give the browser a moment to show up.
+        delay(2_000)
+        while (window.isOpen) {
+            if (System.currentTimeMillis() > deadline) throw IOException("Sign-in timed out after fifteen minutes. Try again.")
+            delay(1_000)
         }
     }
 
     /**
-     * The profile again, headless, now that sign-in is over: YouTube Music's page for its
-     * `ytcfg` values, and the cookies the browser kept for it.
+     * The profile again, out of sight, now that sign-in is over: YouTube Music's page for its
+     * `ytcfg` values, and the cookies the browser kept for it. A browser without a headless mode
+     * gets a window off the screen instead.
      */
-    private suspend fun readAccount(browser: File, profile: File): Session {
+    private suspend fun readOverDevTools(browser: Browser, profile: File, requireAccount: Boolean): Session =
+        try {
+            readOverDevTools(browser, profile, requireAccount, headless = true)
+        } catch (e: DevToolsUnavailable) {
+            Log.w(Tag, "${browser.name} didn't open headless (${e.message}); trying a hidden window")
+            stopAll(profile)
+            readOverDevTools(browser, profile, requireAccount, headless = false)
+        }
+
+    private class DevToolsUnavailable(message: String) : IOException(message)
+
+    private suspend fun readOverDevTools(browser: Browser, profile: File, requireAccount: Boolean, headless: Boolean): Session {
         File(profile, "DevToolsActivePort").delete()
-        val process = openBrowser(browser, profile, "--headless=new", "--remote-debugging-port=0", "--mute-audio", "about:blank")
+        val process = open(browser, profile, visible = false, "about:blank", headless = headless)
+        val window = Window(browser, profile, process)
         var devTools: DevTools? = null
         try {
-            val cdp = DevTools(awaitEndpoint(profile, process))
+            val cdp = DevTools(awaitEndpoint(profile, window))
             devTools = cdp
             // Headless says so in its user agent; YouTube Music gets the browser's ordinary one.
             val agent = cdp.send("Browser.getVersion")["userAgent"]?.jsonPrimitive?.contentOrNull?.replace("HeadlessChrome", "Chrome")
@@ -184,39 +400,149 @@ object BrowserSignIn {
             if (agent != null) cdp.send("Emulation.setUserAgentOverride", buildJsonObject { put("userAgent", agent) }, session)
             cdp.send("Page.navigate", buildJsonObject { put("url", "https://$MusicHost/") }, session)
             val config = readConfig(cdp, session)
-            val cookies = cdp.send("Storage.getCookies")["cookies"].asObjects().filter(::sentToMusic)
-            if (cookies.none { it.text("name") in AccountCookies }) throw ClosedException()
-            val cookie = cookies.joinToString("; ") { "${it.text("name")}=${it.text("value")}" }
-            Log.i(Tag, "Signed in; ${cookies.size} cookies, visitor data ${if (config != null) "found" else "missing"}, data sync id ${if (config?.second != null) "found" else "missing"}")
-            return Session(cookie, config?.first, config?.second)
+            val cookies = cdp.send("Storage.getCookies")["cookies"].asObjects()
+                .filter { sentToMusic(it.text("domain"), it.text("path")) }
+                .map { it.text("name").orEmpty() to it.text("value").orEmpty() }
+            return session(cookies, config, requireAccount)
         } finally {
             withContext(NonCancellable) {
                 devTools?.let { cdp ->
                     withTimeoutOrNull(3_000) { runCatching { cdp.send("Browser.close") } }
                     cdp.close()
                 }
-                if (!process.waitFor(8, TimeUnit.SECONDS)) {
-                    process.descendants().forEach { it.destroy() }
-                    process.destroyForcibly()
-                    process.waitFor(5, TimeUnit.SECONDS)
-                }
+                window.stop()
             }
         }
     }
 
+    /** Firefox's cookie database, copied first so a lingering lock or journal can't get in the way. */
+    private fun readFirefoxProfile(profile: File, requireAccount: Boolean): Session {
+        val db = File(profile, "cookies.sqlite")
+        if (!db.isFile) throw if (requireAccount) ClosedException() else IOException("Firefox left no cookies")
+        val copy = Files.createTempDirectory("convx-cookies").toFile()
+        try {
+            for (suffix in listOf("", "-wal", "-shm")) {
+                File(profile, "cookies.sqlite$suffix").takeIf { it.isFile }?.copyTo(File(copy, "cookies.sqlite$suffix"))
+            }
+            Class.forName("org.sqlite.JDBC")
+            val cookies = DriverManager.getConnection("jdbc:sqlite:${File(copy, "cookies.sqlite").absolutePath}").use { connection ->
+                // A cookie partitioned under another site (originAttributes set) isn't sent to YouTube Music itself.
+                val query = runCatching { connection.prepareStatement("SELECT name, value, host, path FROM moz_cookies WHERE originAttributes = ''").executeQuery() }
+                    .getOrElse { connection.prepareStatement("SELECT name, value, host, path FROM moz_cookies").executeQuery() }
+                buildList {
+                    query.use { rows ->
+                        while (rows.next()) {
+                            if (sentToMusic(rows.getString("host"), rows.getString("path"))) add(rows.getString("name") to rows.getString("value"))
+                        }
+                    }
+                }
+            }
+            val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
+            return session(cookies, if (cookies.isEmpty()) null else readConfigOverHttp(cookie), requireAccount)
+        } finally {
+            copy.deleteRecursively()
+        }
+    }
+
+    /**
+     * The last resort for a Chromium browser that won't answer on a debugging port: its cookie
+     * file, decrypted with the key Windows keeps for this account. A browser that ties its cookies
+     * to itself (Chrome's app-bound "v20" cookies) can't be read this way, only over the port.
+     */
+    private fun readChromiumDatabase(profile: File, requireAccount: Boolean): Session {
+        val state = File(profile, "Local State").takeIf { it.isFile }?.readText() ?: throw IOException("The browser left no profile to read")
+        val wrapped = Json.parseToJsonElement(state).jsonObject["os_crypt"]?.jsonObject?.get("encrypted_key")?.jsonPrimitive?.contentOrNull
+            ?: throw IOException("The browser's cookies have no key Convx can read")
+        val raw = Base64.getDecoder().decode(wrapped)
+        if (raw.size <= 5 || String(raw, 0, 5, Charsets.US_ASCII) != "DPAPI") throw IOException("The browser's cookies have no key Convx can read")
+        val key = SecretKeySpec(Crypt32Util.cryptUnprotectData(raw.copyOfRange(5, raw.size)), "AES")
+        val db = listOf("Default/Network/Cookies", "Network/Cookies", "Default/Cookies", "Cookies").map { File(profile, it) }.firstOrNull { it.isFile }
+            ?: throw if (requireAccount) ClosedException() else IOException("The browser left no cookies")
+        val copy = Files.createTempDirectory("convx-cookies").toFile()
+        try {
+            for (suffix in listOf("", "-wal", "-shm", "-journal")) {
+                File(db.parentFile, db.name + suffix).takeIf { it.isFile }?.copyTo(File(copy, "Cookies$suffix"))
+            }
+            Class.forName("org.sqlite.JDBC")
+            val cookies = DriverManager.getConnection("jdbc:sqlite:${File(copy, "Cookies").absolutePath}").use { connection ->
+                // From version 24 the decrypted value starts with a hash of the cookie's domain.
+                val version = runCatching {
+                    connection.prepareStatement("SELECT value FROM meta WHERE key = 'version'").executeQuery().use { if (it.next()) it.getString(1).toInt() else 0 }
+                }.getOrDefault(0)
+                buildList {
+                    connection.prepareStatement("SELECT host_key, name, value, encrypted_value, path FROM cookies").executeQuery().use { rows ->
+                        while (rows.next()) {
+                            if (!sentToMusic(rows.getString("host_key"), rows.getString("path"))) continue
+                            val plain = rows.getString("value").orEmpty()
+                            val value = plain.ifEmpty { null } ?: decryptCookie(rows.getBytes("encrypted_value"), key, version)
+                            if (value != null) add(rows.getString("name") to value)
+                        }
+                    }
+                }
+            }
+            val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
+            return session(cookies, if (cookies.isEmpty()) null else readConfigOverHttp(cookie), requireAccount)
+        } finally {
+            copy.deleteRecursively()
+        }
+    }
+
+    /** A "v10"/"v11" cookie: AES-256-GCM, a 12-byte nonce after the prefix. Anything else is null. */
+    private fun decryptCookie(data: ByteArray?, key: SecretKeySpec, version: Int): String? {
+        if (data == null || data.size < 3 + 12 + 16) return null
+        val prefix = String(data, 0, 3, Charsets.US_ASCII)
+        if (prefix != "v10" && prefix != "v11") return null
+        return runCatching {
+            val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+            cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, data, 3, 12))
+            val plain = cipher.doFinal(data, 15, data.size - 15)
+            String(if (version >= 24 && plain.size >= 32) plain.copyOfRange(32, plain.size) else plain, Charsets.UTF_8)
+        }.getOrNull()
+    }
+
+    private fun session(cookies: List<Pair<String, String>>, config: Pair<String, String?>?, requireAccount: Boolean): Session {
+        if (requireAccount && cookies.none { it.first in AccountCookies }) throw ClosedException()
+        val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
+        Log.i(Tag, "Read ${cookies.size} cookies, visitor data ${if (config != null) "found" else "missing"}, data sync id ${if (config?.second != null) "found" else "missing"}")
+        return Session(cookie, config?.first, config?.second)
+    }
+
+    /** VISITOR_DATA and DATASYNC_ID from YouTube Music's own page, fetched with the cookies just read. */
+    private fun readConfigOverHttp(cookie: String): Pair<String, String?>? = runCatching {
+        val request = Request.Builder()
+            .url("https://$MusicHost/")
+            .header("Cookie", cookie)
+            .header("User-Agent", Http.USER_AGENT)
+            .header("Accept-Language", "en-US,en;q=0.9")
+            .build()
+        Http.client.newCall(request).execute().use { response ->
+            val page = response.body.string()
+            fun field(name: String) = Regex("\"$name\"\\s*:\\s*\"((?:[^\"\\\\]|\\\\.)*)\"").find(page)?.groupValues?.get(1)
+                ?.let { runCatching { Json.parseToJsonElement("\"$it\"").jsonPrimitive.content }.getOrNull() }
+                ?.takeIf { it.isNotBlank() }
+            val visitor = field("VISITOR_DATA") ?: return@use null
+            percentDecode(visitor) to field("DATASYNC_ID")?.let(::percentDecode)
+        }
+    }.onFailure { Log.w(Tag, "Couldn't read YouTube Music's page after sign-in: ${it.message}") }.getOrNull()
+
     /** The browser writes its debugging port and path into the profile once it's listening. */
-    private suspend fun awaitEndpoint(profile: File, process: Process): String {
+    private suspend fun awaitEndpoint(profile: File, window: Window): String {
         val file = File(profile, "DevToolsActivePort")
-        val deadline = System.currentTimeMillis() + 20_000
-        while (System.currentTimeMillis() < deadline) {
-            if (!process.isAlive) throw IOException("The browser closed before Convx could read your sign-in")
+        val started = System.currentTimeMillis()
+        var checked = started
+        while (System.currentTimeMillis() < started + 20_000) {
             val lines = runCatching { file.readLines() }.getOrNull()
             if (lines != null && lines.size >= 2 && lines[0].toIntOrNull() != null) {
                 return "ws://127.0.0.1:${lines[0].trim()}${lines[1].trim()}"
             }
+            // Past a launcher's hand-over, a browser that's gone isn't coming back.
+            if (System.currentTimeMillis() - checked > 1_000 && System.currentTimeMillis() - started > 3_000) {
+                checked = System.currentTimeMillis()
+                if (!window.isOpen) throw DevToolsUnavailable("it closed before Convx could read your sign-in")
+            }
             delay(200)
         }
-        throw IOException("The browser didn't start for Convx to read your sign-in")
+        throw DevToolsUnavailable("it didn't start for Convx to read your sign-in")
     }
 
     /** The page's `ytcfg` VISITOR_DATA and DATASYNC_ID, as the phone's JavaScript bridge reads them. */
@@ -244,12 +570,11 @@ object BrowserSignIn {
         return null
     }
 
-    /** What the browser would send with a request to https://music.youtube.com/. */
-    private fun sentToMusic(cookie: JsonObject): Boolean {
-        val domain = cookie.text("domain") ?: return false
-        val path = cookie.text("path") ?: "/"
+    /** Whether a cookie for [domain] and [path] goes with a request to https://music.youtube.com/. */
+    private fun sentToMusic(domain: String?, path: String?): Boolean {
+        domain ?: return false
         val domainMatches = if (domain.startsWith(".")) MusicHost == domain.drop(1) || MusicHost.endsWith(domain) else MusicHost == domain
-        return domainMatches && (path == "/" || path.isEmpty())
+        return domainMatches && (path.isNullOrEmpty() || path == "/")
     }
 
     /** Android's Uri.decode: %XX only, a "+" stays a "+". */

@@ -65,9 +65,21 @@ jobs:
       - name: Compile
         run: ./gradlew --no-daemon compileKotlin
 
+      # The YouTube Music login is tried with every browser on the runner; Opera GX is added to
+      # Chrome, Edge and Firefox, because it's the one people asked about.
+      - name: Install Opera GX
+        continue-on-error: true
+        timeout-minutes: 6
+        shell: powershell
+        run: |
+          $setup = Join-Path $env:RUNNER_TEMP 'OperaGXSetup.exe'
+          Invoke-WebRequest -UseBasicParsing 'https://net.geo.opera.com/opera_gx/stable/windows' -OutFile $setup
+          Start-Process -Wait -FilePath $setup -ArgumentList '--silent', '--allusers=0', '--launchopera=0', '--setdefaultbrowser=0'
+          Get-ChildItem "$env:LOCALAPPDATA\Programs\Opera GX" -Filter opera.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1 -ExpandProperty FullName
+
       - name: Playback check
         continue-on-error: true
-        timeout-minutes: 5
+        timeout-minutes: 12
         # Kept beside the screenshots, so the results can be read without the run's logs.
         run: |
           mkdir -p build/snapshots
@@ -96,6 +108,28 @@ jobs:
             echo "::warning::Packaging with the JetBrains Runtime failed; falling back to Temurin (Windows title bar)"
           fi
           CONVX_JBR= ./gradlew --no-daemon packageMsi packageExe createDistributable
+
+      # What Convx costs while it sits paused (CPU, memory, frames drawn, a CPU profile), for this
+      # build and for the release people have now, side by side in the screenshots' idle folder.
+      - name: Idle check
+        continue-on-error: true
+        timeout-minutes: 12
+        shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
+          JBR: ${{ steps.jbr.outputs.path }}
+        run: |
+          $out = 'build/snapshots/idle'
+          New-Item -ItemType Directory -Force $out | Out-Null
+          try { Set-DisplayResolution -Width 1920 -Height 1080 -Force -ErrorAction Stop } catch { Write-Host "Screen size unchanged: $_" }
+          $base = Join-Path $env:RUNNER_TEMP 'release'
+          gh release download desktop-latest --repo $env:GITHUB_REPOSITORY --pattern '*-portable.zip' --dir $base --clobber
+          $zip = Get-ChildItem $base -Filter *-portable.zip -ErrorAction SilentlyContinue | Select-Object -First 1
+          if ($zip) {
+            Expand-Archive -Force $zip.FullName $base
+            ./packaging/windows/idle-check.ps1 -App (Join-Path $base 'Convx') -Name "release-$($zip.BaseName -replace '^Convx-|-portable$')" -OutDir $out -Jdk $env:JBR
+          }
+          ./packaging/windows/idle-check.ps1 -App build/compose/binaries/main/app/Convx -Name "build-$env:CONVX_VERSION" -OutDir $out -Jdk $env:JBR
 
       # Convx's pictures in the installer's pages, and "Updating Convx" over an older install.
       # The script keeps the MSI as jpackage made it if anything looks off.

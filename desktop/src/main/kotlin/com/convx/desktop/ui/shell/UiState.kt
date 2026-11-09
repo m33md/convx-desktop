@@ -66,6 +66,12 @@ object UiState {
     /** F11: the window over the whole screen, taskbar and all, whatever it shows. */
     var windowFullscreen by mutableStateOf(false)
 
+    /** False while the window is minimised; nothing that moves on its own draws then. */
+    var windowShown by mutableStateOf(true)
+
+    /** Whether Convx has the focus; while another app has it, moving views draw at a lower rate. */
+    var windowFocused by mutableStateOf(true)
+
     /** Whether the window is wide enough for the Now Playing panel beside the pages. */
     var rightPanelFits by mutableStateOf(true)
     var fullPlayerMode by mutableStateOf(FullPlayerMode.Lyrics)

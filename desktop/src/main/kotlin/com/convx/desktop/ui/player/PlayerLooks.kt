@@ -6,11 +6,6 @@
 package com.convx.desktop.ui.player
 
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -26,7 +21,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.withFrameMillis
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -53,6 +47,9 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import com.convx.desktop.ui.shell.UiState
+import com.convx.desktop.ui.components.awaitPacedFrameMillis
+import com.convx.desktop.ui.components.rememberLoopingPhase
 import com.convx.desktop.data.PlayerBackground
 import com.convx.desktop.data.PlayerDesign
 import com.convx.desktop.data.Settings
@@ -362,15 +359,12 @@ private fun CoverImage(url: String?, modifier: Modifier, size: Int, colorFilter:
 /** The phone's Glow: six soft blobs in the cover's swatches, drifting through them while music plays. */
 @Composable
 private fun GlowBackground(colors: List<Color>, playing: Boolean) {
-    val transition = rememberInfiniteTransition()
-    val running = transition.animateFloat(0f, 1f, infiniteRepeatable(tween(20_000, easing = LinearEasing), RepeatMode.Restart))
-    val held = remember { mutableFloatStateOf(0f) }
-    LaunchedEffect(playing) { if (!playing) held.floatValue = running.value }
+    val drift = rememberLoopingPhase(20_000, running = playing)
     Box(
         Modifier.fillMaxSize().drawBehind {
             drawRect(Color(0xFF050505))
             if (colors.isEmpty()) return@drawBehind
-            val p = if (playing) running.value else held.floatValue
+            val p = drift.value
             fun colorAt(i: Int): Color {
                 val idx = i + p * colors.size
                 val a = floor(idx).toInt() % colors.size
@@ -404,33 +398,24 @@ private fun GlowBackground(colors: List<Color>, playing: Boolean) {
 /** The phone's Live mesh: three blurred, saturated copies of the cover turning at different speeds. */
 @Composable
 private fun LiveMeshBackground(url: String?, playing: Boolean) {
-    val transition = rememberInfiniteTransition()
-    fun spin(ms: Int) = infiniteRepeatable<Float>(tween(ms, easing = LinearEasing), RepeatMode.Restart)
-    val anchor = transition.animateFloat(0f, -360f, spin(80_000))
-    val fast = transition.animateFloat(0f, 360f, spin(40_000))
-    val slow = transition.animateFloat(0f, 360f, spin(60_000))
-    val still = remember { floatArrayOf(0f, 0f, 0f) }
-    LaunchedEffect(playing) {
-        if (!playing) {
-            still[0] = anchor.value
-            still[1] = fast.value
-            still[2] = slow.value
-        }
-    }
+    // Each turns at its own speed while music plays and holds its angle while paused.
+    val anchor = rememberLoopingPhase(80_000, running = playing)
+    val fast = rememberLoopingPhase(40_000, running = playing)
+    val slow = rememberLoopingPhase(60_000, running = playing)
     val filter = remember { ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(1.8f) }) }
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Box(Modifier.fillMaxSize().graphicsLayer { scaleX = 1.7f; scaleY = 1.7f }.blur(32.dp)) {
-            CoverImage(url, Modifier.fillMaxSize().graphicsLayer { rotationZ = if (playing) anchor.value else still[0] }.blur(100.dp), 160, filter)
+            CoverImage(url, Modifier.fillMaxSize().graphicsLayer { rotationZ = -360f * anchor.value }.blur(100.dp), 160, filter)
             CoverImage(
                 url,
-                Modifier.fillMaxSize().graphicsLayer { rotationZ = if (playing) fast.value else still[1]; alpha = 0.6f }.blur(120.dp),
+                Modifier.fillMaxSize().graphicsLayer { rotationZ = 360f * fast.value; alpha = 0.6f }.blur(120.dp),
                 160,
                 filter,
                 Alignment.TopStart,
             )
             CoverImage(
                 url,
-                Modifier.fillMaxSize().graphicsLayer { rotationZ = if (playing) slow.value else still[2]; alpha = 0.5f }.blur(120.dp),
+                Modifier.fillMaxSize().graphicsLayer { rotationZ = 360f * slow.value; alpha = 0.5f }.blur(120.dp),
                 160,
                 filter,
                 Alignment.BottomEnd,
@@ -506,10 +491,11 @@ fun PlayerDesign.coverStyle(): CoverStyle = when (this) {
 @Composable
 fun rememberCoverRotation(style: CoverStyle, playing: Boolean): State<Float> {
     val angle = remember { mutableFloatStateOf(0f) }
-    if (playing && style.spins) {
+    if (playing && style.spins && UiState.windowShown) {
         LaunchedEffect(Unit) {
             while (true) {
-                withFrameMillis { frame -> angle.floatValue = (frame % CoverTurnMillis) / CoverTurnMillis.toFloat() * 360f }
+                val frame = awaitPacedFrameMillis()
+                angle.floatValue = (frame % CoverTurnMillis) / CoverTurnMillis.toFloat() * 360f
             }
         }
     }

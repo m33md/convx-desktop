@@ -310,6 +310,8 @@ data class Settings(
     val youtubeMoreContent: Boolean = true,
     /** The phone's "Auto sync with account": likes, albums, artists and playlists follow YouTube Music. */
     val youtubeSync: Boolean = true,
+    /** The browser the YouTube Music login opens, by its program's path; null picks Windows' default browser if it can. */
+    val signInBrowser: String? = null,
     /** Folders scanned for music files; the Windows Music folder until you choose. */
     val localFolders: List<String> = com.convx.desktop.player.LocalMusic.defaultFolders(),
     val excludedFolders: List<String> = emptyList(),
