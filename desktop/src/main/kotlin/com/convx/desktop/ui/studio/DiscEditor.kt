@@ -60,12 +60,16 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.input.pointer.PointerEventType
 import androidx.compose.ui.input.pointer.isShiftPressed
+import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.onPointerEvent
+import androidx.compose.ui.input.pointer.pointerHoverIcon
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.core.AppScope
+import com.convx.desktop.data.BrushStroke
+import com.convx.desktop.data.BrushTip
 import com.convx.desktop.data.DiscArt
 import com.convx.desktop.data.DiscDesign
 import com.convx.desktop.data.DiscDesigns
@@ -93,10 +97,12 @@ import kotlinx.coroutines.launch
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
+import kotlin.math.abs
 import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.pow
+import kotlin.random.Random
 import java.awt.Toolkit
 import java.awt.datatransfer.Clipboard
 import java.awt.datatransfer.DataFlavor
@@ -140,6 +146,13 @@ object DiscEditor {
 
     /** Which "Add" picker the tools panel has open. */
     var picker by mutableStateOf<LayerKind?>(null)
+
+    /** Drags on the disc paint with [brush] (into the selected brush layer, or a new one) rather than move things. */
+    var painting by mutableStateOf(false)
+    var brush by mutableStateOf(BrushStroke(tip = BrushTip.PEN, color = 0xFFFFFFFF, size = 0.025f))
+
+    /** The stroke being painted, drawn over the disc until it's let go; the layer it goes into, if there is one yet. */
+    var liveStroke by mutableStateOf<Pair<BrushStroke, DiscLayer?>?>(null)
     var saving by mutableStateOf(false)
         private set
 
@@ -157,6 +170,8 @@ object DiscEditor {
         redo.clear()
         selectedId = null
         picker = null
+        painting = false
+        liveStroke = null
         spinning = false
         asCover = false
         dirty = false
@@ -190,6 +205,7 @@ object DiscEditor {
         isOpen = false
         spinning = false
         picker = null
+        painting = false
         // Pictures added and then dropped before saving aren't kept.
         AppScope.launch(Dispatchers.IO) { runCatching { DiscDesigns.pruneAssets() } }
     }
@@ -308,7 +324,47 @@ object DiscEditor {
         commit(design.copy(layers = design.layers + layer))
         selectedId = layer.id
         picker = null
+        painting = false
     }
+
+    /** The brush layer strokes go into: the selected one, if it's a brush layer that can be painted on. */
+    fun paintTarget(): DiscLayer? = selected?.takeIf { it.kind == LayerKind.PAINT && !it.locked && it.visible }
+
+    /** Adds a finished stroke to [target] (a brush layer), or to a new brush layer on top. */
+    fun addStroke(stroke: BrushStroke, target: String?) {
+        val layer = design.layer(target)
+        if (layer == null) {
+            if (stroke.tip == BrushTip.ERASER) return
+            val fresh = recentre(DiscLayer(kind = LayerKind.PAINT, name = "Painting", strokes = listOf(stroke)))
+            commit(design.copy(layers = design.layers + fresh))
+            selectedId = fresh.id
+        } else {
+            commitLayer(layer.id) { recentre(it.copy(strokes = it.strokes + stroke)) }
+        }
+    }
+
+    /** Ends a rub-out that was shown live, the undo step kept as it began. */
+    fun finishErase(target: String) = liveLayer(target) { recentre(it) }
+
+    /**
+     * Moves a brush layer's middle to the middle of what's painted, without moving the paint, so
+     * it turns and sizes round its own middle.
+     */
+    private fun recentre(layer: DiscLayer): DiscLayer {
+        val box = DiscArt.paintBounds(layer) ?: return layer
+        val mx = (box[0] + box[2]) / 2f
+        val my = (box[1] + box[3]) / 2f
+        if (abs(mx) < 1e-4f && abs(my) < 1e-4f) return layer
+        val strokes = layer.strokes.map { stroke -> stroke.copy(points = stroke.points.mapIndexed { i, v -> roundPoint(v - if (i % 2 == 0) mx else my) }) }
+        val a = Math.toRadians(layer.rotation.toDouble())
+        val scale = layer.scale
+        val dx = ((mx * kotlin.math.cos(a) - my * kotlin.math.sin(a)) * scale).toFloat()
+        val dy = ((mx * kotlin.math.sin(a) + my * kotlin.math.cos(a)) * scale).toFloat()
+        return layer.copy(x = layer.x + dx, y = layer.y + dy, strokes = strokes)
+    }
+
+    /** Four places is a ten-thousandth of the radius: finer than a pixel, and short in the saved file. */
+    fun roundPoint(v: Float): Float = (v * 10_000f).roundToInt() / 10_000f
 
     fun delete(id: String? = selectedId) {
         id ?: return
@@ -361,9 +417,9 @@ object DiscEditor {
         }
         val picture = runCatching { clipboardPicture(clipboard) }.getOrNull() ?: return
         AppScope.launch(Dispatchers.Main) {
-            withContext(Dispatchers.IO) { runCatching { picture() } }
-                .onSuccess { asset ->
-                    insert(DiscLayer(kind = LayerKind.IMAGE, name = "Picture", asset = asset, frame = ImageFrame.WHOLE, scale = 0.5f, amount = 1f))
+            withContext(Dispatchers.IO) { runCatching { picture().let { it to DiscArt.fitScale(it, DiscDesigns.Resources) } } }
+                .onSuccess { (asset, fit) ->
+                    insert(DiscLayer(kind = LayerKind.IMAGE, name = "Picture", asset = asset, frame = ImageFrame.WHOLE, scale = fit, amount = 1f))
                 }
                 .onFailure { Overlays.toast(it.message ?: "Couldn't paste that picture", "error") }
         }
@@ -375,6 +431,7 @@ object DiscEditor {
         commit(design.copy(layers = design.layers.toMutableList().apply { add(at, layer) }))
         selectedId = layer.id
         picker = null
+        painting = false
     }
 
     /** What the clipboard holds as a picture, read and stored as a design asset when called; null if none. */
@@ -435,6 +492,10 @@ object DiscEditor {
         return when {
             event.key == Key.Escape -> {
                 when {
+                    painting -> {
+                        painting = false
+                        if (picker == LayerKind.PAINT) picker = null
+                    }
                     picker != null -> picker = null
                     selectedId != null && !typing -> selectedId = null
                     !typing -> close()
@@ -456,6 +517,14 @@ object DiscEditor {
             event.key == Key.DirectionUp -> { nudge(0f, -step); true }
             event.key == Key.DirectionDown -> { nudge(0f, step); true }
             event.key == Key.Spacebar -> { spinning = !spinning; true }
+            event.key == Key.B && !event.isCtrlPressed -> {
+                painting = !painting
+                if (painting) picker = LayerKind.PAINT else if (picker == LayerKind.PAINT) picker = null
+                true
+            }
+            // Brush size, as in other paint apps.
+            painting && event.key == Key.LeftBracket -> { brush = brush.copy(size = (brush.size / 1.25f).coerceAtLeast(BrushSizes.start)); true }
+            painting && event.key == Key.RightBracket -> { brush = brush.copy(size = (brush.size * 1.25f).coerceAtMost(BrushSizes.endInclusive)); true }
             else -> false
         }
     }
@@ -572,6 +641,8 @@ private fun DiscCanvas(modifier: Modifier) {
         val handleRadius = with(LocalDensity.current) { 9.dp.toPx() }
         val live by rememberUpdatedState(Triple(cx, cy, radius))
         var lastWheel by remember { mutableStateOf(0L) }
+        // Where the brush is, for its outline, while painting.
+        var hover by remember { mutableStateOf<Offset?>(null) }
         // While it spins, the print (with its effects) is drawn once and turned, not drawn again every frame.
         val design = DiscEditor.design
         val print by produceState<org.jetbrains.skia.Image?>(null, DiscEditor.spinning, design, radius) {
@@ -592,11 +663,63 @@ private fun DiscCanvas(modifier: Modifier) {
         Canvas(
             Modifier
                 .fillMaxSize()
+                .pointerHoverIcon(if (DiscEditor.painting) PointerIcon.Crosshair else PointerIcon.Default)
+                .onPointerEvent(PointerEventType.Move) { event -> hover = if (DiscEditor.painting) event.changes.firstOrNull()?.position else null }
+                .onPointerEvent(PointerEventType.Exit) { hover = null }
                 .pointerInput(Unit) {
                     awaitEachGesture {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         DiscEditor.spinning = false
                         val (ccx, ccy, r) = live
+                        if (DiscEditor.painting) {
+                            down.consume()
+                            val target = DiscEditor.paintTarget()
+                            val erasing = DiscEditor.brush.tip == BrushTip.ERASER
+                            if (erasing && target == null) {
+                                Overlays.toast("Select a brush layer first: the eraser rubs out paint", "info")
+                                return@awaitEachGesture
+                            }
+                            // Points in the brush layer's own space, so they land where they're painted however it's moved.
+                            fun local(p: Offset): Pair<Float, Float> {
+                                val x = (p.x - ccx) / r
+                                val y = (p.y - ccy) / r
+                                return if (target != null) DiscArt.toLayer(target, x, y) else x to y
+                            }
+                            val scale = target?.scale?.coerceAtLeast(0.02f) ?: 1f
+                            val brush = DiscEditor.brush.let { it.copy(size = it.size / scale, seed = Random.nextInt(100_000)) }
+                            val points = ArrayList<Float>()
+                            local(down.position).let { (x, y) -> points += DiscEditor.roundPoint(x); points += DiscEditor.roundPoint(y) }
+                            val step = kotlin.math.max(0.0025f, DiscEditor.brush.size * 0.1f) / scale
+                            fun show() {
+                                val stroke = brush.copy(points = points.toList())
+                                if (erasing) {
+                                    if (target != null) DiscEditor.liveLayer(target.id) { it.copy(strokes = target.strokes + stroke) }
+                                } else {
+                                    DiscEditor.liveStroke = stroke to target
+                                }
+                            }
+                            if (erasing && target != null) DiscEditor.keepUndo()
+                            show()
+                            while (true) {
+                                val event = awaitPointerEvent()
+                                val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                                if (!change.pressed) break
+                                change.consume()
+                                hover = change.position
+                                val (x, y) = local(change.position)
+                                if (hypot(x - points[points.size - 2], y - points[points.size - 1]) < step) continue
+                                points += DiscEditor.roundPoint(x)
+                                points += DiscEditor.roundPoint(y)
+                                show()
+                            }
+                            if (erasing) {
+                                target?.let { DiscEditor.finishErase(it.id) }
+                            } else {
+                                DiscEditor.addStroke(brush.copy(points = points.toList()), target?.id)
+                            }
+                            DiscEditor.liveStroke = null
+                            return@awaitEachGesture
+                        }
                         val current = DiscEditor.selected
                         val handle = current?.let { handleAt(it, ccx, ccy, r) }
                         val onHandle = handle != null && current?.locked == false && (down.position - handle).getDistance() <= handleRadius * 2.2f
@@ -691,10 +814,29 @@ private fun DiscCanvas(modifier: Modifier) {
                 } else {
                     DiscArt.drawDisc(native, design, DiscDesigns.Resources, cx, cy, radius, spin, print.takeIf { spin != 0f })
                 }
+                // The stroke being painted, over the disc until it's let go and drawn into its layer.
+                DiscEditor.liveStroke?.let { (stroke, layer) ->
+                    native.save()
+                    native.clipPath(org.jetbrains.skia.Path().addCircle(cx, cy, radius), org.jetbrains.skia.ClipMode.INTERSECT, true)
+                    native.translate(cx + (layer?.x ?: 0f) * radius, cy + (layer?.y ?: 0f) * radius)
+                    if (layer != null) {
+                        native.rotate(layer.rotation)
+                        native.scale(layer.scale, layer.scale)
+                    }
+                    DiscArt.drawStroke(native, stroke, radius)
+                    native.restore()
+                }
+            }
+            // The brush's size, where it would paint.
+            val at = hover
+            if (DiscEditor.painting && at != null) {
+                val size = radius * DiscEditor.brush.size / 2f
+                drawCircle(Color.Black.copy(alpha = 0.5f), size + 1.5f, at, style = Stroke(width = 1.5f))
+                drawCircle(Color.White, size, at, style = Stroke(width = 1.5f))
             }
             // The selection: a dashed outline, and the round handle that sizes and turns it.
             val layer = DiscEditor.selected
-            if (layer != null && layer.visible && !DiscEditor.asCover && spin == 0f) {
+            if (layer != null && layer.visible && !DiscEditor.asCover && spin == 0f && !DiscEditor.painting) {
                 val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f)
                 val round = layer.onCircle
                 val corners = DiscArt.corners(layer, DiscDesigns.Resources, cx, cy, radius)
@@ -724,6 +866,7 @@ private fun DiscCanvas(modifier: Modifier) {
         Text(
             when {
                 DiscEditor.asCover -> "This is how the playlist cover will look."
+                DiscEditor.painting -> "Painting with the ${DiscEditor.brush.tip.label.lowercase()}. Ctrl+Z takes back a stroke, [ and ] size the brush, Esc stops."
                 DiscEditor.selected?.locked == true -> "This layer is locked. Unlock it in Layers to move it."
                 DiscEditor.selected?.kind == LayerKind.FILL -> "A fill covers the part of the disc it's printed on. Pick that part on the right."
                 DiscEditor.selected != null -> "Drag to move. Scroll to resize, Shift+scroll to turn, or drag the round handle. Arrows nudge."

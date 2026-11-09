@@ -46,6 +46,15 @@ licence in fonts/licenses: Ma Shan Zheng (https://github.com/googlefonts/mashanz
 and (c) 2009 Peter Wiegel, both under the SIL Open Font License 1.1; and Permanent Marker by Font
 Diner, under the Apache License, Version 2.0.
 
+## Disc Studio stickers
+
+Disc Studio's sticker library (desktop/src/main/resources/stickers, built by
+desktop/packaging/make_stickers.py) holds Fluent Emoji in its flat style
+(https://github.com/microsoft/fluentui-emoji), Copyright (c) Microsoft Corporation, under the MIT
+License, and Material Design Icons (https://github.com/Templarian/MaterialDesign) by Pictogrammers,
+under the Apache License, Version 2.0, which also gives icons/brush.xml. Both licences are in
+stickers/LICENSES.txt.
+
 ## Convx wordmark
 
 The "convx" wordmark (desktop/packaging/convx-wordmark.*, icons/convx_wordmark.xml) is the Convx

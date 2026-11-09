@@ -19,11 +19,15 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -58,8 +62,9 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.convx.desktop.core.AppScope
+import com.convx.desktop.data.BrushStroke
+import com.convx.desktop.data.BrushTip
 import com.convx.desktop.data.DiscArt
 import com.convx.desktop.data.DiscDesign
 import com.convx.desktop.data.DiscDesigns
@@ -82,8 +87,12 @@ import com.convx.desktop.data.LayerBlend
 import com.convx.desktop.data.LayerKind
 import com.convx.desktop.data.Library
 import com.convx.desktop.data.PatternKind
+import com.convx.desktop.data.StickerLibrary
 import com.convx.desktop.data.TextPath
+import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.Artwork
+import com.convx.desktop.ui.components.MenuItem
+import com.convx.desktop.ui.components.rememberMenuAnchor
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.DialogCard
 import com.convx.desktop.ui.components.IconButton
@@ -117,8 +126,6 @@ private val Swatches = listOf(
     0xFF0A84FF, 0xFF5E5CE6, 0xFF9B7BFF, 0xFFFF6FB5, 0xFFFFC7A1, 0xFFF2EBDD,
     0xFF8C1C13, 0xFF3A2410, 0xFF1B3B6F, 0xFF4B1D7A, 0xFF0F5132, 0xFFC9CACF,
 )
-
-private val Emojis = listOf("✨", "🔥", "💜", "🌙", "⭐", "🎧", "🎵", "🌸", "🦋", "🍒", "⚡", "🖤", "🌊", "🪩", "🎸", "💫", "👑", "🌈", "☁️", "🍄", "🐾", "🎀", "🪐", "💿")
 
 internal fun Long.toColor(): Color = Color(this)
 
@@ -300,8 +307,8 @@ private fun SmallRound(icon: String, tip: String, onClick: () -> Unit) {
  * The colour picker: swatches, hue, saturation, brightness and see-through sliders, and a hex
  * field. Changes show on the disc as they're made; the whole visit is one undo step.
  */
-private fun pickColor(initial: Long, onPick: (Long) -> Unit) {
-    DiscEditor.keepUndo()
+private fun pickColor(initial: Long, undoable: Boolean = true, onPick: (Long) -> Unit) {
+    if (undoable) DiscEditor.keepUndo()
     Overlays.showDialog {
         val start = remember { hsba(initial) }
         var h by remember { mutableStateOf(start[0]) }
@@ -402,8 +409,11 @@ internal fun ToolsPanel(modifier: Modifier) {
         PanelHeading("Add a layer")
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             LayerKind.entries.forEach { kind ->
-                ToolTile(kind.icon, kind.label, DiscEditor.picker == kind) {
-                    DiscEditor.picker = if (DiscEditor.picker == kind) null else kind
+                ToolTile(kind.icon, kind.label, DiscEditor.picker == kind || (kind == LayerKind.PAINT && DiscEditor.painting)) {
+                    val open = DiscEditor.picker != kind
+                    DiscEditor.picker = if (open) kind else null
+                    // The brush paints as soon as it's picked up.
+                    DiscEditor.painting = open && kind == LayerKind.PAINT
                 }
             }
         }
@@ -414,6 +424,15 @@ internal fun ToolsPanel(modifier: Modifier) {
             LayerKind.STICKER -> StickerPicker { sticker -> DiscEditor.add(newSticker(sticker)) }
             LayerKind.FILL -> FillPicker()
             LayerKind.SHAPE -> ShapePicker()
+            LayerKind.PAINT -> PickerBox {
+                BrushSettings()
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "Drag on the disc to paint. Each stroke can be taken back with Ctrl+Z. What you paint is a layer of its own: move, size and blend it like any other.",
+                    style = ConvxType.Caption,
+                    color = ConvxColors.TertiaryLabel,
+                )
+            }
             null -> Unit
         }
         PanelHeading("Start from a preset")
@@ -474,9 +493,18 @@ private fun newPattern(pattern: PatternKind): DiscLayer = DiscLayer(
         PatternKind.PAPER -> listOf(0xFFF3EEE3)
         PatternKind.STREAKS -> listOf(0xFFFFE1B0, 0xFFFFFFFF, 0xFF8FD3FF)
         PatternKind.LIGHT_LEAK -> listOf(0xFFFF7A3D, 0xFFFF3D7F, 0xFFFFD25A)
-        PatternKind.SCREEN_TONE, PatternKind.SCANLINES, PatternKind.HUD -> listOf(ink())
+        PatternKind.SCREEN_TONE, PatternKind.SCANLINES, PatternKind.HUD, PatternKind.CONTOURS -> listOf(ink())
+        PatternKind.CHEVRON -> listOf(0xFFFFFFFF, 0xFFFA2D48)
+        PatternKind.HONEYCOMB -> listOf(0xFFFFC233, 0xFFFFE14D, 0xFFFF9F1C)
+        PatternKind.PLAID -> listOf(0xFF8C1C13, 0xFF0E2A47, 0xFF1F4D2B, 0xFFF2D16B)
+        PatternKind.SCALES -> listOf(0xFF33D1FF, 0xFF5E5CE6, 0xFFFF6FB5)
+        PatternKind.ARGYLE -> listOf(0xFF1B3B6F, 0xFF5E7FB8, 0xFFF2EBDD)
+        PatternKind.TERRAZZO -> listOf(0xFFE76F51, 0xFF2A9D8F, 0xFFE9C46A, 0xFF264653, 0xFFF4A261)
+        PatternKind.LEOPARD -> listOf(0xFF2B1A0E, 0xFFB5651D, 0xFFD9A54A)
+        PatternKind.STICKERS -> listOf(0xFFFFD43B, 0xFFFA2D48, 0xFF33D1FF)
         else -> listOf(0xFFFFFFFF)
     },
+    outline = pattern == PatternKind.STICKERS,
     blend = when (pattern) {
         PatternKind.GRAIN -> LayerBlend.OVERLAY
         // Paper over a design prints the design on it.
@@ -516,6 +544,17 @@ private fun newShape(kind: ShapeKind): DiscLayer {
         ShapeKind.BARCODE -> base.copy(scale = 0.12f, aspect = 1.8f)
         ShapeKind.TAPE -> base.copy(scale = 0.07f, aspect = 3.4f, rotation = -18f, colors = listOf(0xCCF4D58D))
         ShapeKind.SCRAP -> base.copy(scale = 0.28f, aspect = 1.3f, rotation = Random.nextInt(-8, 8).toFloat(), colors = listOf(0xFFF3EEE3), shadow = true)
+        ShapeKind.TRIANGLE -> base.copy(outline = true, scale = 0.18f, amount = 0.12f)
+        ShapeKind.STAR -> base.copy(scale = 0.18f, colors = listOf(0xFFFFD43B))
+        ShapeKind.HEART -> base.copy(scale = 0.17f, colors = listOf(0xFFFA2D48))
+        ShapeKind.HEXAGON -> base.copy(outline = true, scale = 0.18f, amount = 0.12f)
+        ShapeKind.CROSS -> base.copy(scale = 0.12f)
+        ShapeKind.ARROW -> base.copy(scale = 0.1f, aspect = 1.8f)
+        ShapeKind.SPEECH -> base.copy(scale = 0.16f, aspect = 1.45f, colors = listOf(0xFFFFFFFF), shadow = true)
+        ShapeKind.BURST -> base.copy(scale = 0.18f, colors = listOf(0xFFFFD43B))
+        ShapeKind.WAVE -> base.copy(scale = 0.05f, aspect = 6f, amount = 0.15f, density = 0.3f)
+        ShapeKind.ZIGZAG -> base.copy(scale = 0.05f, aspect = 6f, amount = 0.15f, density = 0.3f)
+        ShapeKind.SPIRAL -> base.copy(scale = 0.18f, amount = 0.1f, density = 0.35f)
     }
 }
 
@@ -528,7 +567,15 @@ private fun ShapePicker() {
                     val shape = newShape(kind)
                     shape.copy(
                         x = 0f, y = 0f, shadow = false,
-                        colors = listOf(if (kind == ShapeKind.TAPE) 0xFFF4D58D else if (kind == ShapeKind.SCRAP) 0xFFF3EEE3 else 0xFFFFFFFF),
+                        colors = listOf(
+                            when (kind) {
+                                ShapeKind.TAPE -> 0xFFF4D58D
+                                ShapeKind.SCRAP -> 0xFFF3EEE3
+                                ShapeKind.STAR, ShapeKind.BURST -> 0xFFFFD43B
+                                ShapeKind.HEART -> 0xFFFA2D48
+                                else -> 0xFFFFFFFF
+                            },
+                        ),
                         scale = 0.6f / kotlin.math.max(1f, shape.aspect),
                         amount = if (kind.lines || shape.outline) 0.7f else shape.amount,
                         rotation = if (kind == ShapeKind.TAPE) -18f else 0f,
@@ -547,9 +594,10 @@ private fun ShapePicker() {
 private fun newSticker(sticker: String): DiscLayer {
     val (x, y) = spot()
     val known = DiscSticker.of(sticker)
+    val library = StickerLibrary.of(sticker)
     return DiscLayer(
         kind = LayerKind.STICKER,
-        name = known?.label ?: "Emoji",
+        name = stickerName(sticker),
         sticker = sticker,
         colors = listOf(
             when (known) {
@@ -558,16 +606,25 @@ private fun newSticker(sticker: String): DiscLayer {
                 DiscSticker.FLOWER -> 0xFF9B7BFF
                 DiscSticker.MOON -> 0xFFFFF1C1
                 DiscSticker.NOTE -> 0xFF111113
-                else -> 0xFFFFFFFF
+                // A one-colour icon starts dark on its white border.
+                else -> if (library?.source?.tinted == true) 0xFF15151A else 0xFFFFFFFF
             },
         ),
         x = x,
         y = y,
         scale = 0.22f,
-        outline = known != null,
+        outline = known != null || library != null,
         shadow = true,
     )
 }
+
+/** What a sticker's layer is called. */
+private fun stickerName(sticker: String): String =
+    DiscSticker.of(sticker)?.label ?: StickerLibrary.of(sticker)?.label ?: "Emoji"
+
+/** Whether a sticker takes the layer's colour (Convx's own and the icons) rather than having its own (emoji). */
+private fun stickerTinted(sticker: String): Boolean =
+    !sticker.startsWith(EmojiStickerPrefix) && StickerLibrary.of(sticker)?.source?.tinted != false
 
 @Composable
 private fun PatternPicker(onPick: (PatternKind) -> Unit) {
@@ -598,15 +655,233 @@ private fun StickerPicker(onPick: (String) -> Unit) {
                 }
             }
         }
-        Spacer(Modifier.height(8.dp))
-        FlowRow {
-            Emojis.forEach { emoji ->
-                Box(
-                    Modifier.size(38.dp).clip(SmallShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(EmojiStickerPrefix + emoji) },
-                    contentAlignment = Alignment.Center,
-                ) { Text(emoji, fontSize = 22.sp) }
+        Spacer(Modifier.height(10.dp))
+        StickerBrowser(onPick)
+    }
+}
+
+/** The sticker library: a search over all of it, or one set and category at a time, in a grid that scrolls. */
+@Composable
+private fun StickerBrowser(onPick: (String) -> Unit) {
+    var query by remember { mutableStateOf("") }
+    var source by remember { mutableStateOf(StickerLibrary.Source.EMOJI) }
+    var category by remember { mutableStateOf<String?>(null) }
+    val total = produceState(0) { value = withContext(Dispatchers.IO) { StickerLibrary.count } }.value
+    val categories = produceState(emptyList<String>(), source) { value = withContext(Dispatchers.IO) { StickerLibrary.categories(source) } }.value
+    val found = produceState<List<StickerLibrary.Sticker>?>(null, query, source, category) {
+        value = withContext(Dispatchers.Default) { StickerLibrary.search(query, source, category) }
+    }.value
+    SearchField(query, if (total > 0) "Search ${"%,d".format(total)} stickers" else "Search stickers", "disc-sticker-search") { query = it }
+    if (query.isBlank()) {
+        Choices(StickerLibrary.Source.entries, source, { it.label }) {
+            source = it
+            category = null
+        }
+        val menu = rememberMenuAnchor()
+        Box {
+            PickerRow(category ?: "All ${source.label.lowercase()}", icon = "expand_more") { menu.expanded = true }
+            AppMenu(menu) {
+                MenuItem("All ${source.label.lowercase()}") {
+                    menu.expanded = false
+                    category = null
+                }
+                categories.forEach { name ->
+                    MenuItem(name) {
+                        menu.expanded = false
+                        category = name
+                    }
+                }
             }
         }
+    }
+    Spacer(Modifier.height(8.dp))
+    Box(Modifier.fillMaxWidth().height(250.dp), contentAlignment = Alignment.Center) {
+        when {
+            found == null -> Text("Loading stickers…", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel)
+            found.isEmpty() -> Text("No stickers called \"${query.trim()}\".", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel)
+            else -> LazyVerticalGrid(
+                GridCells.Adaptive(40.dp),
+                Modifier.fillMaxSize(),
+                horizontalArrangement = Arrangement.spacedBy(2.dp),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                items(found, key = { it.id }) { sticker -> LibraryTile(sticker) { onPick(sticker.id) } }
+            }
+        }
+    }
+}
+
+/** One library sticker, drawn off the UI thread the first time it shows. */
+@Composable
+private fun LibraryTile(sticker: StickerLibrary.Sticker, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val ready = produceState(StickerLibrary.isReady(sticker), sticker.id) {
+        if (!value) value = withContext(Dispatchers.Default) {
+            if (sticker.source.tinted) StickerLibrary.path(sticker) != null else StickerLibrary.picture(sticker) != null
+        }
+    }.value
+    Tooltip(sticker.label) {
+        Canvas(
+            Modifier
+                .size(40.dp)
+                .clip(SmallShape)
+                .background(if (hovered) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+                .hoverable(interaction)
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable(interaction, null, onClick = onClick),
+        ) {
+            if (!ready) return@Canvas
+            val half = size.minDimension * 0.36f
+            drawIntoCanvas { canvas ->
+                val native = canvas.nativeCanvas
+                native.save()
+                native.translate(size.width / 2f, size.height / 2f)
+                native.scale(half, half)
+                if (sticker.source.tinted) {
+                    StickerLibrary.path(sticker)?.let { native.drawPath(it, org.jetbrains.skia.Paint().apply { isAntiAlias = true; color = org.jetbrains.skia.Color.WHITE }) }
+                } else {
+                    StickerLibrary.picture(sticker)?.let { native.drawPicture(it, null, null) }
+                }
+                native.restore()
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchField(value: String, placeholder: String, key: String, onChange: (String) -> Unit) {
+    var focused by remember { mutableStateOf(false) }
+    DisposableEffect(key) { onDispose { UiState.typingFocusChanged(key, false) } }
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(SmallShape)
+            .background(if (focused) Color.White.copy(alpha = 0.11f) else FieldBg)
+            .padding(horizontal = 10.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ConvxIcon("search", tint = Color.White.copy(alpha = 0.6f), size = 15.dp)
+        Spacer(Modifier.width(8.dp))
+        Box(Modifier.weight(1f)) {
+            if (value.isEmpty()) Text(placeholder, style = ConvxType.Subhead, color = ConvxColors.TertiaryLabel, maxLines = 1)
+            BasicTextField(
+                value = value,
+                onValueChange = { onChange(it.take(40)) },
+                singleLine = true,
+                textStyle = ConvxType.Subhead.copy(color = Color.White),
+                cursorBrush = SolidColor(Color.White),
+                modifier = Modifier.fillMaxWidth().onFocusChanged {
+                    focused = it.isFocused
+                    UiState.typingFocusChanged(key, it.isFocused)
+                },
+            )
+        }
+        if (value.isNotEmpty()) {
+            Box(Modifier.size(18.dp).clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onChange("") }, contentAlignment = Alignment.Center) {
+                ConvxIcon("close", tint = Color.White.copy(alpha = 0.7f), size = 12.dp)
+            }
+        }
+    }
+}
+
+// ---- Brush -----------------------------------------------------------------------------------
+
+/** How big the brush can be, as a share of the disc's radius. */
+internal val BrushSizes = 0.004f..0.24f
+
+/** The brush's tip, size, colour and how see-through it paints: what the next stroke is made with. */
+@Composable
+private fun BrushSettings() {
+    val brush = DiscEditor.brush
+    FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        BrushTip.entries.forEach { tip -> BrushTile(tip, brush.tip == tip) { DiscEditor.brush = brush.copy(tip = tip) } }
+    }
+    PropRow("Size", "${(brush.size * 200).roundToInt().coerceAtLeast(1)}") {
+        GlassSlider(
+            kotlin.math.sqrt((brush.size - BrushSizes.start) / (BrushSizes.endInclusive - BrushSizes.start)),
+            { v -> DiscEditor.brush = DiscEditor.brush.copy(size = BrushSizes.start + v * v * (BrushSizes.endInclusive - BrushSizes.start)) },
+            valueRange = 0f..1f,
+        )
+    }
+    if (brush.tip != BrushTip.ERASER) {
+        PropRow("Opacity", percent(brush.opacity)) {
+            GlassSlider(brush.opacity, { v -> DiscEditor.brush = DiscEditor.brush.copy(opacity = v) }, valueRange = 0.05f..1f)
+        }
+        Text("Colour", style = ConvxType.Subhead, color = Color.White, modifier = Modifier.padding(top = 4.dp, bottom = 6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Swatch(brush.color, size = 30.dp, selected = true) {
+                pickColor(brush.color, undoable = false) { color -> DiscEditor.brush = DiscEditor.brush.copy(color = color) }
+            }
+            BrushColors.forEach { color -> Swatch(color, size = 22.dp, selected = false) { DiscEditor.brush = DiscEditor.brush.copy(color = color) } }
+        }
+    } else {
+        PropRow("Strength", percent(brush.opacity)) {
+            GlassSlider(brush.opacity, { v -> DiscEditor.brush = DiscEditor.brush.copy(opacity = v) }, valueRange = 0.05f..1f)
+        }
+    }
+}
+
+private val BrushColors = listOf(0xFFFFFFFF, 0xFF111113, 0xFFFA2D48, 0xFFFF6B35, 0xFFFFD43B, 0xFF30D158, 0xFF33D1FF, 0xFF5E5CE6, 0xFFFF6FB5, 0xFF8C1C13)
+
+/** A slider row that isn't an undo step of its own: the brush isn't part of the design. */
+@Composable
+private fun PropRow(label: String, shown: String, slider: @Composable () -> Unit) {
+    Column(Modifier.fillMaxWidth().padding(vertical = 3.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(label, style = ConvxType.Subhead, color = Color.White, modifier = Modifier.weight(1f))
+            Text(shown, style = ConvxType.Caption, color = ConvxColors.SecondaryLabel)
+        }
+        slider()
+    }
+}
+
+/** A tip to paint with: a squiggle it painted, and its name. */
+@Composable
+private fun BrushTile(tip: BrushTip, selected: Boolean, onClick: () -> Unit) {
+    val accent = LocalAccent.current
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val sample = remember(tip) {
+        val points = ArrayList<Float>()
+        for (i in 0..24) {
+            val t = i / 24f
+            points += -0.7f + t * 1.4f
+            points += kotlin.math.sin(t * 6.2832f) * 0.18f
+        }
+        BrushStroke(tip = tip, color = 0xFFFFFFFF, size = if (tip == BrushTip.SPRAY || tip == BrushTip.CHALK) 0.26f else 0.18f, points = points, seed = 7)
+    }
+    Column(
+        Modifier
+            .width(62.dp)
+            .clip(SmallShape)
+            .background(if (selected) accent.copy(alpha = 0.3f) else if (hovered) Color.White.copy(alpha = 0.11f) else FieldBg)
+            .border(if (selected) 1.5.dp else 0.dp, if (selected) accent else Color.Transparent, SmallShape)
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interaction, null, onClick = onClick)
+            .padding(top = 4.dp, bottom = 6.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Canvas(Modifier.size(width = 54.dp, height = 26.dp)) {
+            drawIntoCanvas { canvas ->
+                val native = canvas.nativeCanvas
+                native.save()
+                native.translate(size.width / 2f, size.height / 2f)
+                val r = size.width / 2f
+                if (tip == BrushTip.ERASER) {
+                    // An eraser shows what it takes away: a bar with a stroke rubbed out of it.
+                    native.saveLayer(null, null)
+                    native.drawRect(org.jetbrains.skia.Rect.makeLTRB(-r * 0.8f, -r * 0.24f, r * 0.8f, r * 0.24f), org.jetbrains.skia.Paint().apply { color = 0x99FFFFFF.toInt() })
+                    DiscArt.drawStroke(native, sample, r)
+                    native.restore()
+                } else {
+                    DiscArt.drawStroke(native, sample, r)
+                }
+                native.restore()
+            }
+        }
+        Text(tip.label, style = ConvxType.Caption, color = Color.White, maxLines = 1)
     }
 }
 
@@ -754,9 +1029,9 @@ private fun labelImage(asset: String): DiscLayer = DiscLayer(
 private fun addImageFromPc(onLabel: Boolean = false) {
     val file = pickFile("Add a picture", DiscDesigns.ImageExtensions) ?: return
     AppScope.launch(Dispatchers.Main) {
-        withContext(Dispatchers.IO) { runCatching { DiscDesigns.importImage(file) } }
-            .onSuccess {
-                DiscEditor.add(if (onLabel) labelImage(it) else newImage(it, ImageFrame.WHOLE).copy(x = 0f, y = 0f, scale = 1f, rotation = 0f, shadow = false))
+        withContext(Dispatchers.IO) { runCatching { DiscDesigns.importImage(file).let { it to DiscArt.fitScale(it, DiscDesigns.Resources) } } }
+            .onSuccess { (asset, fit) ->
+                DiscEditor.add(if (onLabel) labelImage(asset) else newImage(asset, ImageFrame.WHOLE).copy(x = 0f, y = 0f, scale = fit, rotation = 0f, shadow = false))
             }
             .onFailure { Overlays.toast(it.message ?: "Couldn't add that picture", "error") }
     }
@@ -782,7 +1057,7 @@ private fun PickerBox(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PickerRow(label: String, onClick: () -> Unit) {
+private fun PickerRow(label: String, icon: String = "add", onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     Row(
@@ -797,7 +1072,7 @@ private fun PickerRow(label: String, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(label, style = ConvxType.SubheadStrong, color = Color.White, modifier = Modifier.weight(1f))
-        ConvxIcon("add", tint = Color.White.copy(alpha = 0.7f), size = 16.dp)
+        ConvxIcon(icon, tint = Color.White.copy(alpha = 0.7f), size = 16.dp)
     }
 }
 
@@ -853,7 +1128,10 @@ private fun LayerRow(layer: DiscLayer?, selected: Boolean) {
             .background(if (selected) accent.copy(alpha = 0.25f) else if (hovered) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
             .pointerHoverIcon(PointerIcon.Hand)
-            .clickable(interaction, null) { DiscEditor.selectedId = layer?.id }
+            .clickable(interaction, null) {
+                DiscEditor.selectedId = layer?.id
+                if (layer?.kind != LayerKind.PAINT) DiscEditor.painting = false
+            }
             .padding(horizontal = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1024,15 +1302,37 @@ private fun LayerProperties(layer: DiscLayer) {
             PropSlider("How many", layer.density, 0f..1f, percent(layer.density)) { v -> live { it.copy(density = v) } }
             PropSlider("Size", layer.amount, 0f..1f, percent(layer.amount)) { v -> live { it.copy(amount = v) } }
             PickerRow("Shuffle") { commit { it.copy(seed = Random.nextInt(100_000)) } }
+            if (layer.pattern == PatternKind.STICKERS) {
+                PropSwitch("White sticker border", layer.outline) { on -> commit { it.copy(outline = on) } }
+                Text("Sticker", style = ConvxType.Subhead, color = Color.White, modifier = Modifier.padding(top = 6.dp))
+                if (!stickerTinted(layer.sticker)) {
+                    Text("Emoji keep their own colours; Convx's stickers and the icons take the colours above.", style = ConvxType.Caption, color = ConvxColors.TertiaryLabel)
+                }
+                StickerPicker { sticker -> commit { it.copy(sticker = sticker) } }
+            }
         }
         LayerKind.STICKER -> {
-            if (!layer.sticker.startsWith(EmojiStickerPrefix)) {
+            if (stickerTinted(layer.sticker)) {
                 ColorRow("Colour", layer.colors.take(1), max = 1) { colors -> live { it.copy(colors = colors) } }
+            }
+            if (!layer.sticker.startsWith(EmojiStickerPrefix)) {
                 PropSwitch("White sticker border", layer.outline) { on -> commit { it.copy(outline = on) } }
                 if (layer.outline) PropSlider("Border", layer.amount, 0f..1f, percent(layer.amount)) { v -> live { it.copy(amount = v) } }
             }
             Text("Change sticker", style = ConvxType.Subhead, color = Color.White, modifier = Modifier.padding(top = 6.dp))
-            StickerPicker { sticker -> commit { it.copy(sticker = sticker, name = DiscSticker.of(sticker)?.label ?: "Emoji") } }
+            StickerPicker { sticker -> commit { it.copy(sticker = sticker, name = stickerName(sticker)) } }
+        }
+        LayerKind.PAINT -> {
+            PropSwitch("Paint on it", DiscEditor.painting) { on -> DiscEditor.painting = on }
+            if (DiscEditor.painting) BrushSettings()
+            val strokes = layer.strokes.size
+            Text(
+                "$strokes ${if (strokes == 1) "stroke" else "strokes"}. Turn painting off to move it, size it with the wheel or turn it with the handle.",
+                style = ConvxType.Caption,
+                color = ConvxColors.TertiaryLabel,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+            if (strokes > 0) PickerRow("Take back the last stroke", icon = "replay") { commit { it.copy(strokes = it.strokes.dropLast(1)) } }
         }
         LayerKind.SHAPE -> {
             Choices(ShapeKind.entries, layer.shape, { it.label }) { kind -> commit { it.copy(shape = kind, name = kind.label) } }

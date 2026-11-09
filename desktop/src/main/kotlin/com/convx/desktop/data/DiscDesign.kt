@@ -26,6 +26,7 @@ enum class LayerKind(val label: String, val icon: String) {
     PATTERN("Pattern", "grid_view"),
     STICKER("Sticker", "star_fill"),
     SHAPE("Shape", "shapes"),
+    PAINT("Brush", "brush"),
 }
 
 /** How a layer mixes with what's under it, as in an image editor. */
@@ -105,6 +106,16 @@ enum class PatternKind(val label: String) {
     STREAKS("Light streaks"),
     LIGHT_LEAK("Light leak"),
     HUD("HUD marks"),
+    CHEVRON("Chevron"),
+    HONEYCOMB("Honeycomb"),
+    PLAID("Plaid"),
+    SCALES("Scales"),
+    ARGYLE("Argyle"),
+    CONTOURS("Contour lines"),
+    TERRAZZO("Terrazzo"),
+    LEOPARD("Leopard"),
+    /** The layer's sticker, over and over. */
+    STICKERS("Sticker pattern"),
 }
 
 /** Lines and cut-outs for collages, sized by the layer's scale and stretched by its aspect. */
@@ -121,13 +132,25 @@ enum class ShapeKind(val label: String) {
     BARCODE("Barcode"),
     TAPE("Tape"),
     SCRAP("Paper scrap"),
+    TRIANGLE("Triangle"),
+    STAR("Star"),
+    HEART("Heart"),
+    HEXAGON("Hexagon"),
+    CROSS("Plus"),
+    ARROW("Arrow"),
+    SPEECH("Speech bubble"),
+    BURST("Burst"),
+    WAVE("Wavy line"),
+    ZIGZAG("Zigzag"),
+    SPIRAL("Spiral"),
     ;
 
     /** Drawn with lines whether or not the layer is outlined. */
-    val lines: Boolean get() = this == LINE || this == CROSSHAIR || this == CORNERS || this == RULER
+    val lines: Boolean get() = this == LINE || this == CROSSHAIR || this == CORNERS || this == RULER || this == WAVE || this == ZIGZAG || this == SPIRAL
 
     /** Can be a filled shape or just its outline. */
-    val outlinable: Boolean get() = this == BOX || this == CIRCLE || this == BADGE || this == BLOB
+    val outlinable: Boolean get() = this == BOX || this == CIRCLE || this == BADGE || this == BLOB || this == TRIANGLE || this == STAR ||
+        this == HEART || this == HEXAGON || this == CROSS || this == ARROW || this == SPEECH || this == BURST
 
     /** Drawn from the layer's seed, so Shuffle gives a new one. */
     val shuffles: Boolean get() = this == BLOB || this == BARCODE || this == TAPE || this == SCRAP
@@ -216,6 +239,34 @@ enum class DiscSticker(val id: String, val label: String) {
 
 const val EmojiStickerPrefix = "emoji:"
 
+/** A sticker from the bundled library ([com.convx.desktop.data.StickerLibrary]): "icon:", its set and its name. */
+const val LibraryStickerPrefix = "icon:"
+
+/** What a brush stroke is painted with. */
+@Serializable
+enum class BrushTip(val label: String) {
+    PEN("Pen"),
+    MARKER("Marker"),
+    INK("Ink brush"),
+    SPRAY("Spray"),
+    CHALK("Chalk"),
+    NEON("Neon"),
+    ERASER("Eraser"),
+}
+
+/** One stroke of a brush layer, in the layer's own space: points are x, y pairs in fractions of the disc's radius. */
+@Serializable
+data class BrushStroke(
+    val tip: BrushTip = BrushTip.PEN,
+    val color: Long = 0xFFFFFFFF,
+    /** Width, as a fraction of the disc's radius. */
+    val size: Float = 0.03f,
+    val opacity: Float = 1f,
+    val points: List<Float> = emptyList(),
+    /** Where the spray's dots and the chalk's grain fall. */
+    val seed: Int = 0,
+)
+
 @Serializable
 data class DiscLayer(
     val id: String = newLayerId(),
@@ -254,7 +305,7 @@ data class DiscLayer(
     val pattern: PatternKind = PatternKind.STARS,
     val density: Float = 0.5f,
     val seed: Int = 0,
-    /** Sticker: a [DiscSticker] id, or [EmojiStickerPrefix] and an emoji. */
+    /** Sticker (and the sticker pattern): a [DiscSticker] id, [EmojiStickerPrefix] and an emoji, or a [LibraryStickerPrefix] id. */
     val sticker: String = DiscSticker.STAR.id,
     /** One more knob each kind reads its own way: pattern size, picture effect strength, sticker border, line width. */
     val amount: Float = 0.5f,
@@ -265,9 +316,12 @@ data class DiscLayer(
     /** A shape's width over its height. */
     val aspect: Float = 1f,
     val effects: List<LayerEffect> = emptyList(),
+    /** Brush: what was painted, oldest first. */
+    val strokes: List<BrushStroke> = emptyList(),
 ) {
     /** Whether the layer is placed somewhere (and can be picked and dragged) rather than covering the disc. */
-    val placed: Boolean get() = kind == LayerKind.IMAGE || kind == LayerKind.STICKER || kind == LayerKind.SHAPE || (kind == LayerKind.TEXT && path != TextPath.REPEAT)
+    val placed: Boolean get() = kind == LayerKind.IMAGE || kind == LayerKind.STICKER || kind == LayerKind.SHAPE || kind == LayerKind.PAINT ||
+        (kind == LayerKind.TEXT && path != TextPath.REPEAT)
 
     /** Text set along a circle, which is moved round it and sized by its circle. */
     val onCircle: Boolean get() = kind == LayerKind.TEXT && (path == TextPath.ARC_TOP || path == TextPath.ARC_BOTTOM || path == TextPath.CIRCLE)
