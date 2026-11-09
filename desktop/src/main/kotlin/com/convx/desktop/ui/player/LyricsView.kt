@@ -121,6 +121,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.collectLatest
+import com.convx.desktop.ui.components.FocusedFps
 import com.convx.desktop.ui.components.awaitPacedFrameMillis
 import com.convx.desktop.ui.components.playheadMoving
 import kotlinx.coroutines.flow.first
@@ -171,6 +172,8 @@ fun LyricsView(
     clock: () -> Long = PlayerController::livePositionMs,
     /** When [clock] moves; null follows the player. */
     clockMoving: Flow<Boolean>? = null,
+    /** A small view (the side panel), which fills its letters at a lower frame rate. */
+    compact: Boolean = false,
 ) {
     val state by remember(song?.id) { song?.let(LyricsService::state) ?: MutableStateFlow<LyricsState>(LyricsState.Missing) }
         .collectAsState()
@@ -195,7 +198,7 @@ fun LyricsView(
         )
     }
     Box(modifier) {
-        CompositionLocalProvider(LocalLyricsClockMoving provides clockMoving) {
+        CompositionLocalProvider(LocalLyricsClockMoving provides clockMoving, LocalLyricsCompact provides compact) {
             when (val s = state) {
                 LyricsState.Loading -> LoadingState()
                 LyricsState.Missing -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -468,21 +471,32 @@ object LyricsFonts {
  */
 internal val LocalLyricsClockMoving = staticCompositionLocalOf<Flow<Boolean>?> { null }
 
+/** Lyrics in a small view (the side panel and its card), whose letters fill at [CompactLyricsFps]. */
+internal val LocalLyricsCompact = staticCompositionLocalOf { false }
+
+/** Frames a second for a small view's letter fill: smooth at that size, half the work of 60. */
+private const val CompactLyricsFps = 30
+
+/** How often line-timed lyrics look at the playhead; nothing between lines moves, so no frames are asked for. */
+private const val LineTickMs = 50L
+
 /**
- * The playhead every frame while it moves, like the phone's player.currentPosition. Paused, it
- * waits instead of asking for frames, and catches up on a seek.
+ * The playhead while it moves, like the phone's player.currentPosition: every frame (at most 60
+ * a second, 30 in a small view) when letters fill [smooth]ly, else every [LineTickMs] without
+ * asking for frames, which only a line change then draws. Paused, it waits, and catches up on a seek.
  */
 @Composable
-internal fun rememberLiveClock(clock: () -> Long): LongState {
+internal fun rememberLiveClock(clock: () -> Long, smooth: Boolean = true): LongState {
     val live = remember { mutableLongStateOf(clock()) }
     val current by rememberUpdatedState(clock)
     val moving = LocalLyricsClockMoving.current ?: remember { playheadMoving() }
-    LaunchedEffect(moving) {
+    val fps = if (LocalLyricsCompact.current) CompactLyricsFps else FocusedFps
+    LaunchedEffect(moving, smooth, fps) {
         combine(moving, PlayerController.position) { on, _ -> on }.collectLatest { on ->
             live.longValue = current()
             if (!on) return@collectLatest
             while (true) {
-                awaitPacedFrameMillis()
+                if (smooth) awaitPacedFrameMillis(fps) else delay(LineTickMs)
                 live.longValue = current()
             }
         }
@@ -498,8 +512,9 @@ private fun FlamingoLyrics(lyrics: Lyrics, subs: List<LineSubs?>, style: TextSty
     val lines = lyrics.lines
     val wordTimed = wordSync && lyrics.wordSynced
 
-    // The playhead off the audio line, every frame, like the phone's player.currentPosition.
-    val live = rememberLiveClock(clock)
+    // The playhead off the audio line, like the phone's player.currentPosition; every frame only
+    // while letters fill.
+    val live = rememberLiveClock(clock, smooth = wordTimed)
 
     val ends = remember(lines) { lines.indices.map { lineEnd(lines, it) } }
     val anchor = remember(lines) { derivedStateOf { anchorIndex(lines, live.longValue) } }

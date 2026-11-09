@@ -7,10 +7,12 @@
  * the Skia actuals are merged into the common declarations (expect/actual
  * removed) and use Compose 1.9's names for the Skia accessors, the lens no longer
  * accepts io.github.kyant0:shapes' RoundedRectangularShape, and IDE-only
- * annotations were dropped.
+ * annotations were dropped. A layer backdrop can also show its own recording on
+ * screen (showRecording), so its content is drawn once a frame.
  */
 package com.kyant.backdrop.backdrops
 
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.layout.LayoutCoordinates
@@ -64,6 +66,11 @@ private class LayerBackdropNode(
 ) : DrawModifierNode, GlobalPositionAwareModifierNode, Modifier.Node() {
 
     override fun ContentDrawScope.draw() {
+        if (backdrop.showRecording) {
+            recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) { backdrop.onDraw(this@draw) }
+            drawLayer(backdrop.graphicsLayer)
+            return
+        }
         drawContent()
         recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) { backdrop.onDraw(this@draw) }
     }

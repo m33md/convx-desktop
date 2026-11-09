@@ -70,6 +70,7 @@ import com.convx.desktop.data.DiscPresets
 import com.convx.desktop.data.DiscSticker
 import com.convx.desktop.data.EffectKind
 import com.convx.desktop.data.LayerEffect
+import com.convx.desktop.data.PictureCutout
 import com.convx.desktop.data.ShapeKind
 import com.convx.desktop.data.TextAlignment
 import com.convx.desktop.data.EmojiStickerPrefix
@@ -755,7 +756,7 @@ private fun addImageFromPc(onLabel: Boolean = false) {
     AppScope.launch(Dispatchers.Main) {
         withContext(Dispatchers.IO) { runCatching { DiscDesigns.importImage(file) } }
             .onSuccess {
-                DiscEditor.add(if (onLabel) labelImage(it) else newImage(it, ImageFrame.SQUARE).copy(x = 0f, y = 0f, scale = 1f, rotation = 0f, shadow = false))
+                DiscEditor.add(if (onLabel) labelImage(it) else newImage(it, ImageFrame.WHOLE).copy(x = 0f, y = 0f, scale = 1f, rotation = 0f, shadow = false))
             }
             .onFailure { Overlays.toast(it.message ?: "Couldn't add that picture", "error") }
     }
@@ -992,6 +993,7 @@ private fun LayerProperties(layer: DiscLayer) {
             if (layer.look == ImageLook.DUOTONE) {
                 ColorRow("Shadows and lights", layer.colors.take(2), min = 2, max = 2) { colors -> live { it.copy(colors = colors) } }
             }
+            BlendIntoDisc(layer, live = { live(it) }, commit = { commit(it) })
         }
         LayerKind.TEXT -> {
             TextInput("Text", layer.text, singleLine = false, key = "disc-layer-text") { text -> live { it.copy(text = text.take(200)) } }
@@ -1116,6 +1118,79 @@ private fun EffectsSection(layer: DiscLayer) {
     }
 }
 
+/** How a picture sits into the disc: the choices under "Blend into the disc". */
+private enum class BlendIn(val label: String, val tip: String) {
+    OFF("Off", "The picture as it is, on top of the disc"),
+    CUT_WHITE("Cut out white", "White and light parts turn see-through, so line art sits on the disc"),
+    PRINT("Print on it", "Mixed in like ink: white takes the disc's colour, dark stays dark"),
+    CUT_BLACK("Cut out black", "Black and dark parts turn see-through, for light drawings on black"),
+}
+
+private val BlendInEffects = setOf(EffectKind.CUT_WHITE, EffectKind.CUT_BLACK)
+
+private fun DiscLayer.blendIn(): BlendIn = when {
+    effects.any { it.kind == EffectKind.CUT_WHITE } -> BlendIn.CUT_WHITE
+    effects.any { it.kind == EffectKind.CUT_BLACK } -> BlendIn.CUT_BLACK
+    blend == LayerBlend.MULTIPLY -> BlendIn.PRINT
+    else -> BlendIn.OFF
+}
+
+private fun DiscLayer.withBlendIn(choice: BlendIn): DiscLayer {
+    val kept = effects.filterNot { it.kind in BlendInEffects }
+    val cut = when (choice) {
+        BlendIn.CUT_WHITE -> LayerEffect(EffectKind.CUT_WHITE)
+        BlendIn.CUT_BLACK -> LayerEffect(EffectKind.CUT_BLACK)
+        else -> null
+    }
+    // Soft edges first, so they fade the picture's outline rather than the lines the cut leaves.
+    val soft = kept.filter { it.kind == EffectKind.SOFT_EDGES }
+    val rest = kept.filterNot { it.kind == EffectKind.SOFT_EDGES }
+    return copy(
+        effects = soft + listOfNotNull(cut) + rest,
+        blend = when {
+            choice == BlendIn.PRINT -> LayerBlend.MULTIPLY
+            blend == LayerBlend.MULTIPLY -> LayerBlend.NORMAL
+            else -> blend
+        },
+        // A cut-out reads as part of the disc; a drop shadow would outline the cut.
+        shadow = if (choice == BlendIn.OFF) shadow else false,
+    )
+}
+
+private fun DiscLayer.withSoftEdges(amount: Float): DiscLayer {
+    val others = effects.filterNot { it.kind == EffectKind.SOFT_EDGES }
+    return copy(effects = if (amount <= 0.01f) others else listOf(LayerEffect(EffectKind.SOFT_EDGES, amount)) + others)
+}
+
+/** A picture's ways into the disc: its background removed, a cut-out or ink-like blend, soft edges. */
+@Composable
+private fun BlendIntoDisc(layer: DiscLayer, live: ((DiscLayer) -> DiscLayer) -> Unit, commit: ((DiscLayer) -> DiscLayer) -> Unit) {
+    var removing by remember(layer.id) { mutableStateOf(false) }
+    Text("Blend into the disc", style = ConvxType.Subhead, color = Color.White, modifier = Modifier.padding(top = 8.dp))
+    PickerRow(if (removing) "Removing the background…" else "Remove the background") {
+        if (removing) return@PickerRow
+        val asset = layer.asset ?: return@PickerRow
+        removing = true
+        AppScope.launch(Dispatchers.Main) {
+            withContext(Dispatchers.Default) { runCatching { PictureCutout.removeBackground(asset) } }
+                .onSuccess { cut -> commit { it.copy(asset = cut, shadow = false) } }
+                .onFailure { Overlays.toast(it.message ?: "Couldn't remove the background", "error") }
+            removing = false
+        }
+    }
+    Text(
+        "Clears a plain background round the subject: white, one colour, or the grey squares of a fake see-through picture.",
+        style = ConvxType.Caption,
+        color = ConvxColors.TertiaryLabel,
+        modifier = Modifier.padding(top = 2.dp, bottom = 4.dp),
+    )
+    val current = layer.blendIn()
+    Choices(BlendIn.entries, current, { it.label }) { choice -> commit { it.withBlendIn(choice) } }
+    Text(current.tip, style = ConvxType.Caption, color = ConvxColors.TertiaryLabel)
+    val soft = layer.effects.firstOrNull { it.kind == EffectKind.SOFT_EDGES }?.amount ?: 0f
+    PropSlider("Soft edges", soft, 0f..1f, if (soft <= 0.01f) "Off" else percent(soft)) { v -> live { it.withSoftEdges(v) } }
+}
+
 private fun strengthLabel(kind: EffectKind) = when (kind) {
     EffectKind.BLOOM -> "Glow"
     EffectKind.GLOW -> "Size"
@@ -1123,6 +1198,8 @@ private fun strengthLabel(kind: EffectKind) = when (kind) {
     EffectKind.HALFTONE -> "Dot size"
     EffectKind.INK -> "Roughness"
     EffectKind.SKETCH -> "Detail"
+    EffectKind.CUT_WHITE, EffectKind.CUT_BLACK -> "How much goes"
+    EffectKind.SOFT_EDGES -> "Width"
     else -> "Strength"
 }
 

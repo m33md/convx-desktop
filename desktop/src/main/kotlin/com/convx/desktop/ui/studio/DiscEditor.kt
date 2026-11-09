@@ -97,6 +97,15 @@ import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.min
 import kotlin.math.pow
+import java.awt.Toolkit
+import java.awt.datatransfer.Clipboard
+import java.awt.datatransfer.DataFlavor
+import java.awt.datatransfer.StringSelection
+import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
+import javax.imageio.ImageIO
+import com.convx.desktop.data.StoreJson
+import com.convx.desktop.data.ImageFrame
 
 /** The editor's own dark, a little lighter than the window's, so the disc stands off it. */
 internal val EditorBg = Color(0xFF0E0E10)
@@ -107,7 +116,8 @@ internal val FieldBg = Color.White.copy(alpha = 0.07f)
  * Disc Studio's editor, over the whole window: tools on the left, the disc in the middle, its
  * layers and the selected one's settings on the right. The mouse moves what's selected, the wheel
  * sizes it (Shift turns it), the round handle does both. Ctrl+Z / Ctrl+Y undo and redo, Ctrl+S
- * saves, Ctrl+D duplicates, Delete removes, the arrows nudge.
+ * saves, Ctrl+C / Ctrl+X / Ctrl+V copy, cut and paste layers (and paste pictures copied in other
+ * apps), Ctrl+D duplicates, Delete removes, the arrows nudge.
  */
 object DiscEditor {
     private const val UndoDepth = 60
@@ -314,6 +324,83 @@ object DiscEditor {
         selectedId = copy.id
     }
 
+    /**
+     * Copies a layer to the clipboard, as text other apps leave alone, so it pastes into another
+     * design too, and after Convx restarts.
+     */
+    fun copy(id: String? = selectedId): Boolean {
+        val layer = design.layer(id) ?: return false
+        val text = LayerClipPrefix + StoreJson.encodeToString(DiscLayer.serializer(), layer)
+        runCatching { Toolkit.getDefaultToolkit().systemClipboard.setContents(StringSelection(text), null) }
+            .onFailure { Overlays.toast("Couldn't copy that layer", "error"); return false }
+        pastes = 0
+        return true
+    }
+
+    fun cut(id: String? = selectedId) {
+        if (copy(id)) delete(id)
+    }
+
+    /**
+     * Pastes a copied layer above the selected one, a step down and right each time so copies
+     * don't hide each other. A picture copied in another app (or a picture file copied in File
+     * Explorer) comes in as a picture layer.
+     */
+    fun paste() {
+        val clipboard = runCatching { Toolkit.getDefaultToolkit().systemClipboard }.getOrNull() ?: return
+        val text = runCatching {
+            if (clipboard.isDataFlavorAvailable(DataFlavor.stringFlavor)) clipboard.getData(DataFlavor.stringFlavor) as? String else null
+        }.getOrNull()
+        val layer = text?.takeIf { it.startsWith(LayerClipPrefix) }
+            ?.let { runCatching { StoreJson.decodeFromString(DiscLayer.serializer(), it.removePrefix(LayerClipPrefix)) }.getOrNull() }
+        if (layer != null) {
+            pastes++
+            val shift = if (layer.placed) PasteStep * pastes else 0f
+            insert(layer.copy(id = newLayerId(), x = layer.x + shift, y = layer.y + shift, locked = false))
+            return
+        }
+        val picture = runCatching { clipboardPicture(clipboard) }.getOrNull() ?: return
+        AppScope.launch(Dispatchers.Main) {
+            withContext(Dispatchers.IO) { runCatching { picture() } }
+                .onSuccess { asset ->
+                    insert(DiscLayer(kind = LayerKind.IMAGE, name = "Picture", asset = asset, frame = ImageFrame.WHOLE, scale = 0.5f, amount = 1f))
+                }
+                .onFailure { Overlays.toast(it.message ?: "Couldn't paste that picture", "error") }
+        }
+    }
+
+    /** Puts [layer] just above the selected layer (on top when none is) and selects it. */
+    private fun insert(layer: DiscLayer) {
+        val at = design.layer(selectedId)?.let { design.layers.indexOf(it) + 1 } ?: design.layers.size
+        commit(design.copy(layers = design.layers.toMutableList().apply { add(at, layer) }))
+        selectedId = layer.id
+        picker = null
+    }
+
+    /** What the clipboard holds as a picture, read and stored as a design asset when called; null if none. */
+    private fun clipboardPicture(clipboard: Clipboard): (() -> String)? {
+        if (clipboard.isDataFlavorAvailable(DataFlavor.javaFileListFlavor)) {
+            val files = (clipboard.getData(DataFlavor.javaFileListFlavor) as? List<*>).orEmpty().filterIsInstance<File>()
+            val file = files.firstOrNull { it.extension.lowercase() in DiscDesigns.ImageExtensions } ?: return null
+            return { DiscDesigns.importImage(file) }
+        }
+        if (clipboard.isDataFlavorAvailable(DataFlavor.imageFlavor)) {
+            val image = clipboard.getData(DataFlavor.imageFlavor) as? java.awt.Image ?: return null
+            return {
+                val buffered = image as? BufferedImage ?: BufferedImage(
+                    image.getWidth(null).coerceAtLeast(1), image.getHeight(null).coerceAtLeast(1), BufferedImage.TYPE_INT_ARGB,
+                ).also { it.createGraphics().apply { drawImage(image, 0, 0, null); dispose() } }
+                val bytes = ByteArrayOutputStream().also { ImageIO.write(buffered, "png", it) }.toByteArray()
+                DiscDesigns.importImage(bytes, "png")
+            }
+        }
+        return null
+    }
+
+    private var pastes = 0
+    private const val PasteStep = 0.05f
+    private const val LayerClipPrefix = "convx-disc-layer:"
+
     /** Moves a layer up (towards the front) or down by [by] places. */
     fun move(id: String, by: Int) {
         val layers = design.layers.toMutableList()
@@ -360,6 +447,9 @@ object DiscEditor {
             event.isCtrlPressed && event.key == Key.Z -> { undo(); true }
             event.isCtrlPressed && event.key == Key.Y -> { redo(); true }
             event.isCtrlPressed && event.key == Key.D -> { duplicate(); true }
+            event.isCtrlPressed && event.key == Key.C -> { copy(); true }
+            event.isCtrlPressed && event.key == Key.X -> { cut(); true }
+            event.isCtrlPressed && event.key == Key.V -> { paste(); true }
             event.key == Key.Delete || event.key == Key.Backspace -> { delete(); true }
             event.key == Key.DirectionLeft -> { nudge(-step, 0f); true }
             event.key == Key.DirectionRight -> { nudge(step, 0f); true }

@@ -168,6 +168,7 @@ fun RightPanel(panel: SidePanel, modifier: Modifier = Modifier) {
                             Modifier.fillMaxSize(),
                             style = ConvxType.LyricsCompact,
                             horizontalPadding = 16.dp,
+                            compact = true,
                         )
                     }
                 }
@@ -295,6 +296,7 @@ private fun LyricsCard(song: Song) {
                     // Big enough to fill the card, as Spotify's card does: about 18 letters a line.
                     style = ConvxType.LyricsCompact.copy(fontSize = 24.sp, lineHeight = 30.sp),
                     horizontalPadding = 10.dp,
+                    compact = true,
                 )
             }
         }

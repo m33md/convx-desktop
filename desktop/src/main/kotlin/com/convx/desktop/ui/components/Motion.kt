@@ -31,10 +31,53 @@ import kotlin.math.abs
 /** Frames a second for moving views while another app has the focus. */
 const val UnfocusedFps = 30
 
-/** The next frame's time in ms; while the window isn't focused, no more than [UnfocusedFps] a second. */
-suspend fun awaitPacedFrameMillis(): Long {
-    if (!UiState.windowFocused) delay(1000L / UnfocusedFps)
-    return withFrameMillis { it }
+/** Frames a second for moving views at most, on a monitor that refreshes faster than this. */
+const val FocusedFps = 60
+
+/**
+ * The next frame's time in ms, no more than [fps] a second, and no more than [UnfocusedFps]
+ * while another app has the focus. Paced views wait for the same beat, so they share frames.
+ */
+suspend fun awaitPacedFrameMillis(fps: Int = FocusedFps): Long {
+    val cap = if (UiState.windowFocused) fps else minOf(fps, UnfocusedFps)
+    // A 60 Hz monitor gives 60 a second by itself; waiting on a timer there would only add jitter.
+    val waited = (cap < FocusedFps || FramePacing.fasterDisplay) && FramePacing.awaitBeat(cap)
+    val frame = withFrameMillis { it }
+    FramePacing.saw(frame, waited)
+    return frame
+}
+
+private object FramePacing {
+    /** Learned from frames that came back to back: the monitor refreshes faster than [FocusedFps]. */
+    @Volatile
+    var fasterDisplay = false
+        private set
+
+    private var lastUnpaced = 0L
+    private var shortGaps = 0
+
+    /** Waits for the next beat of a shared [fps] grid; false if it didn't need to. */
+    suspend fun awaitBeat(fps: Int): Boolean {
+        val beat = 1_000_000_000L / fps
+        val now = System.nanoTime()
+        val waitMs = ((now / beat + 1) * beat - now) / 1_000_000
+        if (waitMs <= 0) return false
+        delay(waitMs)
+        return true
+    }
+
+    fun saw(frameMs: Long, waited: Boolean) {
+        if (waited) return
+        val gap = frameMs - lastUnpaced
+        lastUnpaced = frameMs
+        // A frame drawn at once (a resize, say) can come early, so it takes a few in a row.
+        if (gap == 0L) return
+        shortGaps = if (gap <= FasterThanMs) shortGaps + 1 else 0
+        if (shortGaps >= 3) fasterDisplay = true
+    }
+
+    /** A frame this soon after the last means a monitor above 80 Hz or so. */
+    private const val FasterThanMs = 12L
 }
 
 /** True while a song plays (not paused, not loading) and the window isn't minimised. */
