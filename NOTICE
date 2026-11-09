@@ -38,6 +38,14 @@ are outlines from Jetpack_SF_Symbols (https://github.com/cosmictaserdev-creator/
 Copyright (c) 2026 SF Symbols Compose Contributors, licensed under the MIT License. SF Symbols is a
 trademark of Apple Inc., and the symbol designs are Apple's.
 
+## Disc Studio fonts
+
+Disc Studio ships three fonts from Google Fonts, in desktop/src/main/resources/fonts, each with its
+licence in fonts/licenses: Ma Shan Zheng (https://github.com/googlefonts/mashanzheng), Copyright
+2018 The Ma Shan Zheng Project Authors, and UnifrakturMaguntia, Copyright (c) 2010 j. 'mach' wust
+and (c) 2009 Peter Wiegel, both under the SIL Open Font License 1.1; and Permanent Marker by Font
+Diner, under the Apache License, Version 2.0.
+
 ## Convx wordmark
 
 The "convx" wordmark (desktop/packaging/convx-wordmark.*, icons/convx_wordmark.xml) is the Convx

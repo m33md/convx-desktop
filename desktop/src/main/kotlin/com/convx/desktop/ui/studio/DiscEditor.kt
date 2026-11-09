@@ -35,7 +35,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.withFrameNanos
+import androidx.compose.runtime.produceState
+import com.convx.desktop.ui.components.rememberLoopingPhase
+import kotlinx.coroutines.withContext
+import kotlin.math.roundToInt
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -85,8 +88,8 @@ import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.awt.FileDialog
 import java.awt.Frame
 import java.io.File
@@ -152,8 +155,8 @@ object DiscEditor {
 
     /** A new design from [preset], its text naming the playlist it's for. */
     fun openPreset(preset: DiscPresets.Preset, forPlaylist: String? = null) {
-        val name = forPlaylist?.let { Library.playlist(it)?.name }
-        open(DiscPresets.start(preset, name), forPlaylist)
+        val playlist = forPlaylist?.let { Library.playlist(it) }
+        open(DiscPresets.start(preset, playlist?.name, playlist?.songs?.map { it.title }.orEmpty()), forPlaylist)
         dirty = true
     }
 
@@ -324,8 +327,8 @@ object DiscEditor {
 
     /** Swaps the whole design for [preset]'s, keeping its name and the playlist's name in its text. */
     fun usePreset(preset: DiscPresets.Preset) {
-        val name = playlistId?.let { Library.playlist(it)?.name }
-        val fresh = DiscPresets.start(preset, name ?: design.name)
+        val playlist = playlistId?.let { Library.playlist(it) }
+        val fresh = DiscPresets.start(preset, playlist?.name ?: design.name, playlist?.songs?.map { it.title }.orEmpty())
         commit(fresh.copy(id = design.id, name = design.name, createdAt = design.createdAt))
         selectedId = null
     }
@@ -467,20 +470,9 @@ private fun NameField(modifier: Modifier) {
 @Composable
 private fun DiscCanvas(modifier: Modifier) {
     val accent = LocalAccent.current
-    var spin by remember { mutableStateOf(0f) }
-    LaunchedEffect(DiscEditor.spinning) {
-        if (!DiscEditor.spinning) {
-            spin = 0f
-            return@LaunchedEffect
-        }
-        // 33⅓ turns a minute.
-        var last = withFrameNanos { it }
-        while (true) {
-            val now = withFrameNanos { it }
-            spin = (spin + (now - last) / 1e9f * 200f) % 360f
-            last = now
-        }
-    }
+    // A turn every 1.8 s while the spin preview is on, paced like the app's other moving views.
+    val phase by rememberLoopingPhase(1800, DiscEditor.spinning)
+    val spin = if (DiscEditor.spinning) phase * 360f else 0f
     BoxWithConstraints(modifier.background(EditorBg)) {
         val wPx = constraints.maxWidth.toFloat()
         val hPx = constraints.maxHeight.toFloat()
@@ -490,6 +482,22 @@ private fun DiscCanvas(modifier: Modifier) {
         val handleRadius = with(LocalDensity.current) { 9.dp.toPx() }
         val live by rememberUpdatedState(Triple(cx, cy, radius))
         var lastWheel by remember { mutableStateOf(0L) }
+        // While it spins, the print (with its effects) is drawn once and turned, not drawn again every frame.
+        val design = DiscEditor.design
+        val print by produceState<org.jetbrains.skia.Image?>(null, DiscEditor.spinning, design, radius) {
+            value = if (!DiscEditor.spinning) null else withContext(Dispatchers.Default) {
+                runCatching { DiscArt.renderPrint(design, DiscDesigns.Resources, (radius * 2f).roundToInt().coerceIn(64, 2400)) }.getOrNull()
+            }
+        }
+        // Once it stops changing, the disc is drawn into a picture off the UI thread. Anything else
+        // that redraws the window (a hover, a tooltip, a menu) then repaints that picture instead of
+        // every layer and effect again; while something is dragged, the disc is drawn live.
+        val asCover = DiscEditor.asCover
+        val still by produceState<Still?>(null, design, asCover, radius) {
+            value = null
+            delay(160)
+            value = withContext(Dispatchers.Default) { runCatching { Still.of(design, asCover, radius) }.getOrNull() }
+        }
 
         Canvas(
             Modifier
@@ -524,7 +532,7 @@ private fun DiscCanvas(modifier: Modifier) {
                             }
                             change.consume()
                             val centre = Offset(ccx + start.x * r, ccy + start.y * r)
-                            val round = start.kind == LayerKind.TEXT && start.path != TextPath.STRAIGHT && start.path != TextPath.REPEAT
+                            val round = start.onCircle
                             when {
                                 onHandle -> {
                                     // Distance from the middle sizes it, the angle turns it.
@@ -568,7 +576,7 @@ private fun DiscCanvas(modifier: Modifier) {
                     val notches = change.scrollDelta.y + change.scrollDelta.x
                     val turning = event.keyboardModifiers.isShiftPressed
                     DiscEditor.liveLayer(id) {
-                        val round = it.kind == LayerKind.TEXT && it.path != TextPath.STRAIGHT && it.path != TextPath.REPEAT
+                        val round = it.onCircle
                         when {
                             turning -> it.copy(rotation = it.rotation + notches * 5f)
                             round -> it.copy(radius = (it.radius * 0.97f.pow(notches)).coerceIn(0.05f, 1.2f))
@@ -578,10 +586,12 @@ private fun DiscCanvas(modifier: Modifier) {
                     change.consume()
                 },
         ) {
-            val design = DiscEditor.design
             drawIntoCanvas { canvas ->
                 val native = canvas.nativeCanvas
-                if (DiscEditor.asCover) {
+                val picture = still?.takeIf { it.design == design && it.asCover == asCover && it.radius == radius && spin == 0f }
+                if (picture != null) {
+                    native.drawImage(picture.image, cx - picture.image.width / 2f, cy - picture.image.height / 2f)
+                } else if (asCover) {
                     val side = radius * 2.3f
                     native.save()
                     native.clipRect(org.jetbrains.skia.Rect.makeXYWH(cx - side / 2f, cy - side / 2f, side, side))
@@ -589,14 +599,14 @@ private fun DiscCanvas(modifier: Modifier) {
                     DiscArt.drawCover(native, design, DiscDesigns.Resources, side)
                     native.restore()
                 } else {
-                    DiscArt.drawDisc(native, design, DiscDesigns.Resources, cx, cy, radius, spin)
+                    DiscArt.drawDisc(native, design, DiscDesigns.Resources, cx, cy, radius, spin, print.takeIf { spin != 0f })
                 }
             }
             // The selection: a dashed outline, and the round handle that sizes and turns it.
             val layer = DiscEditor.selected
             if (layer != null && layer.visible && !DiscEditor.asCover && spin == 0f) {
                 val dash = PathEffect.dashPathEffect(floatArrayOf(10f, 7f), 0f)
-                val round = layer.kind == LayerKind.TEXT && layer.path != TextPath.STRAIGHT && layer.path != TextPath.REPEAT
+                val round = layer.onCircle
                 val corners = DiscArt.corners(layer, DiscDesigns.Resources, cx, cy, radius)
                 when {
                     corners != null -> {
@@ -643,11 +653,30 @@ private fun DiscCanvas(modifier: Modifier) {
     }
 }
 
+/** The disc (or its cover) as a picture, for a design that isn't changing. */
+private class Still(val design: DiscDesign, val asCover: Boolean, val radius: Float, val image: org.jetbrains.skia.Image) {
+    companion object {
+        fun of(design: DiscDesign, asCover: Boolean, radius: Float): Still {
+            // Square and even, so its middle lands where the live disc's would.
+            val side = if (asCover) ((radius * 2.3f).roundToInt() / 2) * 2 else ((radius * 2.24f).roundToInt() / 2 + 2) * 2
+            val image = if (asCover) {
+                DiscArt.renderCover(design, DiscDesigns.Resources, side)
+            } else {
+                val surface = org.jetbrains.skia.Surface.makeRasterN32Premul(side, side)
+                surface.canvas.clear(org.jetbrains.skia.Color.TRANSPARENT)
+                DiscArt.drawDisc(surface.canvas, design, DiscDesigns.Resources, side / 2f, side / 2f, radius)
+                surface.makeImageSnapshot()
+            }
+            return Still(design, asCover, radius, image)
+        }
+    }
+}
+
 /** Where the selected layer's handle sits: its outline's bottom-right corner, or on its circle for round text. */
 private fun handleAt(layer: DiscLayer, cx: Float, cy: Float, r: Float): Offset? {
     val corners = DiscArt.corners(layer, DiscDesigns.Resources, cx, cy, r)
     if (corners != null) return Offset(corners[2].first, corners[2].second)
-    if (layer.kind == LayerKind.TEXT && layer.path != TextPath.STRAIGHT && layer.path != TextPath.REPEAT) {
+    if (layer.onCircle) {
         val a = Math.toRadians(layer.rotation.toDouble() + if (layer.path == TextPath.ARC_BOTTOM) 135.0 else 45.0 - 90.0)
         val rr = r * layer.radius
         return Offset(cx + layer.x * r + (rr * kotlin.math.cos(a)).toFloat(), cy + layer.y * r + (rr * kotlin.math.sin(a)).toFloat())

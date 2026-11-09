@@ -5,16 +5,11 @@
 
 package com.convx.desktop.ui.studio
 
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.hoverable
+import com.convx.desktop.ui.components.rememberLoopingPhase
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
 import androidx.compose.foundation.layout.Arrangement
@@ -94,7 +89,7 @@ private val CardMinWidth = 168.dp
 private val CardGap = 16.dp
 
 /** How big the page's cards are drawn, in pixels: sharp up to about 240dp wide. */
-private const val CardPixels = 420
+private const val CardPixels = DiscThumbs.CardPixels
 
 /** The Disc Studio section: your designs, the presets to start from, and new or shared ones. */
 @Composable
@@ -134,7 +129,7 @@ fun DiscStudioScreen() {
             )
         }
         item(key = "presets") {
-            CardGrid(DiscPresets.all) { preset, width -> PresetCard(preset, width) }
+            CardGrid(DiscPresets.ordered) { preset, width -> PresetCard(preset, width) }
         }
         item(key = "tip") {
             Text(
@@ -235,12 +230,12 @@ private fun HeroDiscs(latest: DiscDesign?, modifier: Modifier) {
     val back = remember(backKey) { DiscPresets.of(backKey)?.let { DiscPresets.start(it, "Disc Studio") } }
     val frontImage = discImage(front, 440, "hero:${front?.id}:${front?.updatedAt}")
     val backImage = discImage(back, 400, "hero:$backKey")
-    val turn by rememberInfiniteTransition().animateFloat(
-        initialValue = 0f,
-        targetValue = 360f,
-        animationSpec = infiniteRepeatable(tween(14_000, easing = LinearEasing), RepeatMode.Restart),
-    )
-    Box(modifier.size(width = 260.dp, height = 200.dp)) {
+    // They turn while the mouse is on them and rest otherwise, so the page costs nothing while you read it.
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    val phase by rememberLoopingPhase(14_000, hovered)
+    val turn = phase * 360f
+    Box(modifier.size(width = 260.dp, height = 200.dp).hoverable(interaction)) {
         if (backImage != null) {
             Image(
                 backImage,
