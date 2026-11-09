@@ -37,6 +37,7 @@ import kotlinx.coroutines.flow.filter
 fun ScreenHost(screen: Screen) {
     when (screen) {
         Screen.Home -> HomeScreen()
+        Screen.DiscStudio -> com.convx.desktop.ui.studio.DiscStudioScreen()
         Screen.Search -> SearchScreen()
         is Screen.SearchResults -> SearchResultsScreen(screen.query)
         Screen.Explore -> ExploreScreen()

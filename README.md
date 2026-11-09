@@ -14,6 +14,9 @@ It looks and works like the phone app, sized for a PC:
 - AutoMix transitions, an equalizer, Replay, and the AI features.
 - Discord status, Last.fm and ListenBrainz scrobbling, and importing playlists from Spotify.
 - Windows media keys and the taskbar's play controls.
+- Disc Studio, a PC-only extra: design a CD or a vinyl record for any playlist, from layers of
+  pictures, text, shapes and patterns with effects like bloom, halftone and ink-brush texture,
+  and share designs as `.convxdisc` files.
 
 ## Screenshots
 

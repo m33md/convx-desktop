@@ -498,6 +498,26 @@ fun main(args: Array<String>) {
                 shoot("16a-playlist-picture", seconds = 4) { Library.setPlaylistCover(mix, picture) }
                 Library.setPlaylistCover(mix, null)
             }
+            // Disc Studio: a design worn by the mix, the section page, and the editor on that design.
+            val disc = com.convx.desktop.data.DiscDesigns.save(
+                com.convx.desktop.data.DiscPresets.start(com.convx.desktop.data.DiscPresets.of("afro-night")!!, "Late night drive"),
+            )
+            com.convx.desktop.data.DiscDesigns.applyTo(disc, mix)
+            shoot("27-disc-studio", seconds = 6) { navigator.navigate(Screen.DiscStudio) }
+            shoot("27a-disc-editor", seconds = 4) {
+                com.convx.desktop.ui.studio.DiscEditor.open(disc, mix)
+                com.convx.desktop.ui.studio.DiscEditor.selectedId = disc.layers.lastOrNull()?.id
+            }
+            shoot("27b-disc-editor-stickers", seconds = 3) {
+                com.convx.desktop.ui.studio.DiscEditor.picker = com.convx.desktop.data.LayerKind.STICKER
+            }
+            shoot("27c-disc-editor-as-cover", seconds = 3) {
+                com.convx.desktop.ui.studio.DiscEditor.picker = null
+                com.convx.desktop.ui.studio.DiscEditor.selectedId = null
+                com.convx.desktop.ui.studio.DiscEditor.asCover = true
+            }
+            com.convx.desktop.ui.studio.DiscEditor.close()
+            shoot("27d-playlist-disc-cover", seconds = 4) { navigator.navigate(Screen.LocalPlaylist(mix)) }
             shoot("16b-downloads", seconds = 4) { navigator.navigate(Screen.Downloads) }
             shoot("17-sidebar-collapsed", seconds = 4) {
                 AppSettings.update { it.copy(sidebarCollapsed = true) }

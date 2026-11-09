@@ -51,7 +51,10 @@ object Backup {
     private const val SettingsEntry = "settings.json"
     private const val MatchesEntry = "spotify-matches.json"
     /** Player icons' images, DIY's stickers and imported fonts, kept in these folders of the app's data. */
-    private val AssetFolders = listOf("player_icons", "diy_stickers", "lyrics-fonts", com.convx.desktop.data.PlaylistCovers.Folder)
+    private val AssetFolders = listOf(
+        "player_icons", "diy_stickers", "lyrics-fonts", com.convx.desktop.data.PlaylistCovers.Folder,
+        com.convx.desktop.data.DiscDesigns.Folder, com.convx.desktop.data.DiscDesigns.AssetFolder,
+    )
     const val BeforeRestore = "before-restore.backup"
 
     /** The phone's entries (BackupRestoreViewModel). */
@@ -126,7 +129,7 @@ object Backup {
                 zip.putNextEntry(ZipEntry(MatchesEntry))
                 matches.inputStream().use { it.copyTo(zip) }
             }
-            // The images Player icons and DIY draw, so a restore brings the player back as it was.
+            // The images Player icons and DIY draw, and the Disc Studio designs with their pictures.
             AssetFolders.forEach { folder ->
                 File(AppDirs.data, folder).listFiles()?.filter { it.isFile }?.forEach { image ->
                     zip.putNextEntry(ZipEntry("$folder/${image.name}"))
@@ -193,6 +196,7 @@ object Backup {
             val folder = File(AppDirs.data, path.substringBefore('/')).apply { mkdirs() }
             runCatching { File(folder, path.substringAfter('/')).writeBytes(bytes) }
         }
+        com.convx.desktop.data.DiscDesigns.refresh()
         settings?.let { restored ->
             // The window, the sound device, this PC's party id and YouTube's guest session stay
             // this PC's own, and music folders only come along if they exist here.

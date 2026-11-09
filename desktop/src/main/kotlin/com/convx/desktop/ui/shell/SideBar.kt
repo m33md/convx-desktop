@@ -334,6 +334,9 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
             },
         )
         if (Section.Home.name !in hidden) add(NavItem("home", Section.Home.label, Section.Home.icon, screen == Screen.Home) { navigator.navigate(Screen.Home) })
+        if (Section.Studio.name !in hidden) {
+            add(NavItem("studio", Section.Studio.label, Section.Studio.icon, screen == Screen.DiscStudio) { navigator.navigate(Screen.DiscStudio) })
+        }
         if (Section.Explore.name !in hidden) add(NavItem("explore", Section.Explore.label, Section.Explore.icon, screen == Screen.Explore) { navigator.navigate(Screen.Explore) })
         if (Section.Radio.name !in hidden) {
             add(NavItem("radio", Section.Radio.label, Section.Radio.icon, screen == Screen.Radio || screen is Screen.RadioStation) { navigator.navigate(Screen.Radio) })
@@ -777,6 +780,11 @@ private fun EntryMenu(entry: LibraryEntry, pinned: Boolean, dismiss: () -> Unit)
             MenuItem(if (hasCover) "Change picture" else "Choose picture", "image") {
                 dismiss()
                 com.convx.desktop.ui.components.choosePlaylistCover(entry.id)
+            }
+            val designed = Library.playlist(entry.id)?.design != null
+            MenuItem(if (designed) "Edit disc design" else "Design disc", "disc_studio") {
+                dismiss()
+                com.convx.desktop.ui.studio.DiscEditor.openFor(entry.id)
             }
             if (hasCover) {
                 MenuItem("Remove picture", "hide_image") {

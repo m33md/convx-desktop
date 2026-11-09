@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- An open eye: a layer that shows. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M1.6,12Q12,0.8 22.4,12Q12,23.2 1.6,12ZM3.75,12Q12,3.15 20.25,12Q12,20.85 3.75,12ZM8.3,12A3.7,3.7 0 1,0 15.7,12A3.7,3.7 0 1,0 8.3,12Z" />
+</vector>

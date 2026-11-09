@@ -81,6 +81,16 @@ object PlaylistCovers {
         }
     }
 
+    /** Keeps [data], a picture Convx drew (a Disc Studio design), as a cover for [playlistId]. */
+    fun save(playlistId: String, data: ByteArray, ext: String): Result = runCatching {
+        val name = "${discName(playlistId)}-${System.currentTimeMillis()}.$ext"
+        File(dir, name).writeBytes(data)
+        Result.Done(Prefix + name)
+    }.getOrElse {
+        Log.w(Tag, "Couldn't keep a playlist picture", it)
+        Result.Failed("Couldn't save the picture.")
+    }
+
     /** Where the CD covers Convx draws are kept (ui.components.DiscCovers), one "<playlist>-<key>.jpg" each. */
     val discDir: File by lazy { File(dir, "disc").apply { mkdirs() } }
 

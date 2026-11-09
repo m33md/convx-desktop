@@ -243,6 +243,9 @@ fun AppShell(navigator: Navigator) {
                 // The phone's DIY editor, over everything but toasts and dialogs.
                 CompositionLocalProvider(LocalMenuBackdrop provides null) { com.convx.desktop.ui.player.DiyEditorOverlay() }
 
+                // Disc Studio's editor, also over everything but toasts and dialogs.
+                CompositionLocalProvider(LocalMenuBackdrop provides null) { com.convx.desktop.ui.studio.DiscEditorOverlay() }
+
                 OverlayHost()
             }
         }
