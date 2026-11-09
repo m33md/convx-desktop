@@ -68,6 +68,9 @@ data class PlayerState(
 @OptIn(ExperimentalCoroutinesApi::class)
 object PlayerController : AudioEngine.Listener {
     private const val Tag = "Player"
+
+    /** Fresh tries a YouTube song gets after it fails, each from a client that hasn't failed it yet. */
+    private const val MaxRetries = 3
     private val confined = Dispatchers.Default.limitedParallelism(1)
     private val scope = CoroutineScope(SupervisorJob() + confined)
     private val engine = AudioEngine(this)
@@ -125,7 +128,10 @@ object PlayerController : AudioEngine.Listener {
     private var radioContinuation: String? = null
     private var radioEndpoint: WatchEndpoint? = null
     private var consecutiveFailures = 0
-    private var retriedCurrent = false
+
+    /** Fresh tries the current song has had after failing, and the clients whose streams failed it. */
+    private var retries = 0
+    private val failedClients = mutableSetOf<String>()
     // The current song's play time, toward the phone's History duration before it counts as a listen.
     private var listenId: String? = null
     private var listenMs = 0L
@@ -637,19 +643,34 @@ object PlayerController : AudioEngine.Listener {
         scope.launch {
             if (token != engineToken) return@launch
             val song = _state.value.current ?: return@launch
-            // A full disk fails the same way again; anything else is worth one more try.
-            if (!retriedCurrent && !AudioCache.isDiskFull(error)) {
-                // Most failures are an expired or rejected URL: fetch the song afresh from another
-                // of YouTube's clients and carry on from here.
-                retriedCurrent = true
-                val client = _state.value.stream?.client
-                Log.w(Tag, "Retrying ${song.id} at $positionMs without $client after: $error")
-                StreamResolver.invalidate(song.id)
-                // The saved copy may be what's broken; not when it was the speakers that failed.
-                if (isOutputProblem(error)) AudioCache.cancel(song.id) else AudioCache.discard(song.id)
-                loadCurrent(positionMs, playWhenReady = true, forceRefresh = true, avoidClient = client)
+            val stream = _state.value.stream
+            // YouTube refusing one client's address is common, and another client's usually plays,
+            // so a song from YouTube gets several fresh tries. A file on this PC, or the speakers,
+            // get one; a full disk fails the same way every time.
+            val fromYouTube = stream == null || "googlevideo.com" in stream.url
+            val limit = when {
+                AudioCache.isDiskFull(error) -> 0
+                isOutputProblem(error) || !fromYouTube -> 1
+                else -> MaxRetries
+            }
+            stream?.client?.let(failedClients::add)
+            generateSequence(error) { it.cause }.filterIsInstance<AudioCache.HttpStatusException>()
+                .firstNotNullOfOrNull { it.client }?.let(failedClients::add)
+            StreamResolver.invalidate(song.id)
+            // The saved copy may be what's broken; not when it was the speakers that failed.
+            if (isOutputProblem(error)) AudioCache.cancel(song.id) else AudioCache.discard(song.id)
+            if (retries < limit) {
+                retries++
+                Log.w(Tag, "Try ${retries + 1} of ${song.id} at $positionMs, other clients before $failedClients, after: $error")
+                // A moment's pause from the second retry on, in case YouTube is refusing everything just now.
+                if (retries > 1) {
+                    _state.update { it.copy(isLoading = true) }
+                    delay(1_000L * (retries - 1))
+                }
+                if (token != engineToken || _state.value.current?.id != song.id) return@launch
+                loadCurrent(positionMs, playWhenReady = true, forceRefresh = true, avoidClients = failedClients.toSet())
             } else {
-                Log.w(Tag, "Gave up on ${song.id}: $error")
+                Log.w(Tag, "Gave up on ${song.id} after ${retries + 1} tries: $error")
                 failCurrent(describePlaybackError(error))
             }
         }
@@ -740,10 +761,13 @@ object PlayerController : AudioEngine.Listener {
         playWhenReady: Boolean,
         forceRefresh: Boolean = false,
         fadeInMs: Int = 0,
-        avoidClient: String? = null,
+        avoidClients: Set<String> = emptySet(),
     ) {
         val queued = _state.value.current ?: return
-        if (!forceRefresh) retriedCurrent = false
+        if (!forceRefresh) {
+            retries = 0
+            failedClients.clear()
+        }
         loadJob?.cancel()
         AutoMix.interrupt(autoMixHost)
         // A crossfade's outgoing song keeps playing under this one; anything else stops now.
@@ -792,7 +816,7 @@ object PlayerController : AudioEngine.Listener {
             } else if (offline != null) {
                 offline.first
             } else {
-                StreamResolver.resolve(song.id, quality, forceRefresh, avoidClient = avoidClient).getOrElse { error ->
+                StreamResolver.resolve(song.id, quality, forceRefresh, avoidClients = avoidClients).getOrElse { error ->
                     Log.e(Tag, "Couldn't resolve ${song.id}", error)
                     failCurrent(error.message ?: "This song can't be played right now")
                     return@launch
@@ -863,7 +887,8 @@ object PlayerController : AudioEngine.Listener {
     private fun mixedIntoNow(index: Int, prepared: AutoMix.Prepared, deck: AudioEngine.Deck, cueMs: Long) {
         val song = prepared.song
         loadJob?.cancel()
-        retriedCurrent = false
+        retries = 0
+        failedClients.clear()
         consecutiveFailures = 0
         engineToken = deck.token
         _position.value = cueMs

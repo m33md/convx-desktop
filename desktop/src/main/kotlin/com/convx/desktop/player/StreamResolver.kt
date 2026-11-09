@@ -24,6 +24,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Request
 import java.util.concurrent.ConcurrentHashMap
 
@@ -37,6 +38,7 @@ data class ResolvedStream(
     val contentLength: Long,
     val loudnessDb: Double?,
     val durationMs: Long?,
+    /** The YouTube client that handed out [url], as "NAME version" (several share a name). */
     val client: String,
     val expiresAt: Long,
     /** YouTube's count of plays for this video, when the player response carries it. */
@@ -95,6 +97,31 @@ object StreamResolver {
 
     private val cache = ConcurrentHashMap<String, ResolvedStream>()
 
+    /**
+     * Clients YouTube recently answered with "Sign in to confirm you're not a bot", and until
+     * when they go after the others. YouTube checks the network, not the song, so asking such a
+     * client first would only add a wasted call before every song.
+     */
+    private val botChecked = ConcurrentHashMap<String, Long>()
+    private const val BotCheckPauseMs = 15 * 60 * 1000L
+
+    private val YouTubeClient.key: String get() = "$clientName $clientVersion"
+
+    private fun isBotChecked(client: YouTubeClient): Boolean =
+        (botChecked[client.key] ?: 0L) > System.currentTimeMillis()
+
+    /** The order to ask the clients in: healthy ones first, then bot-checked ones, then [avoid] (their streams just failed). */
+    private fun order(avoid: Set<String>): List<YouTubeClient> =
+        clients.sortedWith(compareBy<YouTubeClient>({ it.key in avoid }, { isBotChecked(it) }))
+
+    private fun noteStatus(client: YouTubeClient, response: PlayerResponse) {
+        if (response.playabilityStatus.status == "OK") {
+            botChecked.remove(client.key)
+        } else if ("bot" in response.playabilityStatus.reason.orEmpty().lowercase()) {
+            botChecked[client.key] = System.currentTimeMillis() + BotCheckPauseMs
+        }
+    }
+
     /** Keep a little headroom so a URL never expires mid-download. */
     private const val ExpiryMarginMs = 10 * 60 * 1000L
 
@@ -108,14 +135,14 @@ object StreamResolver {
     /**
      * [preferAac] puts AAC first, as the phone does for downloads it also saves to the Music
      * folder, since every Windows player opens .m4a. Such a stream isn't kept for playback.
-     * [avoidClient] is tried last: its stream just failed to play.
+     * [avoidClients] are tried last: their streams just failed to play.
      */
     suspend fun resolve(
         videoId: String,
         quality: AudioQuality,
         forceRefresh: Boolean = false,
         preferAac: Boolean = false,
-        avoidClient: String? = null,
+        avoidClients: Set<String> = emptySet(),
     ): Result<ResolvedStream> =
         withContext(Dispatchers.IO) {
             if (!forceRefresh && !preferAac) cached(videoId)?.let { return@withContext Result.success(it) }
@@ -125,9 +152,7 @@ object StreamResolver {
             var lastReason: String? = null
             var signatureTimestamp: Int? = null
             var signatureTimestampFetched = false
-            val order = clients.sortedBy { it.clientName == avoidClient }
-
-            for (client in order) {
+            for (client in order(avoidClients)) {
                 currentCoroutineContext().ensureActive()
                 if (client.loginRequired && YouTube.cookie == null) continue
                 try {
@@ -141,14 +166,15 @@ object StreamResolver {
 
                     val response = YouTube.player(videoId, null, client, timestamp, null).getOrNull()
                     if (response == null) {
-                        lastReason = "No response from ${client.clientName}"
+                        lastReason = "No response from ${client.key}"
                         youTubeReason = null
                         continue
                     }
+                    noteStatus(client, response)
                     if (response.playabilityStatus.status != "OK") {
                         lastReason = response.playabilityStatus.reason ?: response.playabilityStatus.status
                         youTubeReason = response.playabilityStatus.reason
-                        Log.i(Tag, "$videoId: ${client.clientName} -> ${response.playabilityStatus.status} ($lastReason)")
+                        Log.i(Tag, "$videoId: ${client.key} -> ${response.playabilityStatus.status} ($lastReason)")
                         continue
                     }
                     val formats = rankedAudioFormats(response.streamingData?.adaptiveFormats.orEmpty(), quality).let { ranked ->
@@ -170,24 +196,24 @@ object StreamResolver {
                             loudnessDb = format.loudnessDb,
                             durationMs = format.approxDurationMs?.toLongOrNull()
                                 ?: response.videoDetails?.lengthSeconds?.toLongOrNull()?.times(1000),
-                            client = client.clientName,
+                            client = client.key,
                             expiresAt = System.currentTimeMillis() +
                                 (response.streamingData?.expiresInSeconds ?: 21600) * 1000L,
                             viewCount = response.videoDetails?.viewCount?.toLongOrNull(),
                             playbackTracking = response.playbackTracking?.videostatsPlaybackUrl?.baseUrl,
                         )
-                        Log.i(Tag, "$videoId: playing via ${client.clientName}, ${stream.badge}")
+                        Log.i(Tag, "$videoId: playing via ${client.key}, ${stream.badge}")
                         if (!preferAac) cache[videoId] = stream
                         return@withContext Result.success(stream)
                     }
-                    lastReason = "${client.clientName} returned no reachable audio"
+                    lastReason = "${client.key} returned no reachable audio"
                     youTubeReason = null
                 } catch (e: kotlinx.coroutines.CancellationException) {
                     throw e
                 } catch (e: Exception) {
                     lastReason = e.message
                     youTubeReason = null
-                    Log.w(Tag, "$videoId: ${client.clientName} failed", e)
+                    Log.w(Tag, "$videoId: ${client.key} failed", e)
                 }
             }
             Log.w(Tag, "$videoId: no client gave a stream (last: $lastReason)")
@@ -197,6 +223,63 @@ object StreamResolver {
                 ),
             )
         }
+
+    /**
+     * A new address for the very file [stream] points at (same format, same length), for a
+     * download YouTube stopped serving at byte [position]: the bytes already saved stay good and
+     * the download carries on from there. Clients in [refused] are asked last. Null when no
+     * client hands out that file within [timeoutMs].
+     */
+    suspend fun renew(
+        stream: ResolvedStream,
+        position: Long,
+        refused: Set<String> = setOf(stream.client),
+        timeoutMs: Long = 15_000,
+    ): ResolvedStream? {
+        if (stream.contentLength <= 0) return null
+        return withTimeoutOrNull(timeoutMs) {
+            withContext(Dispatchers.IO) {
+                var signatureTimestamp: Int? = null
+                var signatureTimestampFetched = false
+                for (client in order(refused)) {
+                    currentCoroutineContext().ensureActive()
+                    if (client.loginRequired && YouTube.cookie == null) continue
+                    try {
+                        val timestamp = if (client.useSignatureTimestamp) {
+                            if (!signatureTimestampFetched) {
+                                signatureTimestamp = NewPipeExtractor.getSignatureTimestamp(stream.videoId).getOrNull()
+                                signatureTimestampFetched = true
+                            }
+                            signatureTimestamp
+                        } else null
+                        val response = YouTube.player(stream.videoId, null, client, timestamp, null).getOrNull() ?: continue
+                        noteStatus(client, response)
+                        if (response.playabilityStatus.status != "OK") continue
+                        val format = response.streamingData?.adaptiveFormats.orEmpty().firstOrNull {
+                            it.isAudio && it.mimeType == stream.mimeType && it.contentLength == stream.contentLength
+                        } ?: continue
+                        val url = format.url?.takeIf { it.isNotBlank() }
+                            ?: NewPipeExtractor.getStreamUrl(format, stream.videoId)
+                            ?: continue
+                        if (url == stream.url || probe(url, position) == null) continue
+                        val fresh = stream.copy(
+                            url = url,
+                            client = client.key,
+                            expiresAt = System.currentTimeMillis() + (response.streamingData?.expiresInSeconds ?: 21600) * 1000L,
+                        )
+                        // The player asks the cache next time (a seek, a replay): give it the address that works.
+                        cache.computeIfPresent(stream.videoId) { _, kept -> if (kept.url == stream.url) fresh else kept }
+                        return@withContext fresh
+                    } catch (e: kotlinx.coroutines.CancellationException) {
+                        throw e
+                    } catch (e: Exception) {
+                        Log.w(Tag, "${stream.videoId}: ${client.key} failed while renewing", e)
+                    }
+                }
+                null
+            }
+        }
+    }
 
     private fun rankedAudioFormats(
         formats: List<PlayerResponse.StreamingData.Format>,
@@ -214,12 +297,12 @@ object StreamResolver {
     }
 
     /**
-     * A one-byte ranged GET: YouTube can accept a HEAD for a URL it won't serve. Returns
+     * A one-byte ranged GET at [at]: YouTube can accept a HEAD for a URL it won't serve. Returns
      * the full length from Content-Range, or null when the URL doesn't serve bytes.
      */
-    private fun probe(url: String): Long? = runCatching {
+    private fun probe(url: String, at: Long = 0): Long? = runCatching {
         val request = Request.Builder().url(url)
-            .header("Range", "bytes=0-0")
+            .header("Range", "bytes=$at-$at")
             .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
             .build()
         Http.client.newCall(request).execute().use { response ->

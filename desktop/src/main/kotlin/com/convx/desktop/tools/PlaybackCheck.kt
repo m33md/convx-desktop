@@ -983,8 +983,9 @@ private fun tryPlay(id: String): String {
 
 /**
  * Downloads that go wrong, against a local server: a refused song has to fail with the refusal
- * (not FFmpeg's unrelated "could not open input") and in plain words; a server that ignores
- * the byte range must still give one copy of the file; a full disk must be named as such.
+ * (not FFmpeg's unrelated "could not open input") and in plain words; an address refused part
+ * way through must carry on under a renewed one to an exact copy; a server that ignores the
+ * byte range must still give one copy of the file; a full disk must be named as such.
  */
 private fun streamFailureCheck(): Boolean {
     var ok = true
@@ -998,6 +999,31 @@ private fun streamFailureCheck(): Boolean {
         exchange.sendResponseHeaders(403, -1)
         exchange.close()
     }
+    fun serveRange(exchange: com.sun.net.httpserver.HttpExchange) {
+        val range = exchange.requestHeaders.getFirst("Range")?.removePrefix("bytes=")
+        val start = range?.substringBefore('-')?.toLongOrNull() ?: 0L
+        val end = (range?.substringAfter('-')?.toLongOrNull() ?: Long.MAX_VALUE).coerceAtMost(body.size - 1L)
+        if (start >= body.size) {
+            exchange.sendResponseHeaders(416, -1)
+            exchange.close()
+            return
+        }
+        val length = end - start + 1
+        exchange.responseHeaders.add("Content-Range", "bytes $start-$end/${body.size}")
+        exchange.sendResponseHeaders(206, length)
+        exchange.responseBody.use { it.write(body, start.toInt(), length.toInt()) }
+    }
+    // Serves the first megabyte, then refuses: what YouTube does to an address it stops honouring.
+    server.createContext("/stale") { exchange ->
+        val start = exchange.requestHeaders.getFirst("Range")?.removePrefix("bytes=")?.substringBefore('-')?.toLongOrNull() ?: 0L
+        if (start >= 1024 * 1024) {
+            exchange.sendResponseHeaders(403, -1)
+            exchange.close()
+        } else {
+            serveRange(exchange)
+        }
+    }
+    server.createContext("/fresh") { serveRange(it) }
     // A plain 200 with no length, whatever range was asked for.
     server.createContext("/whole") { exchange ->
         exchange.sendResponseHeaders(200, 0)
@@ -1030,6 +1056,26 @@ private fun streamFailureCheck(): Boolean {
                 "${error::class.simpleName}: ${error.message} -> \"$words\"",
             )
         }
+
+        val renewBefore = AudioCache.renewUrl
+        runCatching {
+            AudioCache.renewUrl = { s, position, _ ->
+                if (s.url.endsWith("/stale") && position > 0) s.copy(url = s.url.replace("/stale", "/fresh"), client = "CI fresh") else null
+            }
+            val download = AudioCache.Download(stream("ci-renew", "/stale").copy(contentLength = body.size.toLong())).also { it.start() }
+            val deadline = System.currentTimeMillis() + 30_000
+            while (download.running && System.currentTimeMillis() < deadline) Thread.sleep(50)
+            val exact = download.finished && download.file.readBytes().contentEquals(body)
+            expect(
+                "renewed",
+                exact && download.stream.client == "CI fresh",
+                "finished=${download.finished}, failed=${download.error}, via ${download.stream.client}, " +
+                    "file ${download.file.length()} of ${body.size} bytes, exact=$exact",
+            )
+            AudioCache.discard("ci-renew")
+            download.file.delete()
+        }.onFailure { expect("renewed", false, "${it::class.simpleName}: ${it.message}") }
+        AudioCache.renewUrl = renewBefore
 
         runCatching {
             val download = AudioCache.Download(stream("ci-whole", "/whole")).also { it.start() }

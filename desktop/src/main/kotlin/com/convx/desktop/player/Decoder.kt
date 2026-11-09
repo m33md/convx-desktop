@@ -83,7 +83,7 @@ fun describePlaybackError(error: Throwable): String {
         chain.any { it is java.net.UnknownHostException || it is java.net.ConnectException || it is java.net.NoRouteToHostException } ->
             "You're offline, or YouTube can't be reached right now."
         chain.any { it is AudioCache.HttpStatusException } ->
-            "YouTube stopped sending this song. Try playing it again."
+            "YouTube won't send this song right now. Try again in a minute, or pick another one."
         chain.any { it is java.net.SocketTimeoutException } || "timed out" in text ->
             "The song is taking too long to arrive. Check your connection and try again."
         chain.any { it is java.io.FileNotFoundException || it is java.nio.file.AccessDeniedException } ->

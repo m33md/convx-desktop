@@ -13,6 +13,7 @@ import com.music.innertube.models.YouTubeClient
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.runBlocking
 import okhttp3.Request
 import java.io.File
 import java.io.IOException
@@ -46,6 +47,17 @@ object AudioCache {
 
     private val active = ConcurrentHashMap<String, Download>()
 
+    /** How many times one download may swap to a fresh address before it gives up. */
+    private const val MaxRenewals = 3
+
+    /**
+     * A fresh address for the same file when YouTube stops serving a download at a byte
+     * position, or null when there isn't one. Only YouTube's own addresses can be renewed.
+     */
+    @Volatile var renewUrl: (stream: ResolvedStream, position: Long, refused: Set<String>) -> ResolvedStream? = { stream, position, refused ->
+        if ("googlevideo.com" !in stream.url) null else runBlocking { StreamResolver.renew(stream, position, refused) }
+    }
+
     /** A finished download: the data file plus its ".ok" marker (Windows can't rename a file a reader holds open). */
     fun completeFile(videoId: String): File? =
         dir.listFiles { f -> f.name.startsWith("$videoId.") && f.name.endsWith(".ok") }
@@ -71,7 +83,7 @@ object AudioCache {
             completeFile(id, stream.container)?.let { return it }
             val existing = active[id]
             val download = when {
-                existing != null && existing.running && existing.url == stream.url -> existing
+                existing != null && existing.running && existing.isSameFile(stream) -> existing
                 // The player is fetching this song in another format; let it finish first.
                 existing != null && existing.running -> {
                     delay(500)
@@ -102,7 +114,7 @@ object AudioCache {
             return CachedAudio.Complete(file)
         }
         val download = active.compute(stream.videoId) { _, existing ->
-            if (existing != null && !existing.failed && existing.url == stream.url) existing
+            if (existing != null && !existing.failed && existing.isSameFile(stream)) existing
             else {
                 existing?.cancel()
                 Download(stream).also { it.start() }
@@ -211,7 +223,11 @@ object AudioCache {
 
     class Download(stream: ResolvedStream) {
         val videoId = stream.videoId
-        val url = stream.url
+
+        /** The stream being fetched; its address changes when YouTube stops serving the old one. */
+        @Volatile var stream: ResolvedStream = stream
+            private set
+        val url: String get() = stream.url
 
         /** "webm" or "m4a": also the name FFmpeg knows the container by. */
         val container = stream.container
@@ -235,6 +251,10 @@ object AudioCache {
 
         val running: Boolean get() = !finished && !failed && !cancelled
 
+        /** Whether [other] is this download's file: the same address, or the same format and length under a renewed one. */
+        fun isSameFile(other: ResolvedStream): Boolean =
+            other.url == url || (other.mimeType == stream.mimeType && other.contentLength > 0 && other.contentLength == stream.contentLength)
+
         fun start() {
             thread(name = "convx-download-$videoId", isDaemon = true) { run() }
         }
@@ -251,21 +271,36 @@ object AudioCache {
                 RandomAccessFile(file, "rw").use { out ->
                     out.setLength(0)
                     var position = 0L
+                    val refused = mutableSetOf<String>()
+                    var renewals = 0
                     while (!cancelled) {
                         val known = totalBytes > 0
                         if (known && position >= totalBytes) break
                         if (position > MaxSongBytes) throw IOException("Stopped a download that went past ${MaxSongBytes / 1_048_576} MB")
                         val end = if (known) minOf(position + ChunkBytes, totalBytes) - 1 else position + ChunkBytes - 1
-                        val request = Request.Builder().url(url)
-                            .header("Range", "bytes=$position-$end")
-                            .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
-                            .build()
                         var attempt = 0
                         var read = -1L
                         while (read < 0 && !cancelled) {
+                            val request = Request.Builder().url(url)
+                                .header("Range", "bytes=$position-$end")
+                                .header("User-Agent", YouTubeClient.USER_AGENT_WEB)
+                                .build()
                             try {
                                 read = fetch(request, out, position)
                             } catch (e: IOException) {
+                                // YouTube refusing an address part way through: carry on from here under a fresh one.
+                                if (e is HttpStatusException && renewals < MaxRenewals && !cancelled) {
+                                    renewals++
+                                    refused += stream.client
+                                    val fresh = runCatching { renewUrl(stream, position, refused.toSet()) }
+                                        .onFailure { Log.w(Tag, "Couldn't renew $videoId's address", it) }
+                                        .getOrNull()
+                                    if (fresh != null && fresh.url != url) {
+                                        Log.w(Tag, "$videoId: HTTP ${e.code} at $position/$totalBytes via ${stream.client}; carrying on via ${fresh.client}")
+                                        stream = fresh
+                                        continue
+                                    }
+                                }
                                 if (++attempt >= 3 || e is HttpStatusException) throw e
                                 Thread.sleep(500L * attempt)
                             }
@@ -298,7 +333,7 @@ object AudioCache {
                     isDiskFull(e) -> DiskFullException(e)
                     else -> e as? IOException ?: IOException(e)
                 }
-                Log.w(Tag, "Download of $videoId failed at $downloaded/$totalBytes (${freeBytes()?.let { "${it / 1_048_576} MB free" } ?: "free space unknown"})", e)
+                Log.w(Tag, "Download of $videoId via ${stream.client} failed at $downloaded/$totalBytes (${freeBytes()?.let { "${it / 1_048_576} MB free" } ?: "free space unknown"})", e)
                 lock.withLock {
                     failed = true
                     error = failure
@@ -311,7 +346,7 @@ object AudioCache {
         private fun fetch(request: Request, out: RandomAccessFile, position: Long): Long {
             Http.client.newCall(request).execute().use { response ->
                 if (response.code == 416) return 0
-                if (!response.isSuccessful) throw HttpStatusException(response.code)
+                if (!response.isSuccessful) throw HttpStatusException(response.code, stream.client)
                 // A 200 is the whole file: the server ignored the range.
                 val whole = response.code == 200
                 if (totalBytes <= 0) {
@@ -367,7 +402,8 @@ object AudioCache {
         }
     }
 
-    class HttpStatusException(val code: Int) : IOException("HTTP $code")
+    /** YouTube (or another server) answered [code]; [client] is whose address it refused. */
+    class HttpStatusException(val code: Int, val client: String? = null) : IOException("HTTP $code")
 
     /** The disk has no room for the song. */
     class DiskFullException(cause: Throwable? = null) : IOException("Not enough free disk space", cause)
