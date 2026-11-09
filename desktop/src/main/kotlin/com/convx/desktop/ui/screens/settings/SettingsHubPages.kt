@@ -176,6 +176,16 @@ fun LibraryHub() {
             value = localIndex.tracks.size.takeIf { it > 0 }?.let { "$it songs" },
         ) { SettingsNav.push(SettingsPage.LocalFolders) }
     }
+    SectionGap()
+    SettingsSection {
+        LinkRow(
+            "Modules",
+            "Music sources and add-ons",
+            icon = "link",
+            tint = SystemColors.Blue,
+            value = settings.enabledModules.size.takeIf { it > 0 }?.let { "$it on" },
+        ) { SettingsNav.push(SettingsPage.Modules) }
+    }
 }
 
 @Composable

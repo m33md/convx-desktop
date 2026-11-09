@@ -95,6 +95,7 @@ fun main() {
 
     // Before any HTTP client exists, so they all go through the proxy if one is set.
     Network.apply(AppSettings.value)
+    com.convx.desktop.player.ModuleStreams.init()
     AppScope.launch(Dispatchers.IO) { initYouTube() }
     AppScope.launch(Dispatchers.IO) {
         AudioCache.cleanupPartials()

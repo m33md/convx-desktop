@@ -67,6 +67,20 @@ object AudioCache {
 
     fun isCached(videoId: String) = completeFile(videoId) != null
 
+    /** What a module's copy of a song is saved as; YouTube's are always "webm" or "m4a". */
+    private val ModuleContainers = setOf("flac", "mp3", "ogg", "wav", "mp4")
+
+    /** A finished copy of [videoId] that came from a module. */
+    fun completeModuleFile(videoId: String): File? =
+        ModuleContainers.firstNotNullOfOrNull { completeFile(videoId, it) }
+
+    /**
+     * Whether the next play of [videoId] needs no network: with modules on, only a module's copy
+     * counts, since a module is asked before a copy saved from YouTube is used.
+     */
+    fun isCachedForPlayback(videoId: String) =
+        if (ModuleStreams.active) completeModuleFile(videoId) != null else isCached(videoId)
+
     /** A finished download of [videoId] in [container] ("webm" or "m4a") only. */
     private fun completeFile(videoId: String, container: String): File? =
         File(dir, "$videoId.$container").takeIf { it.isFile && File(dir, "$videoId.$container.ok").isFile }
@@ -109,7 +123,9 @@ object AudioCache {
 
     /** Starts (or joins) the download for [stream] and returns a reader positioned at 0. */
     fun open(stream: ResolvedStream): CachedAudio {
-        completeFile(stream.videoId)?.let { file ->
+        // A module's stream is saved in its own format, so a copy from YouTube doesn't stand in for it.
+        val saved = if (stream.module != null) completeFile(stream.videoId, stream.container) else completeFile(stream.videoId)
+        saved?.let { file ->
             file.setLastModified(System.currentTimeMillis())
             return CachedAudio.Complete(file)
         }
@@ -125,7 +141,8 @@ object AudioCache {
 
     /** Warms the next track so the switch is instant. */
     fun prefetch(stream: ResolvedStream) {
-        if (isCached(stream.videoId) || active.containsKey(stream.videoId)) return
+        val saved = if (stream.module != null) completeFile(stream.videoId, stream.container) else completeFile(stream.videoId)
+        if (saved != null || active.containsKey(stream.videoId)) return
         active[stream.videoId] = Download(stream).also { it.start() }
     }
 

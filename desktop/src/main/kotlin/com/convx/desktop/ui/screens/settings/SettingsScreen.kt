@@ -101,6 +101,8 @@ enum class SettingsPage(val title: String, val hub: String) {
     ListenBrainz("ListenBrainz", "accounts"),
     Network("Network & proxy", "accounts"),
     LocalFolders("Music folders", "library"),
+    Modules("Modules", "library"),
+    ModuleDetail("Module details", "library"),
     Privacy("Privacy", "privacy"),
     Storage("Storage", "privacy"),
     Backup("Backup & restore", "privacy"),
@@ -410,6 +412,8 @@ private val searchEntries: List<SearchEntry> by lazy {
         SearchEntry("Scan local files", null, h.library, SettingsPage.LocalFolders, "scan local files"),
         SearchEntry("Network storage", "SMB and WebDAV shares", h.library, SettingsPage.LocalFolders, "smb webdav nas network share"),
         SearchEntry("Excluded folders", null, h.library, SettingsPage.LocalFolders, "exclude skip folder"),
+        SearchEntry("Modules", "Music sources and add-ons", h.library, SettingsPage.Modules, "modules plugins extensions addons add-ons 8spine eclipse lossless flac hi-res tidal qobuz deezer source"),
+        SearchEntry("Add module source", "An 8spine module index or Eclipse addon", h.library, SettingsPage.Modules, "module source url index manifest addon"),
         SearchEntry("Network & proxy", "IP version and proxy", h.accounts, SettingsPage.Network, "proxy ipv6 ipv4 network socks http"),
         SearchEntry("Apple Music import", "Import playlists from a link or export", h.accounts, keywords = "apple music playlist import export itunes xml"),
         SearchEntry("Sound output", "Speakers or headphones", h.playback, SettingsPage.Output, "device speaker headphones output"),
@@ -590,6 +594,8 @@ private fun PageContent(page: SettingsPage) {
         SettingsPage.ListenBrainz -> ListenBrainzSettings()
         SettingsPage.Network -> NetworkSettings()
         SettingsPage.LocalFolders -> LocalFoldersSettings()
+        SettingsPage.Modules -> ModulesSettings()
+        SettingsPage.ModuleDetail -> ModuleDetailSettings()
         SettingsPage.Privacy -> PrivacySettings()
         SettingsPage.Storage -> StorageSettings()
         SettingsPage.Backup -> BackupSettings()

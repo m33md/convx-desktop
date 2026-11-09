@@ -35,6 +35,8 @@ kotlin {
         "../canvas/src/main/kotlin",
         // Only the phone's Shazam client is copied there.
         "../integrations/src/main/kotlin",
+        // The phone's module engine: 8spine modules and Eclipse addons.
+        "../spine/src/main/kotlin",
     )
 }
 
@@ -99,6 +101,8 @@ dependencies {
     implementation(files("libs/tinypinyin-2.0.3.jar", "libs/ahocorasick-0.3.0.jar"))
     // Android's org.json, for the phone's AI translation clients (com.convx.music.api).
     implementation("org.json:json:20250517")
+    // Modules are JavaScript; this is the engine the phone runs them in, with its Windows build inside.
+    implementation("io.github.dokar3:quickjs-kt-jvm:1.0.5")
 
     testImplementation(kotlin("test"))
 }

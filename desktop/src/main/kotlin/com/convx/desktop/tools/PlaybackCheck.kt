@@ -41,7 +41,7 @@ fun main(args: Array<String>) {
             "kJQP7kiw5Fk",
         )
     }
-    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck() and streamFailureCheck()
+    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck() and streamFailureCheck() and modulesCheck()
     partyServerCheck()
     runBlocking(Dispatchers.IO) { initYouTube() }
     var passed = 0
@@ -582,6 +582,54 @@ private fun backupCheck(): Boolean {
  * Downloads without YouTube: a file noted as a song's download plays from disk with no lookup,
  * lists' buttons count it, and the Music folder copies get the phone's names.
  */
+/**
+ * Modules: the JavaScript engine's Windows library loads in this Java, a module in the phone's
+ * shape answers searchTracks and getTrackStreamUrl, one without them is turned away, and an
+ * Eclipse addon's answers are read as the phone reads them.
+ */
+private fun modulesCheck(): Boolean {
+    var ok = true
+    fun expect(name: String, pass: Boolean, detail: String) {
+        if (!pass) ok = false
+        println("${if (pass) "PASS" else "FAIL"} modules $name: $detail")
+    }
+    val source = """
+        const settings = { quality: { type: "select", label: "Quality", options: [{ label: "CD", value: "LOSSLESS" }], defaultValue: "LOSSLESS" } };
+        async function searchTracks(query, limit, context) {
+            await new Promise(function (resolve) { resolve(); });
+            return { tracks: [{ id: "t1", title: query, artist: "Convx", duration: 200, audioQuality: "LOSSLESS" }], total: 1 };
+        }
+        async function getTrackStreamUrl(id, quality, context) {
+            return { streamUrl: "https://example.com/" + id + ".flac", track: { id: id, audioQuality: quality, format: "FLAC", bitDepth: 24 } };
+        }
+        module.exports = { searchTracks, getTrackStreamUrl, settings };
+    """.trimIndent()
+    try {
+        runBlocking(Dispatchers.IO) {
+            val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+            val manifest = com.music.spine.QuickJsExecutor.loadModule("ci-module", source, "https://example.com/m/").getOrThrow()
+            expect("engine loads", manifest.contains("LOSSLESS"), manifest)
+            val search = com.music.spine.QuickJsExecutor.callExport("ci-module", "searchTracks", listOf("\"Song\"", "5", "{}")).getOrThrow()
+            val tracks = json.decodeFromString(com.music.spine.ModuleSearchResponse.serializer(), search).tracks
+            expect("search", tracks.singleOrNull()?.title == "Song", search)
+            val stream = com.music.spine.QuickJsExecutor.callExport("ci-module", "getTrackStreamUrl", listOf("\"t1\"", "\"LOSSLESS\"", "{}")).getOrThrow()
+            val parsed = json.decodeFromString(com.music.spine.ModuleStreamResponse.serializer(), stream)
+            expect("stream", parsed.streamUrl == "https://example.com/t1.flac" && parsed.track?.bitDepth == 24, stream)
+            com.music.spine.QuickJsExecutor.unload("ci-module")
+            val bad = com.music.spine.QuickJsExecutor.loadModule("ci-bad", "function nothing() {}", "")
+            expect("module without exports refused", bad.isFailure, bad.exceptionOrNull()?.message.orEmpty())
+            com.music.spine.QuickJsExecutor.unload("ci-bad")
+        }
+        val addon = com.music.spine.EclipseAddon
+        val dash = addon.parseStream(kotlinx.serialization.json.Json { ignoreUnknownKeys = true }, "x", """{"url":"https://example.com/a.mpd","manifest":"dash"}""")
+        expect("addon dash", dash.streamType == "dash", "${dash.streamType}")
+        expect("addon urls", addon.searchUrl("https://a.example/t0k", "a b") == "https://a.example/t0k/search?q=a%20b", addon.searchUrl("https://a.example/t0k", "a b"))
+    } catch (e: Throwable) {
+        expect("engine", false, "${e::class.simpleName}: ${e.message}")
+    }
+    return ok
+}
+
 private fun downloadsCheck(): Boolean {
     var ok = true
     fun expect(name: String, pass: Boolean, detail: String) {

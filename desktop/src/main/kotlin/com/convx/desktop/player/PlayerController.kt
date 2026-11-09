@@ -657,6 +657,8 @@ object PlayerController : AudioEngine.Listener {
             generateSequence(error) { it.cause }.filterIsInstance<AudioCache.HttpStatusException>()
                 .firstNotNullOfOrNull { it.client }?.let(failedClients::add)
             StreamResolver.invalidate(song.id)
+            // A module's song that won't play comes from YouTube for the rest of the session.
+            if (stream?.client == ModuleStreams.Client) ModuleStreams.markFailed(song.id)
             // The saved copy may be what's broken; not when it was the speakers that failed.
             if (isOutputProblem(error)) AudioCache.cancel(song.id) else AudioCache.discard(song.id)
             if (retries < limit) {
@@ -816,7 +818,7 @@ object PlayerController : AudioEngine.Listener {
             } else if (offline != null) {
                 offline.first
             } else {
-                StreamResolver.resolve(song.id, quality, forceRefresh, avoidClients = avoidClients).getOrElse { error ->
+                StreamResolver.resolveFor(song, quality, forceRefresh, avoidClients = avoidClients).getOrElse { error ->
                     Log.e(Tag, "Couldn't resolve ${song.id}", error)
                     failCurrent(error.message ?: "This song can't be played right now")
                     return@launch
@@ -858,9 +860,10 @@ object PlayerController : AudioEngine.Listener {
         val next = s.queue.getOrNull(s.index + 1) ?: return
         prefetchJob = scope.launch {
             delay(3_000)
-            val id = SpotifyMatcher.resolve(next)?.id ?: return@launch
-            if (LocalMusic.isLocal(id) || AudioCache.isCached(id) || Downloads.isDownloaded(id)) return@launch
-            StreamResolver.resolve(id, AppSettings.value.audioQuality).onSuccess { AudioCache.prefetch(it) }
+            val song = SpotifyMatcher.resolve(next) ?: return@launch
+            val id = song.id
+            if (LocalMusic.isLocal(id) || AudioCache.isCachedForPlayback(id) || Downloads.isDownloaded(id)) return@launch
+            StreamResolver.resolveFor(song, AppSettings.value.audioQuality).onSuccess { AudioCache.prefetch(it) }
         }
     }
 
@@ -873,7 +876,7 @@ object PlayerController : AudioEngine.Listener {
         val stream = when {
             local != null -> LocalMusic.stream(song.id, local)
             offline != null -> offline.first
-            else -> StreamResolver.resolve(song.id, AppSettings.value.audioQuality).getOrNull() ?: return null
+            else -> StreamResolver.resolveFor(song, AppSettings.value.audioQuality).getOrNull() ?: return null
         }
         val source = when {
             local != null -> CachedAudio.Complete(java.io.File(local.path))

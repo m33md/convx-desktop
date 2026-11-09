@@ -14,6 +14,8 @@ It looks and works like the phone app, sized for a PC:
 - AutoMix transitions, an equalizer, Replay, and the AI features.
 - Discord status, Last.fm and ListenBrainz scrobbling, and importing playlists from Spotify.
 - Windows media keys and the taskbar's play controls.
+- Modules, as on the phone: add an 8spine module source or an Eclipse addon, and songs play from
+  it (often in lossless FLAC) before YouTube, in the order you set.
 - Disc Studio, a PC-only extra: design a CD or a vinyl record for any playlist, from layers of
   pictures, text, shapes, patterns, stickers (thousands of emoji and icons) and your own brush
   strokes, with effects like bloom, halftone and ink-brush texture, and share designs as
@@ -58,13 +60,13 @@ finished installers replace the ones on the
 ## How it's made
 
 It is written in Kotlin with Compose Multiplatform. It compiles the phone app's own YouTube Music,
-lyrics, artwork and song recognition code, so both apps fetch music the same way. Audio is
-decoded with FFmpeg.
+lyrics, artwork, song recognition and module code, so both apps fetch music the same way. Audio is
+decoded with FFmpeg, and modules run in QuickJS, as on the phone.
 
 | Path | What |
 | --- | --- |
 | `desktop/` | The Windows app |
-| `innertube/`, `lyrics/`, `canvas/`, `integrations/` | Code from the Convx phone app: YouTube Music, lyrics, animated artwork and song recognition |
+| `innertube/`, `lyrics/`, `canvas/`, `integrations/`, `spine/` | Code from the Convx phone app: YouTube Music, lyrics, animated artwork, song recognition and modules |
 | `installer/windows/` | Convx's setup window (a WiX bundle around the app's MSI) |
 
 The app keeps its data in two places on your PC:

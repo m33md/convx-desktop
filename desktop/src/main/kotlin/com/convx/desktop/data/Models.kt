@@ -474,6 +474,14 @@ data class Settings(
     /** A song counts after this share of it, or [scrobbleDelaySeconds], whichever comes first. */
     val scrobbleDelayPercent: Float = 0.5f,
     val scrobbleDelaySeconds: Int = 180,
+    /** The phone's Modules: where 8spine module indexes and Eclipse addons were added from. */
+    val moduleSources: List<String> = emptyList(),
+    /** The modules that are on, by id, in the order they're asked for a song. */
+    val enabledModules: List<String> = emptyList(),
+    /** Each module's own settings, by module id. */
+    val moduleSettings: Map<String, Map<String, String>> = emptyMap(),
+    /** What the sources listed when they were last fetched. */
+    val fetchedModules: List<com.music.spine.SpineModule> = emptyList(),
     /** YouTube's guest session id; kept so recommendations stay consistent between launches. */
     val visitorData: String? = null,
     val lastQueue: List<Song> = emptyList(),

@@ -8,6 +8,7 @@ package com.convx.desktop.player
 import com.convx.desktop.core.Http
 import com.convx.desktop.core.Log
 import com.convx.desktop.data.AudioQuality
+import com.convx.desktop.data.Song
 import com.music.innertube.NewPipeExtractor
 import com.music.innertube.YouTube
 import com.music.innertube.models.YouTubeClient
@@ -21,6 +22,8 @@ import com.music.innertube.models.YouTubeClient.Companion.TVHTML5_SIMPLY_EMBEDDE
 import com.music.innertube.models.YouTubeClient.Companion.VISIONOS
 import com.music.innertube.models.response.PlayerResponse
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
@@ -45,33 +48,67 @@ data class ResolvedStream(
     val viewCount: Long? = null,
     /** Where to tell YouTube this video was played, so the account's history and Home learn from it. */
     val playbackTracking: String? = null,
+    /** The module that found this stream, by name; null for YouTube's own and for files on this PC. */
+    val module: String? = null,
+    /** Bits per sample, when a module says: 16 for CD quality, 24 for hi-res. */
+    val bitDepth: Int? = null,
 ) {
     val codec: String
         get() = mimeType.substringAfter("codecs=\"", "").substringBefore('"').substringBefore('.').ifBlank {
             mimeType.substringAfter('/').substringBefore(';')
         }
 
-    val container: String get() = if (mimeType.contains("webm")) "webm" else "m4a"
+    /**
+     * The saved file's extension, which is also the name FFmpeg knows the container by. YouTube's
+     * are always "webm" or "m4a"; a module's MP4 audio is kept as "mp4", so a copy from a module
+     * can be told from YouTube's by its name alone (see [AudioCache.completeModuleFile]).
+     */
+    val container: String
+        get() = when {
+            mimeType.contains("webm") -> "webm"
+            module == null -> "m4a"
+            mimeType.contains("flac") -> "flac"
+            mimeType.contains("mpeg") -> "mp3"
+            mimeType.contains("ogg") -> "ogg"
+            mimeType.contains("wav") -> "wav"
+            else -> "mp4"
+        }
+
+    val lossless: Boolean
+        get() = codec.contains("flac", ignoreCase = true) || codec.contains("alac", ignoreCase = true) ||
+            codec.contains("wav", ignoreCase = true)
 
     /** "Opus", "AAC": the codec as the phone's badge names it. */
     private val codecName: String
         get() = when {
             codec.contains("opus", ignoreCase = true) -> "Opus"
-            codec.contains("mp4a", ignoreCase = true) || codec.contains("aac", ignoreCase = true) -> "AAC"
+            codec.contains("mp4a", ignoreCase = true) || codec.contains("aac", ignoreCase = true) || codec == "mp4" -> "AAC"
             codec.contains("vorbis", ignoreCase = true) -> "Vorbis"
+            codec.contains("mpeg", ignoreCase = true) || codec.contains("mp3", ignoreCase = true) -> "MP3"
             else -> codec.uppercase()
         }
 
-    /** "Opus 160 kbps": the phone's badge between the elapsed and remaining times. */
+    private val sampleRateText: String?
+        get() = sampleRate?.let { if (it % 1000 == 0) "${it / 1000} kHz" else "%.1f kHz".format(it / 1000f) }
+
+    /**
+     * "Opus 160 kbps": the phone's badge between the elapsed and remaining times. Lossless audio
+     * has no fixed bitrate, so it is named by its depth instead: "FLAC 24-bit", or "FLAC".
+     */
     val badge: String
-        get() = if (bitrate > 0) "$codecName ${bitrate / 1000} kbps" else codecName
+        get() = when {
+            lossless -> listOfNotNull(codecName, bitDepth?.let { "$it-bit" }).joinToString(" ")
+            bitrate > 0 -> "$codecName ${bitrate / 1000} kbps"
+            else -> codecName
+        }
 
     /** "Opus · 160 kbps · 48 kHz": the detail line of the phone's quality card. */
     val detail: String
         get() = buildList {
             add(codecName)
-            if (bitrate > 0) add("${bitrate / 1000} kbps")
-            sampleRate?.let { add(if (it % 1000 == 0) "${it / 1000} kHz" else "%.1f kHz".format(it / 1000f)) }
+            if (lossless) bitDepth?.let { add("$it-bit") } else if (bitrate > 0) add("${bitrate / 1000} kbps")
+            sampleRateText?.let { add(it) }
+            module?.let { add(it) }
         }.joinToString(" · ")
 }
 
@@ -130,6 +167,31 @@ object StreamResolver {
 
     fun invalidate(videoId: String) {
         cache.remove(videoId)
+    }
+
+    /**
+     * [song]'s audio for playback: from the modules that are on when one has it, otherwise from
+     * YouTube, which is asked at the same time so a song no module has starts as quickly as before.
+     * [avoidClients] holding [ModuleStreams.Client] means a module's stream just failed: YouTube only.
+     */
+    suspend fun resolveFor(
+        song: Song,
+        quality: AudioQuality,
+        forceRefresh: Boolean = false,
+        avoidClients: Set<String> = emptySet(),
+    ): Result<ResolvedStream> = coroutineScope {
+        if (!ModuleStreams.active || ModuleStreams.Client in avoidClients) {
+            return@coroutineScope resolve(song.id, quality, forceRefresh, avoidClients = avoidClients)
+        }
+        if (!forceRefresh) ModuleStreams.saved(song)?.let { return@coroutineScope Result.success(it) }
+        val youTube = async { resolve(song.id, quality, forceRefresh, avoidClients = avoidClients) }
+        val module = ModuleStreams.resolve(song, quality)
+        if (module != null) {
+            youTube.cancel()
+            Result.success(module)
+        } else {
+            youTube.await()
+        }
     }
 
     /**
@@ -300,7 +362,7 @@ object StreamResolver {
      * A one-byte ranged GET at [at]: YouTube can accept a HEAD for a URL it won't serve. Returns
      * the full length from Content-Range, or null when the URL doesn't serve bytes.
      */
-    private fun probe(url: String, at: Long = 0): Long? = runCatching {
+    internal fun probe(url: String, at: Long = 0): Long? = runCatching {
         val request = Request.Builder().url(url)
             .header("Range", "bytes=$at-$at")
             .header("User-Agent", YouTubeClient.USER_AGENT_WEB)

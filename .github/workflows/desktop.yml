@@ -9,6 +9,7 @@ on:
       - "lyrics/**"
       - "canvas/**"
       - "integrations/**"
+      - "spine/**"
       - ".github/workflows/desktop.yml"
   pull_request:
     paths:
@@ -18,6 +19,7 @@ on:
       - "lyrics/**"
       - "canvas/**"
       - "integrations/**"
+      - "spine/**"
       - ".github/workflows/desktop.yml"
   workflow_dispatch:
 
