@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   Convx's setup .exe: a WiX 5 bundle around the MSI jpackage makes, with its own window (theme.xml).
-  Built by build-bundle.ps1 with -d Version, -d Msi and -d Icon.
+  Built by build-bundle.ps1 with -d Version, -d DisplayVersion, -d Msi and -d Icon. Version is the
+  bundle's own number, which Windows compares; DisplayVersion is the one the window shows.
 
   The bundle is what Windows lists under Installed apps, so uninstalling goes through this window too.
   The MSI inside is hidden there, and is still the one jpackage made: it upgrades any Convx installed
@@ -67,6 +68,9 @@
             <Payload Name="wordmark@2x.png" SourceFile="$(sys.SOURCEFILEDIR)theme\wordmark@2x.png" />
             <Payload Name="wordmark@3x.png" SourceFile="$(sys.SOURCEFILEDIR)theme\wordmark@3x.png" />
         </BootstrapperApplication>
+
+        <!-- The version people know this Convx by, as in About. -->
+        <Variable Name="ConvxVersion" Type="string" Value="$(var.DisplayVersion)" />
 
         <!-- Where jpackage's per-user MSI installs by default; the updater passes the current folder. -->
         <Variable Name="InstallFolder" Type="formatted" Value="[LocalAppDataFolder]Convx" bal:Overridable="yes" />

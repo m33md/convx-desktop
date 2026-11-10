@@ -1,7 +1,10 @@
 # Builds Convx's setup .exe: the WiX 5 bundle in bundle.wxs around the MSI jpackage made.
 param(
     [Parameter(Mandatory)] [string] $Msi,
+    # The bundle's own number, which Windows compares; it must go up from one setup to the next.
     [Parameter(Mandatory)] [string] $Version,
+    # The version the setup window shows (Convx's version in About); the same as -Version if left out.
+    [string] $DisplayVersion,
     [Parameter(Mandatory)] [string] $Icon,
     [Parameter(Mandatory)] [string] $Out
 )
@@ -40,6 +43,7 @@ $ext = foreach ($name in 'WixToolset.Bal.wixext', 'WixToolset.Util.wixext') {
 $msiPath = (Resolve-Path $Msi).Path
 $iconPath = (Resolve-Path $Icon).Path
 New-Item -ItemType Directory -Force (Split-Path -Parent $Out) | Out-Null
-wix build "$PSScriptRoot/bundle.wxs" @ext -d "Version=$Version" -d "Msi=$msiPath" -d "Icon=$iconPath" -o $Out
+if (-not $DisplayVersion) { $DisplayVersion = $Version }
+wix build "$PSScriptRoot/bundle.wxs" @ext -d "Version=$Version" -d "DisplayVersion=$DisplayVersion" -d "Msi=$msiPath" -d "Icon=$iconPath" -o $Out
 Native 'Building the setup'
-Write-Host "Built $Out ($((Get-Item $Out).Length) bytes), version $Version"
+Write-Host "Built $Out ($((Get-Item $Out).Length) bytes), Convx $DisplayVersion (bundle $Version)"

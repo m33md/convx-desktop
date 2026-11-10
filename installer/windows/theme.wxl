@@ -1,18 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The words in Convx's setup window. [WixBundleVersion] is the version being installed. -->
+<!-- The words in Convx's setup window. [ConvxVersion] is the version being installed. -->
 <WixLocalization Culture="en-us" Language="1033" xmlns="http://wixtoolset.org/schemas/v4/wxl">
   <String Id="Caption" Value="Convx Setup" />
-  <String Id="Version" Value="Version [WixBundleVersion]" />
+  <String Id="Version" Value="Version [ConvxVersion]" />
 
   <String Id="InstallHeader" Value="Install Convx" />
   <String Id="InstallMessage" Value="Convx's player, lyrics and library, on this PC. It takes about a minute." />
   <String Id="InstallButton" Value="Install" />
   <String Id="UpdateHeader" Value="Update Convx" />
-  <String Id="UpdateMessage" Value="Version [ConvxInstalledVersion] is on this PC. Your library, playlists and settings stay as they are." />
+  <String Id="UpdateMessage" Value="Convx is on this PC already. Your library, playlists and settings stay as they are." />
   <String Id="UpdateButton" Value="Update" />
 
   <String Id="ModifyHeader" Value="Convx is installed" />
-  <String Id="ModifyMessage" Value="Version [WixBundleVersion] is on this PC. Uninstalling keeps your library and settings, in case you come back." />
+  <String Id="ModifyMessage" Value="Version [ConvxVersion] is on this PC. Uninstalling keeps your library and settings, in case you come back." />
   <String Id="UninstallButton" Value="Uninstall" />
 
   <String Id="ProgressHeader" Value="Installing Convx…" />

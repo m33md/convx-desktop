@@ -39,11 +39,31 @@ jobs:
         working-directory: desktop
         shell: bash
     env:
-      # Each build is numbered, so its installer upgrades the one installed before it. 1.1, because
-      # the 1.0 builds (up to 1.0.75) came from m33md/anything, where this app lived before.
-      CONVX_VERSION: 1.1.${{ github.run_number }}
+      # The installers' own number, which only goes up, so each one upgrades the Convx installed
+      # before it. 1.1, because the 1.0 builds (up to 1.0.75) came from m33md/anything. People see
+      # CONVX_VERSION instead (the Version step below).
+      CONVX_PACKAGE_VERSION: 1.1.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          # The whole history: the version number is counted from it.
+          fetch-depth: 0
+
+      # The version people see: 1.1.20 for the first commit after aa77a0e, then one up for each
+      # commit on main that changes Convx. Shown in About, the setup window, the release and its
+      # file names; the updater goes by commits, so it never compares these numbers.
+      - name: Version
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          base=aa77a0e80c547908dc77cefd6e507bb9b153604d
+          if git merge-base --is-ancestor "$base" HEAD; then
+            count=$(git rev-list --count --first-parent "$base..HEAD" -- installer desktop innertube lyrics canvas integrations spine .github/workflows/desktop.yml)
+            version="1.1.$((19 + count))"
+          else
+            version=$CONVX_PACKAGE_VERSION
+          fi
+          echo "Convx $version (installer $CONVX_PACKAGE_VERSION)"
+          echo "CONVX_VERSION=$version" >> "$GITHUB_ENV"
 
       # The runtime the installer ships: the JetBrains Runtime has the custom title bar the
       # app's top bar replaces Windows' with. Set up first so Temurin stays the build's Java.
@@ -160,7 +180,7 @@ jobs:
         shell: pwsh
         run: |
           $msi = Get-ChildItem build/compose/binaries/main/msi/*.msi | Select-Object -First 1
-          ../installer/windows/build-bundle.ps1 -Msi $msi.FullName -Version $env:CONVX_VERSION -Icon src/main/resources/convx.ico -Out build/setup/Convx-Setup.exe
+          ../installer/windows/build-bundle.ps1 -Msi $msi.FullName -Version $env:CONVX_PACKAGE_VERSION -DisplayVersion $env:CONVX_VERSION -Icon src/main/resources/convx.ico -Out build/setup/Convx-Setup.exe
 
       - name: Try the setup
         id: trysetup

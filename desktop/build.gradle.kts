@@ -139,7 +139,8 @@ compose.desktop {
         nativeDistributions {
             targetFormats(TargetFormat.Msi, TargetFormat.Exe)
             packageName = "Convx"
-            packageVersion = appVersion
+            // The installer's own number, which only goes up (CI's CONVX_PACKAGE_VERSION).
+            packageVersion = System.getenv("CONVX_PACKAGE_VERSION")?.takeIf { it.isNotBlank() } ?: appVersion
             description = "Convx music player for desktop"
             vendor = "Convx"
             copyright = "GPL-3.0"
