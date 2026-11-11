@@ -192,7 +192,7 @@ p { margin: 0; }
   opacity: var(--glare, 0.5); transition: opacity 0.5s var(--ease);
 }
 .mac-view > .glare { z-index: 4; }
-.stage .hero-phone { position: absolute; left: -14%; bottom: -14%; width: 42%; transform: translateZ(110px); cursor: pointer; }
+.stage .hero-phone { position: absolute; left: 3%; bottom: -14%; width: 24%; transform: translateZ(110px); cursor: pointer; }
 .hero-phone .scr {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; aspect-ratio: auto;
   opacity: 0; transform: translateY(9%) scale(1.08); filter: blur(10px);
@@ -216,9 +216,18 @@ p { margin: 0; }
 }
 .screen img { width: 100%; height: auto; aspect-ratio: 1440 / 900; object-fit: cover; }
 /* Devices: a Galaxy S Ultra (front and back) around the real Android screenshots, and a MacBook-style laptop. */
-.gpair { position: relative; margin: 0; aspect-ratio: 820 / 997; filter: drop-shadow(0 40px 60px rgba(0,0,0,0.6)); }
-.gpair > .g-frame { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
-.gpair > .g-screen { position: absolute; z-index: 1; left: 43.25%; top: 1.21%; width: 54.92%; height: 97.35%; overflow: hidden; background: #000; }
+.gpair { position: relative; margin: 0; aspect-ratio: 1274 / 2644; transform-style: preserve-3d; }
+.g-back {
+  position: absolute; z-index: 0; top: 0; left: -58%; width: 70.8%; height: auto; pointer-events: none;
+  transform-origin: 100% 50%; transform: translateZ(-40px) translateY(1.5%) scale(0.95);
+  filter: brightness(0.72) saturate(0.9);
+  transition: transform 0.9s var(--spring), filter 0.6s var(--ease);
+}
+.stage .hero-phone .g-back { left: -64%; }
+.gpair:hover > .g-back { transform: translateZ(-40px) translate(-6%, 1%) scale(0.95) rotate(-2deg); filter: brightness(0.85) saturate(0.95); }
+.g-front { position: absolute; inset: 0; z-index: 1; filter: drop-shadow(-16px 0 18px rgba(0,0,0,0.6)) drop-shadow(0 40px 50px rgba(0,0,0,0.55)); }
+.g-front > .g-frame { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
+.g-front > .g-screen { position: absolute; z-index: 1; left: 3.06%; top: 1.21%; width: 93.8%; height: 97.35%; overflow: hidden; background: #000; }
 .g-screen > img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
 .mac { position: relative; }
 .hero-mac { width: 94%; margin-left: auto; }
@@ -334,7 +343,7 @@ p { margin: 0; }
 .plat li svg { flex: none; width: 18px; height: 18px; color: var(--red); margin-top: 3px; }
 .plat-android { background: linear-gradient(170deg, #0b1830, #071022 50%, #050912); border-color: rgba(120, 170, 255, 0.12); }
 .plat-android .shot { display: flex; justify-content: center; }
-.plat-android .gpair { width: min(400px, 100%); margin-bottom: -90px; }
+.plat-android .gpair { width: min(230px, 56%); margin-bottom: -90px; translate: 20% 0; }
 .plat-windows .screen { margin-right: calc(-1 * clamp(24px, 3.4vw, 40px)); margin-bottom: calc(-1 * clamp(24px, 3.4vw, 40px)); border-radius: 14px 0 0 0; border-right: 0; border-bottom: 0; }
 .plat-foot { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .credit { font-size: 13px; color: var(--label-3); }
@@ -496,7 +505,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   .cta-row .btn, .dl .btn { width: 100%; }
   .zone span { display: none; }
   .deck-b .deck-label { margin-left: 0; justify-content: flex-end; }
-  .stage .hero-phone { width: 46%; left: -8%; }
+  .stage .hero-phone { width: 27%; left: 10%; }
   .stage-cap { right: 0; }
   .stage-cap .hint { display: none; }
   .studio-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
@@ -666,12 +675,15 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           <div class="mac-base" aria-hidden="true"></div>
         </div>
         <div class="gpair hero-phone" data-phone tabindex="0" role="button" aria-label="Show the next Android screen">
-          <div class="g-screen">
-            <img class="scr is-on" src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
-            <img class="scr" src="assets/img/phone-now-playing.webp" width="640" height="1399" alt="Convx on Android: the now playing screen">
-            <span class="glare" aria-hidden="true"></span>
+          <img class="g-back" src="assets/img/galaxy-back.webp" width="396" height="1161" alt="">
+          <div class="g-front">
+            <div class="g-screen">
+              <img class="scr is-on" src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
+              <img class="scr" src="assets/img/phone-now-playing.webp" width="640" height="1399" alt="Convx on Android: the now playing screen">
+              <span class="glare" aria-hidden="true"></span>
+            </div>
+            <img class="g-frame" src="assets/img/galaxy-front.webp" width="560" height="1162" alt="">
           </div>
-          <img class="g-frame" src="assets/img/galaxy-s.webp" width="820" height="997" alt="">
         </div>
       </div>
       <p class="stage-cap mono" aria-live="polite"><span class="hint" data-hint>Hover the screens</span><b data-cap>Home</b><span class="stage-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span></p>
@@ -729,7 +741,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           <div class="plat-foot">
             <a class="btn btn-glass glass" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Get it on Android</span></a>
           </div>
-          <div class="shot"><figure class="gpair"><div class="g-screen"><img src="assets/img/phone-now-playing.webp" width="640" height="1399" loading="lazy" alt="Convx on Android: the now playing screen with a lossless badge"></div><img class="g-frame" src="assets/img/galaxy-s.webp" width="820" height="997" loading="lazy" alt=""></figure></div>
+          <div class="shot"><figure class="gpair"><img class="g-back" src="assets/img/galaxy-back.webp" width="396" height="1161" loading="lazy" alt=""><div class="g-front"><div class="g-screen"><img src="assets/img/phone-now-playing.webp" width="640" height="1399" loading="lazy" alt="Convx on Android: the now playing screen with a lossless badge"></div><img class="g-frame" src="assets/img/galaxy-front.webp" width="560" height="1162" loading="lazy" alt=""></div></figure></div>
         </article>
         <article class="plat plat-windows">
           <div>
