@@ -1,0 +1,994 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Convx</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Convx is a free, open-source music app with liquid glass, word-synced lyrics and AutoMix, for Android and Windows.">
+<meta name="theme-color" content="#000000">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Convx. Just listen.">
+<meta property="og:description" content="A free, open-source music app with liquid glass, word-synced lyrics and AutoMix. For Android and Windows.">
+<meta property="og:image" content="https://m33md.github.io/convx-desktop/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<style>
+/* Layout: a night sky of glass. Full-bleed true-black bands, one 1200px column,
+   glass objects floating over stars, Convx red used only where you act. */
+:root {
+  --black: #000000;
+  --raised: #0d0c0e;
+  --line: rgba(255, 255, 255, 0.10);
+  --glass: rgba(255, 255, 255, 0.055);
+  --glass-strong: rgba(255, 255, 255, 0.12);
+  --glass-edge: rgba(255, 255, 255, 0.16);
+  --label: #f5f5f7;
+  --label-2: rgba(235, 235, 245, 0.66);
+  --label-3: rgba(235, 235, 245, 0.38);
+  --red: #fa2d48;
+  --red-press: #e0203b;
+  --crimson: #be1660;
+  --crimson-deep: #6e123e;
+  --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  color-scheme: dark;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { scroll-behavior: smooth; scroll-padding-top: 96px; }
+html, body { overflow-x: clip; }
+body {
+  margin: 0;
+  background: var(--black);
+  color: var(--label);
+  font-family: var(--font);
+  font-size: 17px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 60; background: var(--black);
+}
+img { max-width: 100%; height: auto; display: block; }
+a { color: inherit; }
+:focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 8px; }
+.mono { font-family: var(--mono); font-feature-settings: "zero" 0; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+.wrap {
+  width: 100%;
+  max-width: 1232px;
+  margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+@media (min-width: 700px) {
+  .wrap { padding-left: max(32px, env(safe-area-inset-left, 0px)); padding-right: max(32px, env(safe-area-inset-right, 0px)); }
+}
+
+/* Type */
+h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 800; }
+h2 { font-size: clamp(34px, 4.8vw, 58px); line-height: 1.03; letter-spacing: -0.038em; }
+h3 { font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
+p { margin: 0; }
+.eyebrow {
+  font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+  color: var(--red); margin-bottom: 18px;
+}
+.lede { font-size: clamp(17px, 1.6vw, 20px); color: var(--label-2); max-width: 34em; }
+.body-2 { color: var(--label-2); max-width: 36em; }
+
+/* Glass */
+.glass {
+  background: linear-gradient(160deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03) 45%, rgba(255,255,255,0.05));
+  -webkit-backdrop-filter: blur(24px) saturate(170%);
+  backdrop-filter: blur(24px) saturate(170%);
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.14), inset 0 -1px 0 rgba(255,255,255,0.03), 0 20px 50px rgba(0,0,0,0.45);
+}
+
+/* Buttons */
+.btn {
+  display: inline-flex; align-items: center; gap: 12px;
+  min-height: 56px; padding: 10px 22px 10px 16px; border-radius: 999px;
+  text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.15;
+  transition: transform 0.4s var(--spring), background-color 0.2s, box-shadow 0.2s;
+}
+.btn svg { width: 24px; height: 24px; flex: none; }
+.btn small { display: block; font-weight: 500; font-size: 12.5px; opacity: 0.78; margin-top: 2px; font-family: var(--mono); letter-spacing: -0.01em; }
+.btn:hover { transform: translateY(-2px) scale(1.015); }
+.btn:active { transform: scale(0.98); }
+.btn-red { background: var(--red); color: #fff; box-shadow: 0 10px 30px rgba(250, 45, 72, 0.32), inset 0 1px 0 rgba(255,255,255,0.25); }
+.btn-red:hover { background: #ff3954; }
+.btn-glass { color: var(--label); }
+.btn-glass:hover { background-color: rgba(255,255,255,0.10); }
+
+/* Nav */
+.nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 50;
+  padding-top: calc(env(safe-area-inset-top, 0px) + 12px);
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+.nav-bar {
+  pointer-events: auto;
+  max-width: 1168px; margin: 0 auto;
+  display: flex; align-items: center; gap: 6px;
+  padding: 7px 7px 7px 14px; border-radius: 999px;
+  background: rgba(20, 20, 22, 0.58);
+}
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; }
+.brand-mark { width: 30px; height: 30px; }
+.brand-word { height: 15px; width: auto; color: var(--label); }
+.nav-links { position: relative; display: none; gap: 2px; }
+.nav-links a {
+  position: relative; z-index: 1; padding: 9px 15px; border-radius: 999px;
+  color: var(--label-2); font-weight: 600; font-size: 15px; text-decoration: none; transition: color 0.2s;
+}
+.nav-links a:hover, .nav-links a.on { color: var(--label); }
+.puck {
+  position: absolute; z-index: 0; top: 0; left: 0; height: 100%; width: 0; border-radius: 999px;
+  background: rgba(255,255,255,0.11); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
+  opacity: 0; transition: transform 0.55s var(--spring), width 0.55s var(--spring), opacity 0.25s;
+}
+.nav-cta { min-height: 42px; padding: 8px 18px; font-size: 15px; }
+@media (min-width: 860px) { .nav-links { display: flex; } }
+
+/* Hero */
+.hero { position: relative; padding-top: 120px; padding-bottom: clamp(48px, 6vw, 88px); isolation: isolate; }
+.hero::before {
+  content: ""; position: absolute; z-index: -1; left: 50%; top: -10%; width: min(1100px, 140vw); height: 760px;
+  transform: translateX(-30%);
+  background: radial-gradient(closest-side, rgba(190, 22, 96, 0.30), rgba(110, 18, 62, 0.12) 55%, transparent);
+  pointer-events: none;
+}
+.stars { position: absolute; inset: 0; z-index: -2; width: 100%; height: 100%; pointer-events: none; }
+.hero-grid { display: grid; gap: 56px; align-items: center; }
+@media (min-width: 1000px) {
+  .hero-grid { grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: 40px; }
+  .stage { margin-right: calc(-1 * min(9vw, 140px)); }
+}
+.hero-copy { min-width: 0; }
+.hero h1 {
+  font-size: clamp(64px, 10.5vw, 138px); line-height: 0.9; letter-spacing: -0.055em;
+  margin: 0 0 28px -0.04em;
+  background: linear-gradient(180deg, #ffffff 30%, #c9c9d1);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.hero h1 .dot { color: var(--red); -webkit-text-fill-color: var(--red); }
+.cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
+.hero-meta { margin-top: 22px; font-size: 13px; color: var(--label-3); display: flex; flex-wrap: wrap; gap: 6px 18px; }
+.hero-meta span::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--label-3); margin-right: 8px; vertical-align: middle; }
+
+.stage { position: relative; min-width: 0; padding: 0 0 8% 9%; }
+.screen {
+  margin: 0; border-radius: 14px; overflow: hidden; background: #050505;
+  border: 1px solid rgba(255,255,255,0.13);
+  box-shadow: 0 50px 120px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,0,0,0.8), 0 0 80px rgba(190, 22, 96, 0.12);
+}
+.screen img { width: 100%; height: auto; aspect-ratio: 1440 / 900; object-fit: cover; }
+.phone {
+  margin: 0; position: relative; padding: 6px; border-radius: 15% / 7%;
+  background: linear-gradient(150deg, #3a3a40, #121214 40%, #26262a);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16), 0 40px 90px rgba(0,0,0,0.75);
+}
+.phone img { width: 100%; height: auto; aspect-ratio: 640 / 1378; object-fit: cover; border-radius: 13% / 6%; }
+.stage .phone { position: absolute; left: 0; bottom: 0; width: 27%; }
+
+/* Sections */
+.band { padding-block: clamp(80px, 11vw, 150px); position: relative; }
+.band + .band { border-top: 1px solid rgba(255,255,255,0.06); }
+.section-head { display: grid; gap: 22px; margin-bottom: clamp(40px, 6vw, 72px); max-width: 760px; }
+.split { display: grid; gap: 48px; align-items: center; }
+@media (min-width: 960px) { .split { grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 72px; } }
+.ticks { list-style: none; padding: 0; margin: 28px 0 0; display: grid; gap: 12px; }
+.ticks li { display: flex; gap: 12px; align-items: baseline; color: var(--label-2); }
+.ticks li::before { content: ""; flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--red); transform: translateY(-2px); }
+
+/* Lyrics demo */
+.lyrics-demo {
+  position: relative; margin: 0; overflow: hidden; border-radius: 28px; min-width: 0;
+  height: clamp(420px, 46vw, 520px);
+  background: #1a0a10;
+  box-shadow: 0 40px 100px rgba(0,0,0,0.6), inset 0 0 0 1px rgba(255,255,255,0.08);
+}
+.lyrics-demo::before {
+  content: ""; position: absolute; inset: -20%;
+  background:
+    radial-gradient(40% 50% at 20% 25%, rgba(250, 45, 72, 0.75), transparent 70%),
+    radial-gradient(45% 55% at 80% 70%, rgba(190, 22, 96, 0.8), transparent 70%),
+    radial-gradient(50% 50% at 70% 10%, rgba(255, 140, 70, 0.45), transparent 70%),
+    #2a0b16;
+  filter: blur(30px);
+  animation: drift 18s ease-in-out infinite alternate;
+}
+@keyframes drift { to { transform: translate(4%, -3%) rotate(6deg) scale(1.06); } }
+.ld-head { position: absolute; z-index: 2; top: 18px; left: 18px; right: 18px; display: flex; align-items: center; gap: 12px; }
+.ld-cover {
+  width: 44px; height: 44px; border-radius: 9px; flex: none;
+  background: linear-gradient(135deg, #ff6a3d, var(--red) 45%, var(--crimson-deep));
+  display: grid; place-items: center; box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+}
+.ld-cover svg { width: 24px; height: 24px; fill: rgba(255,255,255,0.92); }
+.ld-title { min-width: 0; line-height: 1.25; }
+.ld-title b { display: block; font-size: 15px; }
+.ld-title span { font-size: 13px; color: rgba(255,255,255,0.68); }
+.ld-chip {
+  margin-left: auto; font-size: 11.5px; padding: 6px 10px; border-radius: 999px; white-space: nowrap;
+  background: rgba(0,0,0,0.22); border: 1px solid rgba(255,255,255,0.14); color: rgba(255,255,255,0.85);
+}
+.ld-viewport { position: absolute; z-index: 1; inset: 78px 0 64px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(transparent, #000 14%, #000 80%, transparent);
+  mask-image: linear-gradient(transparent, #000 14%, #000 80%, transparent); }
+.ld-lines { list-style: none; margin: 0; padding: 0 22px 0 14px; transition: transform 0.75s var(--ease); }
+.ld-line {
+  font-size: clamp(22px, 2.5vw, 30px); font-weight: 800; letter-spacing: -0.02em; line-height: 1.22;
+  padding: 10px 14px; margin: 4px 0; border-radius: 16px;
+  transition: opacity 0.5s, background-color 0.5s, box-shadow 0.5s, transform 0.6s var(--spring);
+  transform-origin: left center;
+  opacity: 0.5;
+}
+.ld-line.past { opacity: 0.86; }
+.ld-line.now {
+  opacity: 1; transform: scale(1.012);
+  background: rgba(255,255,255,0.10);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.20), inset 0 0 0 1px rgba(255,255,255,0.06), 0 10px 30px rgba(0,0,0,0.15);
+}
+.w {
+  --p: 0;
+  display: inline-block; white-space: pre;
+  background: linear-gradient(90deg, #fff calc(var(--p) * 1% - 10%), rgba(255,255,255,0.42) calc(var(--p) * 1% + 10%));
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+  transition: transform 0.45s var(--spring), text-shadow 0.4s;
+}
+.w.lift { transform: translateY(-0.07em); }
+.ld-line.past .w { --p: 110; }
+.ld-foot { position: absolute; z-index: 2; left: 22px; right: 22px; bottom: 20px; display: flex; align-items: center; gap: 12px; font-size: 12px; color: rgba(255,255,255,0.75); }
+.ld-bar { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.22); overflow: hidden; }
+.ld-bar i { display: block; height: 100%; width: 0; background: #fff; border-radius: 4px; }
+.ld-note { margin-top: 14px; font-size: 13px; color: var(--label-3); }
+
+/* Platforms */
+.platforms { display: grid; gap: 20px; }
+@media (min-width: 960px) { .platforms { grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); } }
+.plat {
+  position: relative; overflow: hidden; border-radius: 32px; padding: clamp(24px, 3.4vw, 40px);
+  background: var(--raised); border: 1px solid rgba(255,255,255,0.07);
+  display: flex; flex-direction: column; gap: 28px; min-width: 0;
+}
+.plat > .shot, .plat > .screen { margin-top: auto; }
+.plat-tag { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; color: var(--label-2); }
+.plat-tag svg { width: 18px; height: 18px; }
+.plat h3 { font-size: clamp(24px, 2.4vw, 30px); letter-spacing: -0.03em; margin-top: 12px; }
+.plat p { color: var(--label-2); margin-top: 10px; font-size: 16px; }
+.plat ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; font-size: 15.5px; }
+.plat li { display: flex; gap: 10px; color: var(--label-2); }
+.plat li svg { flex: none; width: 18px; height: 18px; color: var(--red); margin-top: 3px; }
+.plat-android { background: linear-gradient(170deg, #0b1830, #071022 50%, #050912); border-color: rgba(120, 170, 255, 0.12); }
+.plat-android .shot { display: flex; justify-content: center; }
+.plat-android .phone { width: min(250px, 70%); transform: rotate(-3deg); margin-bottom: -90px; }
+.plat-windows .screen { margin-right: calc(-1 * clamp(24px, 3.4vw, 40px)); margin-bottom: calc(-1 * clamp(24px, 3.4vw, 40px)); border-radius: 14px 0 0 0; border-right: 0; border-bottom: 0; }
+.plat-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.credit { font-size: 13px; color: var(--label-3); }
+.credit a { color: var(--label-2); }
+
+/* Feature bento */
+.bento { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 760px) { .bento { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (min-width: 1080px) { .bento { grid-template-columns: repeat(6, minmax(0, 1fr)); } }
+.tile {
+  position: relative; overflow: hidden; min-width: 0;
+  border-radius: 28px; padding: 28px; background: var(--raised);
+  border: 1px solid rgba(255,255,255,0.07);
+  display: flex; flex-direction: column; gap: 12px;
+}
+.tile p { color: var(--label-2); font-size: 15.5px; }
+.tile .kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--label-3); }
+@media (min-width: 760px) { .t-mix { grid-column: 1 / -1; } }
+@media (min-width: 1080px) {
+  .t-mix { grid-column: span 4; }
+  .t-replay { grid-column: span 2; grid-row: span 2; }
+  .t-modules { grid-column: span 2; }
+  .t-party { grid-column: span 2; }
+  .t-links { grid-column: span 3; }
+  .t-small { grid-column: span 3; }
+}
+
+/* AutoMix */
+.mix { margin-top: 10px; position: relative; display: grid; gap: 14px; padding: 18px 0 4px; }
+.deck { position: relative; }
+.deck-label { font-size: 12px; color: var(--label-2); margin-bottom: 8px; display: flex; gap: 10px; flex-wrap: wrap; }
+.deck-label b { color: var(--label); font-weight: 500; }
+.wave { position: relative; height: 54px; }
+.wave svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.wave .lit { clip-path: inset(0 45% 0 0); }
+.deck-b .wave { margin-left: 44%; }
+.deck-b .deck-label { margin-left: 44%; }
+.deck-a .wave { margin-right: 22%; }
+.zone {
+  position: absolute; top: 0; bottom: 0; left: 44%; right: 22%; border-radius: 14px;
+  background: rgba(255,255,255,0.045); border: 1px dashed rgba(255,255,255,0.14);
+}
+.zone span { white-space: nowrap; position: absolute; top: -10px; left: 12px; font-size: 11px; padding: 2px 8px; border-radius: 999px; background: var(--raised); color: var(--label-2); border: 1px solid rgba(255,255,255,0.12); }
+.head { position: absolute; top: 0; bottom: 0; left: 55%; width: 2px; background: #fff; border-radius: 2px; box-shadow: 0 0 12px rgba(255,255,255,0.7); }
+.mix-plan { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.pill { font-family: var(--mono); font-size: 12px; padding: 6px 11px; border-radius: 999px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.10); color: var(--label-2); white-space: nowrap; }
+.pill.red { color: #fff; background: rgba(250, 45, 72, 0.16); border-color: rgba(250, 45, 72, 0.4); }
+
+/* Replay */
+.t-replay { padding-bottom: 0; }
+.replay-fan { position: relative; flex: 1; min-height: 320px; margin: 8px -28px 0; }
+.replay-fan img {
+  position: absolute; left: 50%; bottom: -36px; height: min(540px, 90%); width: auto; border-radius: 16px;
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6); transition: transform 0.6s var(--spring);
+}
+.replay-fan img:nth-child(1) { transform: translateX(-92%) rotate(-11deg); }
+.replay-fan img:nth-child(2) { transform: translateX(-8%) rotate(10deg); }
+.replay-fan img:nth-child(3) { transform: translate(-50%, -14px); z-index: 2; }
+.t-replay:hover .replay-fan img:nth-child(1) { transform: translateX(-100%) rotate(-15deg); }
+.t-replay:hover .replay-fan img:nth-child(2) { transform: translateX(0%) rotate(14deg); }
+.t-replay:hover .replay-fan img:nth-child(3) { transform: translate(-50%, -28px); }
+
+/* Modules */
+.sources { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; counter-reset: s; }
+.sources li {
+  counter-increment: s; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 14px;
+  background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.07); font-size: 14.5px; font-weight: 600;
+}
+.sources li::before { content: counter(s); font-family: var(--mono); font-size: 12px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: rgba(255,255,255,0.08); color: var(--label-2); flex: none; }
+.sources li .pill { margin-left: auto; }
+.sources li.hit { border-color: rgba(250, 45, 72, 0.45); background: rgba(250, 45, 72, 0.08); }
+
+/* Listen together */
+.party { margin-top: 8px; display: grid; gap: 12px; }
+.party-code { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 16px; border-radius: 18px; }
+.party-code b { font-family: var(--mono); font-size: 24px; letter-spacing: 0.08em; font-weight: 500; }
+.party-code span { font-size: 12px; color: var(--label-3); }
+.party-people { display: flex; gap: 8px; flex-wrap: wrap; }
+.person { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--label-2); padding: 6px 12px 6px 6px; border-radius: 999px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.08); }
+.person i { width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-style: normal; background: rgba(255,255,255,0.1); }
+.person svg { width: 14px; height: 14px; }
+.eq { display: inline-flex; gap: 2px; align-items: flex-end; height: 12px; margin-left: 2px; }
+.eq u { width: 3px; background: var(--red); border-radius: 2px; animation: eq 1s ease-in-out infinite; }
+.eq u:nth-child(2) { animation-delay: -0.3s; } .eq u:nth-child(3) { animation-delay: -0.6s; }
+@keyframes eq { 0%, 100% { height: 30%; } 50% { height: 100%; } }
+
+/* Links & small things */
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 9px 14px; border-radius: 999px; font-size: 14px; font-weight: 600; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.09); }
+.chip svg { width: 16px; height: 16px; color: var(--label-2); }
+
+/* Disc Studio */
+.studio { overflow: hidden; background: radial-gradient(80% 60% at 75% 30%, rgba(190, 22, 96, 0.16), transparent 70%), var(--black); }
+.studio-grid { display: grid; gap: 48px; align-items: center; }
+@media (min-width: 1000px) { .studio-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); gap: 64px; } }
+.studio-shot { position: relative; min-width: 0; }
+.studio-shot .disc-float { position: absolute; width: 30%; right: -4%; top: -9%; filter: drop-shadow(0 24px 40px rgba(0,0,0,0.7)); animation: spin 14s linear infinite; }
+.badge { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 999px; color: #fff; background: rgba(250, 45, 72, 0.14); border: 1px solid rgba(250, 45, 72, 0.4); margin-bottom: 20px; }
+.studio-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 32px; }
+.fact { padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
+.fact b { display: block; font-size: 22px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.fact span { font-size: 13px; color: var(--label-2); }
+.file { font-family: var(--mono); font-size: 0.92em; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); }
+
+.rack { margin-top: clamp(56px, 8vw, 96px); overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.rack-track { display: flex; gap: 22px; width: max-content; animation: slide 60s linear infinite; padding-block: 8px; }
+.rack:hover .rack-track { animation-play-state: paused; }
+.rack figure { margin: 0; width: clamp(120px, 14vw, 170px); flex: none; text-align: center; }
+.rack img { width: 100%; aspect-ratio: 1; filter: drop-shadow(0 14px 24px rgba(0,0,0,0.6)); transition: transform 0.7s var(--spring); }
+.rack figure:hover img { transform: rotate(160deg) scale(1.05); }
+.rack figcaption { font-size: 12.5px; color: var(--label-3); margin-top: 10px; }
+.rack figcaption b { color: var(--label-2); font-weight: 600; }
+@keyframes slide { to { transform: translateX(calc(-50% - 11px)); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Download */
+.dl-grid { display: grid; gap: 16px; }
+@media (min-width: 900px) { .dl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.dl {
+  border-radius: 32px; padding: clamp(24px, 3.4vw, 40px); display: grid; gap: 22px; align-content: start; min-width: 0;
+}
+.dl-top { display: flex; align-items: center; gap: 14px; }
+.dl-icon { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: rgba(255,255,255,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
+.dl-icon svg { width: 26px; height: 26px; }
+.dl h3 { font-size: 26px; }
+.dl-ver { font-size: 12.5px; color: var(--label-3); }
+.dl ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--label-2); font-size: 15.5px; }
+.dl ol li::marker { font-family: var(--mono); color: var(--label-3); font-size: 13px; }
+.dl .btn { justify-self: start; }
+.dl-also { font-size: 14px; color: var(--label-3); }
+.dl-also a { color: var(--label-2); }
+.setup-shot { border-radius: 14px; width: min(100%, 400px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
+.oss { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; color: var(--label-2); font-size: 15px; }
+.oss a { color: var(--label); }
+
+/* Community + footer */
+.community { display: grid; gap: 24px; align-items: center; padding: clamp(28px, 4vw, 48px); border-radius: 32px; }
+@media (min-width: 900px) { .community { grid-template-columns: minmax(0, 1fr) auto; } }
+.community h2 { font-size: clamp(30px, 3.6vw, 44px); }
+.community-links { display: flex; flex-wrap: wrap; gap: 10px; }
+footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); color: var(--label-3); font-size: 14px; }
+.foot { display: grid; gap: 28px; }
+@media (min-width: 900px) { .foot { grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); } }
+.foot .brand-word { height: 22px; color: var(--label-2); }
+.foot p { max-width: 46em; }
+.foot p + p { margin-top: 10px; }
+.foot a { color: var(--label-2); }
+.foot-links { display: flex; flex-wrap: wrap; gap: 8px 22px; align-content: start; }
+.foot-links a { text-decoration: none; }
+.foot-links a:hover { color: var(--label); }
+
+@media (max-width: 520px) {
+  .cta-row .btn, .dl .btn { width: 100%; }
+  .zone span { display: none; }
+  .deck-b .deck-label { margin-left: 0; justify-content: flex-end; }
+  .stage .phone { width: 30%; }
+  .studio-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .studio-facts .fact:last-child { grid-column: 1 / -1; }
+  .party-code b { font-size: 20px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
+}
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="crimson" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e0306f"/>
+      <stop offset="1" stop-color="#8a1748"/>
+    </linearGradient>
+  </defs>
+  <symbol id="mono" viewBox="60 15 1340 1495"><path d="M 783,29 L 761,30 L 739,31 L 717,33 L 695,36 L 674,39 L 652,43 L 631,48 L 610,54 L 589,60 L 569,66 L 548,74 L 528,82 L 508,90 L 489,100 L 470,109 L 451,120 L 432,131 L 413,143 L 395,156 L 377,169 L 360,183 L 343,197 L 326,212 L 310,228 L 294,244 L 279,260 L 264,277 L 249,294 L 236,311 L 222,329 L 210,347 L 197,365 L 186,384 L 175,402 L 165,421 L 155,440 L 146,459 L 138,479 L 130,499 L 122,519 L 116,540 L 109,561 L 104,582 L 99,603 L 94,625 L 90,647 L 87,669 L 84,691 L 82,714 L 81,736 L 80,758 L 80,781 L 80,803 L 82,825 L 84,848 L 86,870 L 89,891 L 93,913 L 98,935 L 103,956 L 109,977 L 115,998 L 122,1018 L 130,1038 L 138,1058 L 146,1078 L 156,1098 L 165,1117 L 175,1135 L 186,1154 L 198,1172 L 210,1190 L 223,1208 L 237,1226 L 251,1243 L 266,1260 L 281,1276 L 297,1292 L 313,1308 L 330,1323 L 347,1338 L 364,1352 L 382,1365 L 400,1378 L 418,1391 L 436,1402 L 455,1413 L 474,1424 L 493,1433 L 512,1442 L 532,1451 L 552,1458 L 572,1465 L 593,1471 L 614,1477 L 636,1482 L 658,1486 L 680,1489 L 702,1491 L 724,1493 L 746,1494 L 769,1495 L 791,1494 L 813,1493 L 836,1492 L 858,1489 L 880,1486 L 901,1482 L 922,1477 L 944,1471 L 964,1465 L 985,1458 L 1005,1450 L 1025,1442 L 1044,1433 L 1063,1423 L 1082,1413 L 1101,1402 L 1120,1390 L 1138,1378 L 1155,1365 L 1173,1352 L 1190,1338 L 1207,1324 L 1224,1309 L 1240,1294 L 1256,1278 L 1272,1261 L 1287,1244 L 1302,1227 L 1316,1209 L 1330,1191 L 1342,1173 L 1354,1154 L 1365,1135 L 1373,1115 L 1376,1095 L 1372,1075 L 1361,1055 L 1344,1038 L 1324,1028 L 1303,1028 L 1283,1035 L 1265,1047 L 1250,1062 L 1237,1079 L 1225,1098 L 1213,1117 L 1200,1135 L 1186,1153 L 1172,1170 L 1156,1187 L 1140,1202 L 1124,1217 L 1106,1232 L 1089,1245 L 1071,1258 L 1052,1270 L 1033,1282 L 1014,1292 L 995,1303 L 976,1312 L 956,1321 L 936,1328 L 916,1336 L 896,1342 L 875,1347 L 854,1351 L 832,1355 L 810,1357 L 787,1358 L 765,1358 L 742,1358 L 719,1356 L 697,1354 L 674,1350 L 653,1346 L 631,1341 L 611,1335 L 590,1329 L 571,1321 L 551,1313 L 532,1303 L 513,1293 L 494,1282 L 476,1270 L 457,1257 L 440,1243 L 422,1229 L 406,1214 L 389,1199 L 374,1183 L 359,1166 L 344,1149 L 331,1132 L 318,1115 L 306,1097 L 295,1078 L 284,1060 L 274,1040 L 265,1021 L 256,1001 L 248,981 L 241,960 L 234,939 L 229,918 L 224,897 L 220,875 L 216,854 L 214,832 L 212,810 L 211,788 L 210,765 L 211,743 L 212,721 L 214,699 L 217,677 L 220,655 L 225,633 L 230,612 L 235,590 L 242,569 L 249,549 L 257,528 L 265,508 L 275,489 L 285,470 L 295,451 L 307,433 L 319,415 L 331,397 L 345,380 L 359,363 L 374,347 L 389,331 L 406,315 L 422,300 L 439,286 L 457,272 L 475,259 L 493,247 L 512,235 L 531,225 L 550,215 L 570,206 L 590,198 L 610,191 L 630,184 L 651,178 L 672,174 L 694,170 L 715,166 L 737,164 L 759,162 L 782,161 L 804,161 L 827,162 L 849,163 L 871,166 L 894,169 L 915,173 L 937,178 L 958,183 L 979,190 L 1000,197 L 1019,205 L 1039,214 L 1058,224 L 1076,234 L 1094,246 L 1112,258 L 1130,270 L 1148,284 L 1166,298 L 1183,312 L 1200,328 L 1217,344 L 1231,362 L 1234,380 L 1226,400 L 1215,419 L 1205,438 L 1195,457 L 1184,476 L 1174,495 L 1164,514 L 1153,532 L 1143,551 L 1133,570 L 1122,589 L 1112,608 L 1101,627 L 1091,646 L 1081,665 L 1070,684 L 1060,703 L 1050,722 L 1039,740 L 1029,759 L 1018,778 L 1008,797 L 998,816 L 987,835 L 977,853 L 966,872 L 956,891 L 946,911 L 935,930 L 925,949 L 914,966 L 902,964 L 892,946 L 881,926 L 871,906 L 861,887 L 851,868 L 841,850 L 830,831 L 820,812 L 809,793 L 799,774 L 789,755 L 779,736 L 769,717 L 760,698 L 749,679 L 739,660 L 727,642 L 713,625 L 698,610 L 680,601 L 658,600 L 636,607 L 617,621 L 604,639 L 599,660 L 601,682 L 608,702 L 618,721 L 629,740 L 639,759 L 649,778 L 660,797 L 670,816 L 681,834 L 691,853 L 701,872 L 712,891 L 722,910 L 732,929 L 743,948 L 753,967 L 763,986 L 774,1005 L 784,1024 L 794,1043 L 805,1061 L 815,1080 L 826,1100 L 830,1118 L 815,1129 L 795,1134 L 773,1136 L 750,1135 L 726,1132 L 704,1127 L 683,1121 L 662,1114 L 643,1105 L 624,1095 L 605,1084 L 587,1072 L 570,1058 L 554,1043 L 538,1028 L 524,1011 L 510,994 L 497,975 L 486,956 L 476,937 L 467,917 L 459,896 L 453,875 L 448,854 L 443,833 L 440,811 L 439,789 L 438,767 L 439,745 L 440,723 L 443,702 L 447,680 L 453,659 L 459,638 L 466,617 L 475,597 L 485,578 L 496,559 L 508,541 L 522,523 L 536,507 L 551,491 L 567,476 L 584,463 L 602,450 L 621,438 L 640,428 L 660,419 L 681,411 L 702,405 L 724,400 L 746,397 L 768,394 L 790,394 L 812,394 L 833,396 L 855,400 L 876,405 L 896,412 L 916,420 L 936,429 L 955,440 L 975,450 L 995,459 L 1015,462 L 1036,457 L 1055,444 L 1069,426 L 1077,405 L 1077,383 L 1069,364 L 1056,347 L 1040,332 L 1023,320 L 1004,309 L 985,300 L 965,292 L 945,284 L 924,278 L 902,273 L 881,268 L 859,264 L 836,262 L 814,260 L 792,260 L 770,260 L 748,262 L 726,264 L 704,268 L 683,272 L 662,278 L 641,284 L 621,292 L 601,300 L 581,309 L 562,320 L 543,331 L 525,343 L 507,356 L 490,370 L 474,385 L 458,401 L 442,417 L 428,433 L 414,451 L 401,468 L 388,487 L 377,505 L 366,525 L 357,544 L 348,564 L 340,584 L 333,604 L 327,625 L 322,646 L 318,668 L 314,689 L 312,711 L 310,733 L 309,755 L 309,778 L 310,800 L 312,822 L 315,844 L 318,866 L 323,888 L 328,909 L 334,930 L 341,951 L 349,971 L 358,991 L 368,1010 L 378,1029 L 390,1047 L 402,1065 L 415,1082 L 429,1099 L 443,1116 L 459,1132 L 475,1147 L 492,1162 L 509,1176 L 527,1190 L 546,1202 L 565,1213 L 584,1223 L 603,1232 L 623,1239 L 643,1246 L 664,1252 L 685,1257 L 707,1261 L 729,1264 L 751,1266 L 773,1266 L 796,1265 L 818,1262 L 840,1258 L 862,1252 L 881,1243 L 899,1231 L 915,1217 L 930,1201 L 942,1183 L 954,1165 L 965,1146 L 975,1127 L 985,1108 L 995,1089 L 1005,1070 L 1015,1051 L 1026,1032 L 1036,1013 L 1047,994 L 1057,975 L 1067,956 L 1078,937 L 1088,918 L 1098,900 L 1109,881 L 1119,862 L 1129,843 L 1140,824 L 1150,805 L 1160,786 L 1171,767 L 1181,748 L 1191,729 L 1201,710 L 1212,691 L 1222,672 L 1232,654 L 1243,635 L 1253,616 L 1264,597 L 1274,578 L 1285,559 L 1295,540 L 1305,521 L 1315,502 L 1325,483 L 1335,464 L 1346,445 L 1358,427 L 1368,408 L 1375,388 L 1378,367 L 1376,345 L 1370,324 L 1360,305 L 1347,288 L 1332,271 L 1316,254 L 1300,238 L 1283,223 L 1266,208 L 1249,193 L 1231,179 L 1214,166 L 1196,153 L 1178,141 L 1160,129 L 1142,118 L 1123,108 L 1104,98 L 1085,89 L 1065,80 L 1045,72 L 1025,65 L 1004,59 L 983,53 L 961,48 L 939,43 L 917,39 L 895,36 L 872,33 L 850,31 L 828,30 L 805,29 Z"/></symbol>
+  <symbol id="word" viewBox="0 0 796 152"><path fill="currentColor" fill-rule="evenodd" d="M331.7,147.3C328.7,146.7 326.8,146.1 325.3,145.3C319.9,142.3 316.7,138.5 314.6,132.5C313.6,129.9 313.5,120.4 314.4,117.2C314.7,116.1 315.2,114 315.5,112.5C315.8,111 316.2,109.2 316.4,108.3C316.6,107.5 316.9,106.2 317,105.3C317.1,104.5 317.4,103.2 317.6,102.5C317.8,101.8 318.2,100 318.5,98.5C318.8,97 319.2,95.2 319.4,94.3C319.6,93.5 319.9,92.2 320,91.3C320.1,90.5 320.4,89.2 320.6,88.5C320.8,87.8 321.2,86 321.5,84.5C321.8,83 322.2,81.2 322.4,80.3C322.6,79.5 322.9,78.2 323,77.3C323.1,76.5 323.4,75.2 323.6,74.5C323.8,73.8 324.2,72 324.5,70.5C324.8,69 325.2,67.2 325.4,66.3C325.6,65.5 325.9,64.2 326,63.3C326.1,62.5 326.4,61.2 326.6,60.5C326.8,59.8 327.2,58 327.5,56.5C327.8,55 328.2,53.2 328.4,52.3C328.6,51.5 328.9,50.2 329,49.3C329.1,48.5 329.4,47.1 329.6,46.2C329.8,45.4 330.2,44 330.4,43.1C330.6,42.2 330.9,40.8 331,40C331.1,39.2 331.4,37.8 331.6,36.9C331.8,36 332.2,34.6 332.4,33.8C332.6,32.9 332.9,31.4 333,30.5C333.1,29.6 333.4,28.4 333.6,27.9C333.8,27.4 334,26.6 334,26.1C334,23.7 336.3,18.3 338.6,15.3C344.9,6.9 355.8,3.7 363.9,7.8C365.3,8.5 369,11.9 369,12.5C369,12.7 369.2,13 369.4,13.3C370.3,14.1 370.8,16.4 371,20L371.2,23.8L418.2,24L465.2,24.2L466.7,24.9C472.3,27.5 474.5,34.2 472.6,42.3C472.2,43.7 471.8,45.5 471.6,46.3C471.4,47.2 471.1,48.6 471,49.5C470.9,50.4 470.6,51.8 470.4,52.5C470.2,53.2 469.8,55 469.5,56.5C469.2,58 468.8,60.1 468.5,61.3C468.3,62.5 467.8,64.7 467.5,66.1C467.2,67.5 466.8,69.8 466.5,71.2C466.2,72.7 465.7,74.8 465.5,76C465.2,77.2 464.8,79.4 464.5,80.8C463.2,86.9 462.9,88.2 462.6,89.7C462.4,90.5 462.1,91.8 462,92.7C460.7,100.3 458.1,105.5 453.3,110.2C448.9,114.4 444.1,117.1 439.3,118C438.5,118.2 437.2,118.5 436.5,118.7C430.1,120.3 421.2,117.8 416.5,113.2C412.2,108.9 410.4,102.8 411.6,96.9C411.8,96.1 412.2,94.3 412.5,92.8C412.8,91.4 413.2,89.3 413.5,88.2C413.7,87.1 414.2,85 414.5,83.5C414.8,82 415.2,79.9 415.5,78.8C415.7,77.7 416.2,75.6 416.5,74.2C416.8,72.7 417.2,70.6 417.5,69.5C417.7,68.4 418.2,66.3 418.5,64.8C418.8,63.4 419.2,61.3 419.5,60.2C419.7,59.1 420.2,57 420.5,55.5C420.8,54 421.3,51.9 421.5,50.8C421.8,49.7 422.2,47.6 422.5,46.2C422.8,44.7 423.3,42.7 423.5,41.6C424.1,39.4 424.1,37.8 423.6,37.6C422.6,37.3 388.2,38.1 388,38.4C387.9,38.6 387.6,39.6 387.4,40.6C387.1,41.6 386.8,43.2 386.6,44C386.4,44.8 386.1,46.2 386,47C385.9,47.8 385.6,49.2 385.4,50.1C385.2,51 384.8,52.4 384.6,53.2C384.4,54.1 384.1,55.5 384,56.3C383.9,57.2 383.6,58.5 383.4,59.3C383.2,60.2 382.8,62 382.5,63.5C382.2,65 381.7,67.1 381.5,68.2C381.2,69.3 380.8,71.4 380.5,72.8C380.2,74.3 379.7,76.4 379.5,77.5C379.2,78.6 378.8,80.7 378.5,82.2C378.2,83.6 377.7,85.7 377.5,86.8C377.2,87.9 376.8,90 376.5,91.5C376.2,93 375.7,95.1 375.5,96.2C375.3,97.3 374.8,99.4 374.5,100.8C374.2,102.3 373.8,104.4 373.5,105.5C373.3,106.6 372.8,108.7 372.5,110.2C371.1,116.7 370.9,117.6 370.5,119.2C370.2,120.1 370,121.1 370,121.4C370,122.5 367.2,128.6 365.8,130.5C365.4,131.1 365,131.7 364.9,132C364,134.3 357.3,140.6 352.8,143.2C351.2,144.2 347.3,146 346.8,146C346.6,146 345.9,146.2 345.3,146.5C342,147.8 335.7,148.2 331.7,147.3ZM107.3,144.3C97.2,141.6 92,134.6 92,123.8L92,119L52.4,118.9C7.7,118.8 11.4,119 8.3,116C5.3,113 4.9,111.9 4.9,107.3C4.9,104.9 5.1,102.8 5.4,101.5C5.7,100.4 6.2,98.3 6.5,96.8C6.8,95.4 7.3,93.1 7.5,91.8C7.8,90.5 8.2,88.8 8.4,88C8.6,87.2 8.9,85.8 9,85C9.1,84.2 9.4,82.8 9.6,82C9.8,81.2 10.2,79.3 10.5,77.8C10.8,76.4 11.3,74.3 11.5,73.2C11.8,72.1 12.2,70 12.5,68.5C12.8,67 13.3,64.9 13.5,63.8C13.7,62.7 14.2,60.6 14.5,59.2C15.8,52.8 16.9,50.5 20.2,47.2C21.6,45.7 24.5,43.6 25.7,43.1C25.9,43 26.5,42.8 27,42.5C28.6,41.7 33.6,41.3 43.2,41.4C48.4,41.4 52.8,41.3 52.8,41.3C53.1,40.9 54,37.8 54,37C54,36.6 54.2,35.5 54.5,34.5C55.2,31.8 55.7,29.6 56,28C56.3,26.4 56.8,24.2 57.5,21.5C57.8,20.5 58,19.5 58,19.1C58,18.8 58.4,17.8 58.8,17C59.3,16.2 59.8,15.2 60,14.8C61.1,12.2 66.7,7.9 70.5,6.6C73,5.8 140,5.7 143.8,6.5C151.6,8.3 156.9,12.2 159.8,18.5C163.2,25.7 162.1,36.1 157,43.8C156.6,44.4 156.2,45.1 156.1,45.3C154.5,48.9 146.8,55.7 141.3,58.3C133.5,62.2 135.6,62 93.2,62C54.2,62 54.5,62 52.9,63.6C52.7,63.8 52.4,64 52.1,64C51.9,64 50.9,64.8 49.9,65.8C44.2,71.5 44.7,79.7 50.9,82.3C52,82.8 57,82.8 94.3,83C128.9,83.1 136.7,83.2 137.5,83.6C138.1,83.9 139.1,84.4 139.9,84.7C142.2,85.8 144.7,88.3 146,90.9C147.2,93.2 147.2,93.2 147.2,97.7C147.2,100.7 147,102.9 146.6,104.3C145.6,108.5 145.2,109.8 145,111.2C144.6,113 143.7,116.6 142.5,120.9C138,137 121.2,148.1 107.3,144.3ZM749.3,132C746,131.5 743.2,129.3 741.7,126.2C741,124.8 741,124.3 741.1,120.8C741.2,116.5 741.6,114.6 743.4,107.5C743.6,106.6 743.8,105.2 743.9,104.4L744.1,103L698,103C657.1,103 651.9,103.1 650.6,103.5C643.8,106 639.2,110.7 637.5,117.1L637,119L631.3,119C625.2,119 625.2,119 625.6,117.3C625.9,116.2 626.3,114.5 627.5,108.8C627.8,107.4 628.3,105.3 628.5,104.2C628.8,103.1 629.2,101 629.5,99.5C629.8,98 630.3,96.1 630.5,95.1C630.8,94.2 631,93 631,92.6C631,92.1 631.2,91.3 631.4,90.8C631.6,90.3 631.9,89.1 632,88.2C632.1,87.2 632.4,85.8 632.6,84.9C632.8,84 633.2,82.6 633.4,81.8C633.6,80.9 633.9,79.5 634,78.7C634.1,77.8 634.4,76.5 634.6,75.6C635.4,72.2 635.8,70.8 636,69.7C636.8,65.7 641.4,60.2 646,57.7C649.2,56 649,56 670.1,56L689.7,56L691.4,55.1C696.6,52.5 697.7,46.9 693.5,44L692.2,43L667.1,43L641.9,43L642.1,41.4C642.1,40.5 642.4,39.2 642.6,38.3C642.8,37.5 643.2,35.6 643.5,34.2C646.8,18.1 647,17.1 648.2,14.5C649.6,11.6 653.9,7 655.2,7C655.4,7 655.7,6.8 655.9,6.6C657.6,4.9 664.3,4.4 667.4,5.8C673.6,8.6 674.7,14.7 671.5,27.3C671.2,28.3 671,29.8 670.9,30.5L670.8,31.8L716.5,31.9C767.2,32 763.3,32.2 767.2,29.9C772.8,26.5 775.8,21.8 777.5,13.5C777.8,12 778.3,9.9 778.5,8.8C778.8,7.7 779,6.5 779.1,6L779.2,5.2L785.3,5.1C791.9,5 792.2,5 791.6,6.5C791.4,7.1 791.1,8.2 791,9.2C790.9,10.1 790.6,11.5 790.4,12.3C790.2,13.2 789.8,15 789.5,16.5C788.3,22.3 787.9,23.9 787.5,25.9C787.2,27 787,28.2 787,28.6C787,32 781,39.2 776.3,41.4C772.8,43 773.4,43 755.6,43C736.8,43 737.2,43 734.7,45.5C731.3,48.7 731.1,52.8 734.1,55.1L735.2,56L752.5,56C772.1,56 771.3,55.9 774.5,58.7C777.9,61.7 779,65.7 778.2,70.9C777.9,72.7 777.5,74.3 777.4,74.4C777.4,74.6 777.1,75.5 777,76.4C776.9,77.4 776.6,78.8 776.4,79.7C776.2,80.5 775.8,82.4 775.5,83.8C775.2,85.3 774.7,87.4 774.5,88.5C774.3,89.6 773.8,91.7 773.5,93.2C773.2,94.6 772.8,96.5 772.6,97.3C772.4,98.2 772.1,99.5 772,100.3C771.9,101.2 771.6,102.5 771.4,103.3C771,104.8 770.7,106.2 769.5,112.2C769.2,113.6 768.7,115.7 768.5,116.7C768.2,117.8 768,119 768,119.3C768,120.2 766.2,124 765.3,125C762.1,128.8 760.6,129.9 756.5,131.4C754.9,132.1 751.4,132.3 749.3,132ZM166,118.8C159.3,116.3 156.5,110.1 158.5,102.1C158.7,101 159.2,99 159.5,97.5C159.8,96 160.3,93.9 160.5,92.8C160.7,91.7 161.2,89.6 161.5,88.2C161.8,86.7 162.2,84.8 162.4,84C162.6,83.2 162.9,81.8 163,81C163.1,80.2 163.4,78.8 163.6,78C163.8,77.2 164.2,75.3 164.5,73.8C164.8,72.4 165.3,70.3 165.5,69.2C165.7,68.1 166.2,66 166.5,64.5C166.8,63 167.3,61 167.5,59.9C167.8,58.9 168,57.7 168,57.4C168,53.4 172.8,46.2 177.1,43.8C181.4,41.4 181.9,41.3 193.7,41L204.2,40.8L204.6,39C204.8,38 205.2,36.5 205.4,35.7C205.6,34.8 205.9,33.5 206,32.7C206.2,31.2 206.4,30.5 207.4,26.5C207.6,25.6 207.9,24.2 208,23.3C208.8,18.2 210.3,15 213.5,11.8C215.7,9.6 219.5,7 220.5,7C220.7,7 221.5,6.8 222.1,6.5C224.1,5.7 305.3,5.8 308,6.6C311.3,7.6 316,11.1 316,12.6C316,12.7 316.2,13 316.4,13.3C317.8,14.7 318.4,20.4 317.5,24.3C317.2,25.5 316.8,27.2 316.6,28C316.4,28.8 316.1,30.2 316,31.2C315.9,32.1 315.6,33.3 315.4,33.8C315.2,34.3 315,35.1 315,35.6C315,36 314.8,37.2 314.5,38.1C314.3,39.1 313.8,41 313.5,42.5C313.2,44 312.8,46.1 312.5,47.2C312.3,48.3 311.8,50.4 311.5,51.8C310.7,55.5 310,58.8 309.5,61.2C309.3,62.3 308.8,64.4 308.5,65.8C308.2,67.3 307.7,69.4 307.5,70.5C307.2,71.6 306.8,73.7 306.5,75.2C306.2,76.6 305.7,78.7 305.5,79.8C305.2,80.9 304.8,83 304.5,84.5C304.2,86 303.7,87.9 303.5,88.9C303.2,89.8 303,91 303,91.4C303,91.9 302.8,92.7 302.6,93.2C302.4,93.7 302.1,94.9 302,95.8C301.3,100.5 300,104.7 298.2,108C296.6,110.9 291.3,115.6 288.3,116.8C288.1,117 287.6,117.2 287.2,117.4C284.1,119 286.3,119 224.2,119C192.4,119 166.3,118.9 166,118.8ZM487.8,118.4C486.7,118.2 485.4,117.7 484.8,117.5C484.3,117.3 483.6,117 483.3,116.8C479.1,115.1 475.4,110.8 473.4,105.5C472.6,103.3 472.6,95.5 473.4,92.5C473.9,90.5 474.4,88.5 475.5,83.2C475.8,81.7 476.2,79.9 476.4,79.2C476.6,78.4 476.9,77.2 477,76.3C477.2,74.9 477.4,74.2 478.4,70.2C478.6,69.2 478.9,67.8 479,67C479.1,66.2 479.4,64.9 479.6,64.2C479.8,63.4 480.2,61.6 480.5,60.2C481.7,54.4 482.2,53 484.1,50.2C485.7,47.6 488.9,44.9 491.7,43.6C495.3,41.9 494.5,42 509,42C519.7,42 522.7,41.9 522.8,41.6C522.9,41.4 523.2,40 523.5,38.5C523.8,37 524.3,34.8 524.6,33.5C524.8,32.2 525.2,30.3 525.5,29.2C525.7,28.1 526.2,26 526.5,24.5C526.8,23 527.2,20.9 527.5,19.8C527.7,18.7 528.2,16.6 528.5,15.2C528.8,13.7 529.3,11.6 529.5,10.6C529.8,9.5 530,8.2 530,7.7C530,6.1 530.4,6 536.4,6L542,6L542,6.8C542,7.3 541.8,8.5 541.5,9.6C541.3,10.6 540.9,12.2 540.6,13.2C540.4,14.1 540.1,15.5 540,16.3C539.9,17.2 539.6,18.6 539.4,19.4C539.2,20.3 538.8,21.7 538.6,22.6C538.4,23.4 538.1,24.8 538,25.7C537.8,27.1 537.6,27.8 536.6,31.8C536.4,32.8 536.1,34.2 536,35C535.9,35.8 535.6,37.2 535.4,38.1C535.2,39 534.8,40.4 534.6,41.2C534.4,42.1 534.1,43.5 534,44.3C533.9,45.2 533.6,46.5 533.4,47.4C533.2,48.3 532.8,49.7 532.6,50.6C532.4,51.5 532.1,52.8 532,53.7C531.9,54.5 531.6,55.8 531.4,56.5C531.2,57.2 530.8,59 530.5,60.5C530.2,62 529.8,64.1 529.5,65.2C529.3,66.3 528.8,68.4 528.5,69.8C527.9,72.9 527.1,76.2 526.5,79.2C526.3,80.3 525.8,82.4 525.5,83.8C525.2,85.3 524.8,87.4 524.5,88.5C524.3,89.6 523.8,91.7 523.5,93.2C522.8,96.4 522.2,99 521.5,102.4C521.1,104 521,105.1 521.2,105.3C521.8,105.9 549.9,105.8 552.1,105.2C557.1,103.8 562,100 564.3,95.7C564.9,94.5 566,91 566,90.2C566,89.8 566.2,88.8 566.5,88C566.8,87.2 567,86.2 567,85.7C567,85.3 567.2,84.1 567.5,83.2C567.7,82.3 568.2,80.3 568.5,78.8C568.8,77.4 569.3,75.3 569.5,74.2C569.8,73.1 570.2,71 570.5,69.5C570.8,68 571.3,66.1 571.5,65.1C571.8,64.2 572,63.1 572,62.7C572,62.2 572.2,61.1 572.5,60.2C572.7,59.3 573.2,57.3 573.5,55.8C573.8,54.4 574.2,52.3 574.5,51.2C574.7,50.1 575.2,48 575.5,46.5C575.8,45 576.3,43.1 576.5,42.1C576.8,41.2 577,40.1 577,39.6C577,39.1 577.2,38.1 577.5,37.3C577.8,36.5 578,35.5 578,35.1C578,34.3 578.3,33.1 579.6,28.7C582.5,18.7 593.1,8.9 603,7C611.5,5.3 616.4,6.3 622.1,10.6C628.7,15.6 630.9,23.4 628.5,33.8C628.3,34.9 627.8,37 627.5,38.5C627.2,40 626.8,41.8 626.6,42.7C626.4,43.5 626.1,44.8 626,45.7C625.8,47.1 625.6,47.8 624.6,51.8C624.4,52.8 624.1,54.2 624,55C623.9,55.8 623.6,57.2 623.4,58.1C623.2,59 622.8,60.4 622.6,61.2C622.4,62.1 622.1,63.6 622,64.5C621.9,65.4 621.6,66.6 621.4,67.1C621.2,67.6 621,68.5 621,68.9C620.9,73.1 616.3,79.4 611.1,82.2C608.4,83.8 608,83.8 594.7,84L581.9,84.2L581.5,85.7C581.2,86.5 580.8,88.4 580.5,89.8C580.2,91.3 579.8,93.4 579.5,94.5C579.3,95.6 578.8,97.7 578.5,99.2C578.2,100.6 577.7,102.9 577.4,104.2C576,110.9 571.1,116.2 564.2,118.5C561.8,119.2 491,119.2 487.8,118.4ZM279.2,83.4C285.8,81.3 290.7,76.8 293.8,70.2C294.5,68.8 295,67.4 295,67C295,66.7 295.2,65.8 295.5,65C298.6,54.9 297.5,48.1 292.3,44.2C287.7,40.9 288.7,41 262,41C240.6,41 239,41.1 236.8,41.6C227.6,44.1 221.6,50.6 219.5,60.2C219.2,61.6 218.7,63.7 218.5,64.7C217.5,68.6 217.9,74.5 219.4,77C219.5,77.3 219.8,77.8 220,78.2C220.7,79.8 224,82.2 227,83.4C229.4,84.3 276.2,84.3 279.2,83.4Z"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 20.5h7M12 17v3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 3.5V17h0A2.5 2.5 0 0 1 4 14.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M20.5 3.5 3.5 10.5l6.5 2.5 2.5 6.5z M10 13l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+  <symbol id="i-cup" viewBox="0 0 24 24"><path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 9.5h1.5a2.5 2.5 0 0 1 0 5H16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 3.5v2M12 3.5v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-scrobble" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></symbol>
+  <symbol id="i-list" viewBox="0 0 24 24"><path d="M9 6.5h11M9 12h11M9 17.5h11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="4.5" cy="6.5" r="1.3" fill="currentColor"/><circle cx="4.5" cy="12" r="1.3" fill="currentColor"/><circle cx="4.5" cy="17.5" r="1.3" fill="currentColor"/></symbol>
+  <symbol id="i-wave" viewBox="0 0 24 24"><path d="M4 10v4M8 6v12M12 9v6M16 4v16M20 10v4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
+</svg>
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-bar glass">
+    <a class="brand" href="#top" aria-label="Convx home">
+      <svg class="brand-mark" aria-hidden="true"><use href="#mono" fill="url(#crimson)"/></svg>
+      <svg class="brand-word" viewBox="0 0 796 152" aria-hidden="true"><use href="#word"/></svg>
+    </a>
+    <div class="nav-links">
+      <span class="puck" aria-hidden="true"></span>
+      <a href="#lyrics">Lyrics</a>
+      <a href="#apps">Phone &amp; PC</a>
+      <a href="#features">Features</a>
+      <a href="#disc-studio">Disc Studio</a>
+    </div>
+    <a class="btn btn-red nav-cta" href="#download">Download</a>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <canvas class="stars" aria-hidden="true"></canvas>
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <p class="eyebrow">Free music app for Android and Windows</p>
+      <h1>Just listen<span class="dot">.</span></h1>
+      <p class="lede">Convx brings your music, lyrics and library together under a calm sheet of glass. Stream from YouTube Music, sing along word by word, and let one song flow into the next.</p>
+      <div class="cta-row" data-cta>
+        <a class="btn btn-red" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases">
+          <svg aria-hidden="true"><use href="#i-phone"/></svg>
+          <span>Get it on Android<small data-label="android">APK · Android 8.0+</small></span>
+        </a>
+        <a class="btn btn-glass glass" data-dl="windows" href="https://github.com/m33md/convx-desktop/releases/latest">
+          <svg aria-hidden="true"><use href="#i-pc"/></svg>
+          <span>Download for Windows<small data-label="windows">Setup · Windows 10+</small></span>
+        </a>
+      </div>
+      <p class="hero-meta mono"><span>Free</span><span>Open source, GPL-3.0</span><span>No account needed</span></p>
+    </div>
+    <div class="stage">
+      <figure class="screen">
+        <img src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: the Home page with Top Picks for You, mood chips and the glass side bar">
+      </figure>
+      <figure class="phone">
+        <img src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
+      </figure>
+    </div>
+  </div>
+</header>
+
+<main>
+  <section class="band" id="lyrics">
+    <div class="wrap split">
+      <div>
+        <p class="eyebrow">Lyrics</p>
+        <h2>Every word lands right on time.</h2>
+        <p class="lede" style="margin-top:22px">Convx asks every lyrics source at once and shows the first good answer straight away. When a word-timed version arrives, it takes over: letters fill as they are sung, words lift, and the line you are on sits on a strip of glass.</p>
+        <ul class="ticks">
+          <li>13 lyric styles, from Flamingo to Karaoke</li>
+          <li>Romanized and translated lyrics, line by line</li>
+          <li>Fix the timing, search or edit the lyrics of any song</li>
+        </ul>
+      </div>
+      <div>
+        <figure class="lyrics-demo" aria-label="A live demo of word-synced lyrics">
+          <div class="ld-head">
+            <div class="ld-cover"><svg aria-hidden="true"><use href="#mono"/></svg></div>
+            <div class="ld-title"><b>Porch Light</b><span>Demo song</span></div>
+            <span class="ld-chip mono">word-timed</span>
+          </div>
+          <div class="ld-viewport"><ol class="ld-lines" data-lines></ol></div>
+          <div class="ld-foot mono"><span data-ts>[00:00.00]</span><div class="ld-bar"><i data-bar></i></div><span data-total>0:00</span></div>
+        </figure>
+        <p class="ld-note">Lyrics written for this page. In the app, they come from your song.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="apps">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow" style="margin:0">One Convx</p>
+        <h2>On your phone, and on your PC.</h2>
+        <p class="lede">The same glass, the same red, the same library. Convx on Windows is built from the Android app's own code, so both fetch music, lyrics and artwork the same way.</p>
+      </div>
+      <div class="platforms">
+        <article class="plat plat-android">
+          <div>
+            <span class="plat-tag"><svg aria-hidden="true"><use href="#i-phone"/></svg>Android</span>
+            <h3>Where Convx began.</h3>
+            <p>Made by Aryan with Jetpack Compose and Media3, with Cupertino-style controls and liquid glass.</p>
+          </div>
+          <ul>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Lock-screen, notification and Android Auto controls</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Songs saved for offline, plus your own files and SMB or WebDAV shares</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Animated artwork and album colours in the player</li>
+          </ul>
+          <div class="plat-foot">
+            <a class="btn btn-glass glass" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Get it on Android</span></a>
+          </div>
+          <div class="shot"><figure class="phone"><img src="assets/img/phone-now-playing.webp" width="640" height="1399" loading="lazy" alt="Convx on Android: the now playing screen with a lossless badge"></figure></div>
+        </article>
+        <article class="plat plat-windows">
+          <div>
+            <span class="plat-tag"><svg aria-hidden="true"><use href="#i-pc"/></svg>Windows</span>
+            <h3>The official Windows version.</h3>
+            <p>The phone's layout, sized for a big screen: a glass top bar, a simple side bar and a now playing bar that follows you everywhere.</p>
+          </div>
+          <ul>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Media keys and play controls on the taskbar</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Several player designs, including a vinyl record</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Disc Studio, made for a mouse and a big screen</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Updates itself from inside the app</li>
+          </ul>
+          <div class="plat-foot">
+            <a class="btn btn-glass glass" data-dl="windows" href="https://github.com/m33md/convx-desktop/releases/latest"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download for Windows</span></a>
+            <span class="credit">Maintained by <a href="https://github.com/m33md">m33md</a>, with Aryan</span>
+          </div>
+          <figure class="screen"><img src="assets/img/win-player.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: the full-screen player with the vinyl design and a blurred cover background"></figure>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow" style="margin:0">Features</p>
+        <h2>Made for people who listen all day.</h2>
+      </div>
+      <div class="bento">
+        <article class="tile t-mix">
+          <span class="kicker">AutoMix</span>
+          <h3>Songs that blend like a DJ set.</h3>
+          <p>AutoMix measures each song's tempo and key, then plans the handover: beats lined up, filters swept, and creative transitions with reverb, delay or a tape stop.</p>
+          <div class="mix" aria-hidden="true">
+            <div class="zone"><span class="mono">transition · 8 bars</span></div>
+            <div class="deck deck-a">
+              <div class="deck-label mono"><b>Now</b><span>120.00 BPM</span><span>A minor</span></div>
+              <div class="wave" data-wave="a"></div>
+            </div>
+            <div class="deck deck-b">
+              <div class="deck-label mono"><b>Next</b><span>124.00 BPM</span><span>D minor</span></div>
+              <div class="wave" data-wave="b"></div>
+            </div>
+            <i class="head"></i>
+          </div>
+          <div class="mix-plan"><span class="pill red">DJ blend</span><span class="pill">tempo ×0.968</span><span class="pill">beats matched</span></div>
+        </article>
+
+        <article class="tile t-replay">
+          <span class="kicker">Replay</span>
+          <h3>Your year in music.</h3>
+          <p>Minutes listened, top songs and top artists, told as a story you tap through. Then save it as a playlist.</p>
+          <div class="replay-fan">
+            <img src="assets/img/replay-intro.webp" width="458" height="820" loading="lazy" alt="Replay intro card">
+            <img src="assets/img/replay-minutes.webp" width="458" height="820" loading="lazy" alt="Replay card: minutes listened this year">
+            <img src="assets/img/replay-summary.webp" width="458" height="820" loading="lazy" alt="Replay summary card with minutes, songs, artists and albums">
+          </div>
+        </article>
+
+        <article class="tile t-modules">
+          <span class="kicker">Modules</span>
+          <h3>More places to play from.</h3>
+          <p>Add a module and Convx asks it first, often for lossless FLAC. YouTube Music stays as the fallback.</p>
+          <ol class="sources" aria-label="Example order of music sources">
+            <li class="hit">Your module <span class="pill red">FLAC</span></li>
+            <li>An Eclipse addon <span class="pill">FLAC</span></li>
+            <li>YouTube Music <span class="pill">always there</span></li>
+          </ol>
+        </article>
+
+        <article class="tile t-party">
+          <span class="kicker">Listen Together</span>
+          <h3>Same song, same second.</h3>
+          <p>Start a party and share the code. Everyone who joins hears the same moment, on a phone or a PC.</p>
+          <div class="party" aria-hidden="true">
+            <div class="party-code glass"><b>K7Q·2MX</b><span>party code</span></div>
+            <div class="party-people">
+              <span class="person"><i><svg><use href="#i-phone"/></svg></i>Sam<span class="eq"><u></u><u></u><u></u></span></span>
+              <span class="person"><i><svg><use href="#i-pc"/></svg></i>Rin<span class="eq"><u></u><u></u><u></u></span></span>
+              <span class="person"><i><svg><use href="#i-phone"/></svg></i>Leo<span class="eq"><u></u><u></u><u></u></span></span>
+            </div>
+          </div>
+        </article>
+
+        <article class="tile t-links">
+          <span class="kicker">Connected</span>
+          <h3>Bring your music with you.</h3>
+          <p>Sign in to YouTube Music for your library and mixes, show what you're playing on Discord, scrobble every song, and import your Spotify playlists.</p>
+          <div class="chips">
+            <span class="chip"><svg aria-hidden="true"><use href="#i-play"/></svg>YouTube Music</span>
+            <span class="chip"><svg aria-hidden="true"><use href="#i-chat"/></svg>Discord status</span>
+            <span class="chip"><svg aria-hidden="true"><use href="#i-scrobble"/></svg>Last.fm</span>
+            <span class="chip"><svg aria-hidden="true"><use href="#i-scrobble"/></svg>ListenBrainz</span>
+            <span class="chip"><svg aria-hidden="true"><use href="#i-list"/></svg>Spotify playlists</span>
+          </div>
+        </article>
+
+        <article class="tile t-small">
+          <span class="kicker">The little things</span>
+          <h3>Everything else you reach for.</h3>
+          <p>An equalizer, speed and pitch, a sleep timer, song recognition, offline downloads, and moods and genres to wander through.</p>
+          <div class="chips">
+            <span class="chip"><svg aria-hidden="true"><use href="#i-wave"/></svg>Equalizer</span>
+            <span class="chip">Tempo &amp; pitch</span>
+            <span class="chip">Sleep timer</span>
+            <span class="chip">Recognize a song</span>
+            <span class="chip"><svg aria-hidden="true"><use href="#i-down"/></svg>Offline</span>
+          </div>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band studio" id="disc-studio">
+    <div class="wrap">
+      <div class="studio-grid">
+        <div>
+          <span class="badge">New in Convx for Windows</span>
+          <h2>Disc Studio. A record for every playlist.</h2>
+          <p class="lede" style="margin-top:22px">Design a CD or a vinyl from layers of pictures, text, shapes, patterns and your own brush strokes. Add bloom, halftone or an ink-brush texture, and the playlist wears it as its cover.</p>
+          <p class="body-2" style="margin-top:14px">Share a design as a <span class="file">.convxdisc</span> file and anyone with Convx can open it.</p>
+          <div class="studio-facts">
+            <div class="fact"><b>4,300</b><span>stickers, emoji and icons</span></div>
+            <div class="fact"><b>CD &amp; vinyl</b><span>with grooves, labels and shine</span></div>
+            <div class="fact"><b>Brush</b><span>pen, marker, ink, spray, neon</span></div>
+          </div>
+        </div>
+        <div class="studio-shot">
+          <figure class="screen"><img src="assets/img/disc-editor.webp" width="1600" height="1000" loading="lazy" alt="Disc Studio editor: a CD covered in stickers, with layer, sticker and colour panels"></figure>
+          <img class="disc-float" src="assets/img/disc-chillin.webp" width="480" height="480" loading="lazy" alt="">
+        </div>
+      </div>
+    </div>
+    <div class="rack" aria-label="Discs made in Disc Studio">
+      <div class="rack-track" data-rack>
+        <figure><img src="assets/img/disc-chillin.webp" width="480" height="480" loading="lazy" alt="A torn-paper vinyl titled Chillin"><figcaption><b>Chillin</b> · vinyl</figcaption></figure>
+        <figure><img src="assets/img/disc-late-night.webp" width="320" height="320" loading="lazy" alt="A yellow CD covered in the words Late night"><figcaption><b>Late night</b> · CD</figcaption></figure>
+        <figure><img src="assets/img/disc-pop.webp" width="320" height="320" loading="lazy" alt="A pink halftone CD that says POP!"><figcaption><b>Halftone pop</b> · CD</figcaption></figure>
+        <figure><img src="assets/img/disc-checker.webp" width="320" height="320" loading="lazy" alt="A black and white checkerboard vinyl"><figcaption><b>Checker</b> · vinyl</figcaption></figure>
+        <figure><img src="assets/img/disc-sticker.webp" width="320" height="320" loading="lazy" alt="A dark CD covered in stickers"><figcaption><b>Sticker bomb</b> · CD</figcaption></figure>
+        <figure><img src="assets/img/disc-sunburst.webp" width="320" height="320" loading="lazy" alt="An orange sunburst CD with a smiley sticker"><figcaption><b>Sunburst</b> · CD</figcaption></figure>
+        <figure><img src="assets/img/disc-pixel.webp" width="320" height="320" loading="lazy" alt="A pixel mosaic CD"><figcaption><b>Pixel mosaic</b> · CD</figcaption></figure>
+        <figure><img src="assets/img/disc-chrome.webp" width="320" height="320" loading="lazy" alt="A pale chrome CD"><figcaption><b>Chrome</b> · CD</figcaption></figure>
+        <figure><img src="assets/img/disc-splatter.webp" width="320" height="320" loading="lazy" alt="A cream vinyl with black and red paint splatter"><figcaption><b>Splatter</b> · vinyl</figcaption></figure>
+        <figure><img src="assets/img/disc-prism.webp" width="320" height="320" loading="lazy" alt="A pastel prism CD"><figcaption><b>Prism</b> · CD</figcaption></figure>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="download">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow" style="margin:0">Download</p>
+        <h2>Get Convx. It's free.</h2>
+      </div>
+      <div class="dl-grid">
+        <article class="dl glass">
+          <div class="dl-top">
+            <span class="dl-icon"><svg aria-hidden="true"><use href="#i-phone"/></svg></span>
+            <div><h3>Android</h3><span class="dl-ver mono" data-ver="android">Android 8.0 or later</span></div>
+          </div>
+          <ol>
+            <li>Download the newest APK from GitHub Releases.</li>
+            <li>Open it, and let your browser install apps if Android asks.</li>
+            <li>If your phone says “app not compatible”, pick the <span class="file">arm32</span> APK from the same release.</li>
+          </ol>
+          <a class="btn btn-red" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download for Android<small data-label="android">APK · Android 8.0+</small></span></a>
+        </article>
+        <article class="dl glass">
+          <div class="dl-top">
+            <span class="dl-icon"><svg aria-hidden="true"><use href="#i-pc"/></svg></span>
+            <div><h3>Windows</h3><span class="dl-ver mono" data-ver="windows">Windows 10 or later, 64-bit</span></div>
+          </div>
+          <ol>
+            <li>Download <span class="file">Convx-Setup.exe</span> and run it.</li>
+            <li>If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.</li>
+            <li>That's it. Convx keeps itself up to date.</li>
+          </ol>
+          <a class="btn btn-red" data-dl="windows" href="https://github.com/m33md/convx-desktop/releases/latest"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download for Windows<small data-label="windows">Setup · Windows 10+</small></span></a>
+          <p class="dl-also">Prefer an <a href="https://github.com/m33md/convx-desktop/releases/latest">.msi or a portable .zip</a>? They're on the same page.</p>
+        </article>
+      </div>
+      <div class="oss">
+        <span>Convx is free software under the GPL-3.0. Read the code:</span>
+        <a href="https://github.com/cosmictaserdev-creator/Convx">Android app</a>
+        <a href="https://github.com/m33md/convx-desktop">Windows app</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" style="padding-top:0; border-top:0">
+    <div class="wrap">
+      <div class="community glass">
+        <div>
+          <p class="eyebrow">Community</p>
+          <h2>Say hi, ask for features, share your discs.</h2>
+          <p class="body-2" style="margin-top:14px">The Convx Discord is where updates land first, for both apps.</p>
+        </div>
+        <div class="community-links">
+          <a class="btn btn-red" href="https://discord.gg/Ejeb4cmzfd"><svg aria-hidden="true"><use href="#i-chat"/></svg><span>Join the Discord</span></a>
+          <a class="btn btn-glass glass" href="https://t.me/+Nen-QpiY0tk1OTE9"><svg aria-hidden="true"><use href="#i-send"/></svg><span>Telegram</span></a>
+          <a class="btn btn-glass glass" href="https://ko-fi.com/cosmictaser"><svg aria-hidden="true"><use href="#i-cup"/></svg><span>Support Aryan</span></a>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <svg class="brand-word" viewBox="0 0 796 152" role="img" aria-label="Convx"><use href="#word"/></svg>
+      <p style="margin-top:18px">Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
+      <p>Convx is an independent project and is not affiliated with, endorsed by, or connected to YouTube, Google, or their affiliates. Album art in the screenshots belongs to its owners.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="#download">Download</a>
+      <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
+      <a href="https://github.com/m33md/convx-desktop">Windows source</a>
+      <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
+      <a href="https://ko-fi.com/cosmictaser">Ko-fi</a>
+      <a href="https://cosmictaser.de5.net">Cosmic Taser</a>
+    </nav>
+  </div>
+</footer>
+
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* Platform: put the visitor's own download first. */
+  const ua = navigator.userAgent || '';
+  const cta = document.querySelector('[data-cta]');
+  if (/Windows/i.test(ua) && !/Android/i.test(ua) && cta) {
+    const [a, w] = [cta.querySelector('[data-dl="android"]'), cta.querySelector('[data-dl="windows"]')];
+    a.classList.replace('btn-red', 'btn-glass'); a.classList.add('glass');
+    w.classList.replace('btn-glass', 'btn-red'); w.classList.remove('glass');
+    cta.prepend(w);
+  }
+
+  /* Latest versions from GitHub, when the page can reach it. */
+  const setAll = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
+  fetch('https://api.github.com/repos/m33md/convx-desktop/releases/latest')
+    .then(r => r.ok ? r.json() : null).then(j => {
+      if (!j) return;
+      const v = ((j.name || '') + ' ' + (j.body || '')).match(/\d+\.\d+\.\d+/);
+      const exe = (j.assets || []).find(a => /^Convx-Setup-.*\.exe$/i.test(a.name));
+      if (v) {
+        setAll('[data-label="windows"]', el => el.textContent = 'Version ' + v[0] + ' · Windows 10+');
+        setAll('[data-ver="windows"]', el => el.textContent = 'Version ' + v[0] + ' · Windows 10 or later, 64-bit');
+      }
+      if (exe) setAll('.dl [data-dl="windows"]', el => el.href = exe.browser_download_url);
+    }).catch(() => {});
+  fetch('https://api.github.com/repos/cosmictaserdev-creator/Convx/releases?per_page=10')
+    .then(r => r.ok ? r.json() : null).then(list => {
+      if (!Array.isArray(list)) return;
+      const rel = list.find(x => !x.draft && (x.assets || []).some(a => /\.apk$/i.test(a.name)));
+      if (!rel) return;
+      const tag = String(rel.tag_name || '').replace(/^v/i, '');
+      const name = rel.prerelease ? 'Nightly ' + tag.replace(/-?nightly/i, '') : 'Version ' + tag;
+      setAll('[data-label="android"]', el => el.textContent = name + ' · Android 8.0+');
+      setAll('[data-ver="android"]', el => el.textContent = name + ' · Android 8.0 or later');
+      setAll('[data-dl="android"]', el => el.href = rel.html_url);
+    }).catch(() => {});
+
+  /* Stars, like the Convx poster. */
+  const canvas = document.querySelector('.stars');
+  if (canvas && canvas.getContext) {
+    const ctx = canvas.getContext('2d');
+    let stars = [], w = 0, h = 0, dpr = 1, raf = 0, visible = true;
+    const seed = n => { let s = n; return () => (s = (s * 16807) % 2147483647) / 2147483647; };
+    const build = () => {
+      dpr = Math.min(window.devicePixelRatio || 1, 2);
+      w = canvas.clientWidth; h = canvas.clientHeight;
+      canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
+      const rnd = seed(7), count = Math.round(w * h / 5200);
+      stars = Array.from({ length: count }, () => ({
+        x: rnd() * w, y: rnd() * h, r: rnd() < 0.08 ? 1.3 + rnd() * 0.9 : 0.35 + rnd() * 0.7,
+        a: 0.25 + rnd() * 0.65, s: 0.4 + rnd() * 1.4, o: rnd() * 6.28
+      }));
+    };
+    const draw = t => {
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, w, h);
+      for (const st of stars) {
+        const tw = reduce ? 1 : 0.65 + 0.35 * Math.sin(t / 1000 * st.s + st.o);
+        ctx.globalAlpha = st.a * tw;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath(); ctx.arc(st.x, st.y, st.r, 0, 6.283); ctx.fill();
+        if (st.r > 1.4) { ctx.globalAlpha = st.a * tw * 0.35; ctx.fillRect(st.x - st.r * 3, st.y - 0.3, st.r * 6, 0.6); ctx.fillRect(st.x - 0.3, st.y - st.r * 3, 0.6, st.r * 6); }
+      }
+    };
+    const loop = t => { draw(t); if (!reduce && visible) raf = requestAnimationFrame(loop); };
+    build(); draw(0);
+    if (!reduce) raf = requestAnimationFrame(loop);
+    new ResizeObserver(() => { build(); draw(performance.now()); }).observe(canvas);
+    new IntersectionObserver(([e]) => {
+      visible = e.isIntersecting; cancelAnimationFrame(raf);
+      if (visible && !reduce) raf = requestAnimationFrame(loop);
+    }).observe(canvas);
+  }
+
+  /* Nav puck that springs to the section you're reading. */
+  const links = [...document.querySelectorAll('.nav-links a')];
+  const puck = document.querySelector('.puck');
+  const movePuck = a => {
+    links.forEach(l => l.classList.toggle('on', l === a));
+    if (!a) { puck.style.opacity = 0; return; }
+    puck.style.opacity = 1; puck.style.width = a.offsetWidth + 'px';
+    puck.style.transform = 'translateX(' + a.offsetLeft + 'px)';
+  };
+  const sections = links.map(a => document.querySelector(a.getAttribute('href')));
+  const onScroll = () => {
+    const y = innerHeight * 0.4; let cur = null;
+    sections.forEach((s, i) => { const r = s.getBoundingClientRect(); if (r.top < y && r.bottom > y) cur = links[i]; });
+    movePuck(cur);
+  };
+  addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll); onScroll();
+
+  /* AutoMix: two waveforms and one playhead crossing the transition. */
+  document.querySelectorAll('[data-wave]').forEach(el => {
+    const key = el.dataset.wave, n = 64;
+    let s = key === 'a' ? 11 : 29;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    let bars = '';
+    for (let i = 0; i < n; i++) {
+      const f = i / (n - 1);
+      const env = key === 'a' ? (f < 0.55 ? 1 : 1 - (f - 0.55) / 0.45 * 0.85) : (f < 0.42 ? 0.15 + f / 0.42 * 0.85 : 1);
+      const beat = i % 4 === 0 ? 1 : 0.62 + rnd() * 0.3;
+      const hgt = Math.max(6, 100 * env * beat * (0.55 + rnd() * 0.45));
+      bars += `<rect x="${(i / n * 100).toFixed(2)}" y="${((100 - hgt) / 2).toFixed(1)}" width="${(100 / n * 0.56).toFixed(2)}" height="${hgt.toFixed(1)}" rx="0.6"/>`;
+    }
+    el.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><g fill="rgba(255,255,255,0.16)">${bars}</g></svg>` +
+      `<svg class="lit" viewBox="0 0 100 100" preserveAspectRatio="none"><g fill="${key === 'a' ? '#fa2d48' : '#ffffff'}">${bars}</g></svg>`;
+  });
+  const mix = document.querySelector('.mix');
+  const deckA = document.querySelector('.deck-a .lit'), deckB = document.querySelector('.deck-b .lit'), head = document.querySelector('.head');
+  if (mix && deckA && deckB && head) {
+    const period = 9000; let mixOn = false;
+    const step = t => {
+      const p = reduce ? 0.55 : (t % period) / period;
+      head.style.left = (p * 100).toFixed(2) + '%';
+      const pa = Math.min(1, p / 0.78), pb = Math.max(0, (p - 0.44) / 0.56);
+      deckA.style.clipPath = `inset(0 ${(100 - pa * 100).toFixed(2)}% 0 0)`;
+      deckB.style.clipPath = `inset(0 ${(100 - pb * 100).toFixed(2)}% 0 0)`;
+      if (mixOn && !reduce) requestAnimationFrame(step);
+    };
+    step(period * 0.55);
+    if (!reduce) new IntersectionObserver(([e]) => {
+      const was = mixOn; mixOn = e.isIntersecting;
+      if (mixOn && !was) requestAnimationFrame(step);
+    }).observe(mix);
+  }
+
+  /* Word-synced lyrics demo. Timings are seconds; each word carries its own start. */
+  const song = [
+    'Leave the porch light on for me',
+    "I'm driving home through all the static",
+    'Every song I know by heart',
+    'Plays back slower than I remember',
+    'Just listen, the night is talking',
+    'Turn it up and let it go'
+  ];
+  const list = document.querySelector('[data-lines]');
+  if (list) {
+    let t = 1.2; const lines = [];
+    song.forEach(text => {
+      const words = text.split(' ').map(w => {
+        const d = 0.2 + w.length * 0.06; const word = { text: w, start: t, end: t + d }; t += d + 0.06; return word;
+      });
+      lines.push({ start: words[0].start, end: words[words.length - 1].end, words }); t += 0.9;
+    });
+    const total = t + 1.4;
+    list.innerHTML = lines.map(l => '<li class="ld-line">' + l.words.map(w => '<span class="w">' + w.text + '</span>').join(' ') + '</li>').join('');
+    const liEls = [...list.children], wordEls = liEls.map(li => [...li.querySelectorAll('.w')]);
+    const ts = document.querySelector('[data-ts]'), bar = document.querySelector('[data-bar]'), tot = document.querySelector('[data-total]');
+    const fmt = s => '[' + String(Math.floor(s / 60)).padStart(2, '0') + ':' + (s % 60).toFixed(2).padStart(5, '0') + ']';
+    tot.textContent = '0:' + String(Math.round(total)).padStart(2, '0');
+    let current = -2, shown = -2, origin = performance.now(), running = false;
+    const render = now => {
+      const time = reduce ? lines[2].words[3].start + 0.1 : ((now - origin) / 1000) % total;
+      let idx = -1;
+      lines.forEach((l, i) => { if (time >= l.start - 0.25) idx = i; });
+      if (idx !== current) {
+        current = idx;
+        liEls.forEach((li, i) => { li.classList.toggle('now', i === idx); li.classList.toggle('past', i < idx); });
+        const target = liEls[Math.max(0, idx)];
+        const viewH = list.parentElement.clientHeight;
+        const off = target.offsetTop - viewH * 0.32;
+        list.style.transform = 'translateY(' + (-Math.max(0, off)) + 'px)';
+        ts.textContent = fmt(lines[Math.max(0, idx)].start);
+      }
+      if (idx !== shown) {
+        wordEls.forEach((ws, i) => { if (i !== idx) ws.forEach(el => { el.style.removeProperty('--p'); el.classList.remove('lift'); }); });
+        shown = idx;
+      }
+      if (idx >= 0) {
+        lines[idx].words.forEach((w, j) => {
+          const p = Math.max(0, Math.min(1, (time - w.start) / (w.end - w.start)));
+          const el = wordEls[idx][j];
+          el.style.setProperty('--p', (p * 120 - 10).toFixed(1));
+          el.classList.toggle('lift', time >= w.start);
+        });
+      }
+      bar.style.width = (time / total * 100).toFixed(2) + '%';
+      if (running && !reduce) requestAnimationFrame(render);
+    };
+    render(performance.now());
+    if (!reduce) {
+      new IntersectionObserver(([e]) => {
+        if (e.isIntersecting && !running) { running = true; requestAnimationFrame(render); }
+        else if (!e.isIntersecting) running = false;
+      }, { threshold: 0.2 }).observe(list.closest('figure'));
+    }
+  }
+
+  /* Disc rack: repeat the discs so the slide loops without a gap. */
+  const rack = document.querySelector('[data-rack]');
+  if (rack) [...rack.children].forEach(f => { const c = f.cloneNode(true); c.setAttribute('aria-hidden', 'true'); rack.append(c); });
+})();
+</script>
+</body>
+</html>
