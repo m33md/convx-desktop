@@ -348,9 +348,50 @@ p { margin: 0; }
 .plat li svg { flex: none; width: 18px; height: 18px; color: var(--red); margin-top: 3px; }
 .plat-android { background: linear-gradient(170deg, #0b1830, #071022 50%, #050912); border-color: rgba(120, 170, 255, 0.12); }
 .plat-android .shot { display: flex; justify-content: center; }
-.plat-android .phone { width: min(250px, 70%); transform: rotate(-3deg); margin-bottom: -90px; }
+.phone-pair { position: relative; width: min(240px, 60%); margin-bottom: -90px; translate: 22% 0; }
+.plat-android .phone { width: 100%; transform: rotate(-3deg); }
+.phone-back {
+  position: absolute; inset: 0; z-index: -1; border-radius: 12.5% / 5.8%;
+  transform: translate(-50%, -3%) rotate(-10deg);
+  background: linear-gradient(160deg, #c3cbd8, #9aa6b8 38%, #7a879b 72%, #66728a);
+  box-shadow: inset 0 0 0 3px #d4d7dc, inset 0 0 0 4px rgba(0,0,0,0.28), inset 0 0 0 6px rgba(255,255,255,0.12), 0 40px 80px rgba(0,0,0,0.7);
+}
+.phone-back::before, .phone-back::after {
+  content: ""; position: absolute; right: -1.2%; width: 1.3%; border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, #63666c, #c9ccd1 55%, #84878d);
+}
+.phone-back::before { top: 19%; height: 10%; }
+.phone-back::after { top: 32%; height: 5.5%; }
+.phone-back .island {
+  position: absolute; left: 6.5%; top: 2.9%; width: 28%; height: 36.2%; border-radius: 999px;
+  background: linear-gradient(160deg, #b6bfcd, #8995a9);
+  box-shadow: inset 0 0 0 2px #d9dde3, inset 0 0 0 3px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.25);
+}
+.phone-back .lens, .phone-back .lens-s, .phone-back .flash { position: absolute; aspect-ratio: 1; border-radius: 50%; }
+.phone-back .lens {
+  left: 9%; width: 23%;
+  background:
+    radial-gradient(circle at 37% 33%, rgba(170, 195, 255, 0.45) 0 5%, transparent 6%),
+    radial-gradient(circle, #1b2438 0 16%, #05060a 17% 50%, #262a31 51% 58%, #08090c 59% 70%, #c4c8cf 71% 80%, #7d828b 81% 90%, transparent 91%);
+  filter: drop-shadow(0 1px 1.5px rgba(0,0,0,0.4));
+}
+.phone-back .lens:nth-of-type(2) { top: 4.2%; }
+.phone-back .lens:nth-of-type(3) { top: 15.6%; }
+.phone-back .lens:nth-of-type(4) { top: 27%; }
+.phone-back .lens-s {
+  left: 38%; width: 11%;
+  background:
+    radial-gradient(circle at 38% 34%, rgba(170, 195, 255, 0.4) 0 7%, transparent 8%),
+    radial-gradient(circle, #141a28 0 22%, #040507 23% 62%, #c4c8cf 63% 78%, #7d828b 79% 90%, transparent 91%);
+}
+.phone-back .lens-s.a { top: 7%; }
+.phone-back .lens-s.b { top: 18.4%; }
+.phone-back .flash {
+  left: 41%; width: 5%; top: 13.4%;
+  background: radial-gradient(circle, #fff6d8 0 40%, #e6d7a6 41% 70%, #9a9479 71%);
+}
 .plat-windows .screen { margin-right: calc(-1 * clamp(24px, 3.4vw, 40px)); margin-bottom: calc(-1 * clamp(24px, 3.4vw, 40px)); border-radius: 14px 0 0 0; border-right: 0; border-bottom: 0; }
-.plat-foot { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.plat-foot { position: relative; z-index: 2; display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
 .credit { font-size: 13px; color: var(--label-3); }
 .credit a { color: var(--label-2); }
 
@@ -538,8 +579,9 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
 .party-code b { display: inline-block; min-width: 7.2ch; }
 .plat { transition: border-color 0.3s; }
 .plat:hover { border-color: rgba(255,255,255,0.14); }
-.plat-android .phone { transition: transform 0.9s var(--spring); }
+.plat-android .phone, .phone-back { transition: transform 0.9s var(--spring); }
 .plat-android:hover .phone { transform: rotate(0deg) translateY(-16px); }
+.plat-android:hover .phone-back { transform: translate(-55%, -2%) rotate(-13deg); }
 #lyrics .split > div:last-child, .plat-windows, .studio-shot { perspective: 1400px; }
 .plat-windows .screen { transition: transform 0.9s var(--spring); }
 .plat-windows:hover .screen { transform: translate(-10px, -10px); }
@@ -745,7 +787,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           <div class="plat-foot">
             <a class="btn btn-glass glass" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Get it on Android</span></a>
           </div>
-          <div class="shot"><figure class="phone"><div class="bezel"><div class="scr-box"><img src="assets/img/phone-now-playing.webp" width="640" height="1399" loading="lazy" alt="Convx on Android: the now playing screen with a lossless badge"><i class="cam" aria-hidden="true"></i></div></div></figure></div>
+          <div class="shot"><div class="phone-pair"><div class="phone-back" aria-hidden="true"><i class="island"></i><i class="lens"></i><i class="lens"></i><i class="lens"></i><i class="lens-s a"></i><i class="flash"></i><i class="lens-s b"></i></div><figure class="phone"><div class="bezel"><div class="scr-box"><img src="assets/img/phone-now-playing.webp" width="640" height="1399" loading="lazy" alt="Convx on Android: the now playing screen with a lossless badge"><i class="cam" aria-hidden="true"></i></div></div></figure></div></div>
         </article>
         <article class="plat plat-windows">
           <div>
