@@ -160,7 +160,13 @@ p { margin: 0; }
 .hero-grid { display: grid; gap: 56px; align-items: center; }
 @media (min-width: 1000px) {
   .hero-grid { grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: 40px; }
-  .stage { margin-right: calc(-1 * min(3vw, 40px)); }
+}
+@media (min-width: 1000px) {
+  .stage { margin-right: calc(-1 * max(min(3vw, 40px), (100vw - 1168px) / 2 - 24px)); padding-right: 3%; padding-left: 8%; }
+  .stage-cap { right: 3%; }
+}
+@media (min-width: 1200px) {
+  .hero-grid { grid-template-columns: minmax(0, 4.1fr) minmax(0, 7.9fr); gap: 28px; }
 }
 .hero-copy { min-width: 0; }
 .hero h1 { margin: 0 0 30px; line-height: 0; }
@@ -174,7 +180,7 @@ p { margin: 0; }
 .stage { position: relative; min-width: 0; padding: 9% 7% 10% 11%; perspective: 1700px; perspective-origin: 40% 50%; }
 .scene {
   position: relative; transform-style: preserve-3d;
-  transform: rotateX(calc(4deg + var(--rx, 0deg))) rotateY(calc(-9deg + var(--ry, 0deg)));
+  transform: rotateX(calc(3deg + var(--rx, 0deg))) rotateY(calc(-6deg + var(--ry, 0deg)));
 }
 .hero-deck { cursor: pointer; }
 .mac-view .card {
@@ -257,6 +263,29 @@ p { margin: 0; }
 .tour-meter b { color: var(--label); font-weight: 500; }
 .tour-meter i { width: 30px; height: 1px; background: currentColor; }
 .tour-meter em { margin-left: auto; font-style: normal; color: var(--label-2); }
+.tour-zoom {
+  display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; padding: 6px 12px; border-radius: 999px; cursor: zoom-in;
+  font: 500 12px/1 var(--mono); color: var(--label); background: rgba(255,255,255,0.08); border: 1px solid var(--line);
+  transition: background-color 0.2s, transform 0.4s var(--spring);
+}
+.tour-zoom:hover { background: rgba(255,255,255,0.14); transform: translateY(-1px); }
+.tour-zoom svg { width: 13px; height: 13px; }
+.tour-view { cursor: zoom-in; }
+/* Full size: any tour screen opens at its real size, scrollable on a phone. */
+.shot-box {
+  width: min(96vw, 1480px); max-width: none; max-height: 92vh; padding: 0; overflow: auto;
+  border: 1px solid var(--line); border-radius: 18px; background: #050505; color: var(--label);
+}
+.shot-box::backdrop { background: rgba(0,0,0,0.84); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.shot-box img { display: block; width: 100%; height: auto; }
+/* A CSS entrance: GSAP measures a fixed element by moving it in the page, which would close a modal dialog. */
+.shot-box[open] { animation: box-in 0.5s var(--ease); }
+@keyframes box-in { from { opacity: 0; transform: scale(0.94); } }
+.shot-bar { position: sticky; top: 0; left: 0; z-index: 1; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 18px; background: rgba(5,5,5,0.92); font: 500 13px/1 var(--mono); color: var(--label-2); }
+.shot-bar b { color: var(--label); font-weight: 500; }
+.shot-close { margin-left: auto; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,0.08); color: var(--label); font-size: 20px; line-height: 1; cursor: pointer; }
+.shot-close:hover { background: rgba(255,255,255,0.16); }
+@media (max-width: 760px) { .shot-box img { width: 1100px; max-width: none; } }
 .tour-bar { height: 2px; margin: 0 10%; border-radius: 2px; background: rgba(255,255,255,0.12); overflow: hidden; }
 .tour-bar i { display: block; height: 100%; background: var(--red); transform-origin: 0 50%; transform: scaleX(var(--p, 0.036)); }
 .tour-steps { list-style: none; margin: 0; padding: 2vh 0 16vh; }
@@ -269,14 +298,17 @@ p { margin: 0; }
 .tour-step.is-on { opacity: 1; cursor: default; }
 .tour-num { display: flex; gap: 10px; margin-bottom: 12px; font-size: 12px; color: var(--red); }
 .tour-num b { font-weight: 500; color: var(--label-3); }
-.tour-step h3 { font-size: clamp(26px, 3.2vw, 40px); line-height: 1.08; letter-spacing: -0.025em; transition: transform 0.7s var(--spring); }
+.tour-step h3 { font-size: clamp(26px, 2.6vw, 36px); line-height: 1.08; letter-spacing: -0.025em; transition: transform 0.7s var(--spring); }
 .tour-step p { margin: 14px 0 0; color: var(--label-2); max-width: 30em; transition: transform 0.7s var(--spring) 0.04s; }
 .tour-step.is-on h3, .tour-step.is-on p { transform: translateX(6px); }
 @media (min-width: 960px) {
-  .tour { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(48px, 6vw, 88px); align-items: start; }
+  .tour {
+    grid-template-columns: minmax(0, 1fr) clamp(280px, 28vw, 380px); gap: clamp(32px, 4vw, 64px); align-items: start;
+    margin-inline: calc(50% - 50vw); padding-left: max(16px, 2vw); padding-right: max(32px, 4vw);
+  }
   .tour-stage { height: 100vh; height: 100svh; padding: 0; display: flex; flex-direction: column; justify-content: center; background: none; }
   .tour-stage::after { display: none; }
-  .tour-dev { width: 100%; }
+  .tour-dev { width: min(100%, calc((100svh - 150px) * 1.656)); }
   .tour-steps { padding: 22vh 0; }
   .tour-step { min-height: 56vh; }
 }
@@ -688,7 +720,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           </div>
         </div>
       </div>
-      <p class="stage-cap mono" aria-live="polite"><span class="hint" data-hint>Hover the screens</span><b data-cap>Home</b><span class="stage-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span></p>
+      <p class="stage-cap mono" aria-live="polite"><span class="hint" data-hint>Hover the screens</span><b data-cap>Home</b><span class="stage-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span><button class="tour-zoom" type="button" data-hero-zoom><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Full size</button></p>
     </div>
   </div>
 </header>
@@ -780,7 +812,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
             <div class="mac tour-mac">
               <div class="mac-screen">
                 <div class="mac-bar" aria-hidden="true"><b>Convx</b><span>File</span><span>Edit</span><span>View</span><span>Playback</span><span>Window</span><span class="r" data-clock>Wed 4:26 PM</span></div>
-                <div class="mac-view tour-view">
+                <div class="mac-view tour-view" data-tour-view role="button" tabindex="0" aria-label="Show this screen at full size">
                 <img class="tour-shot is-on" src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: The Home page with Top Picks for You and mood chips">
                 <img class="tour-shot" src="assets/img/tour-search.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Search results for an artist: top result, songs, videos and albums">
                 <img class="tour-shot" src="assets/img/tour-menu.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: A song menu with Play next, Start radio, AI DJ Mix and Track insights">
@@ -799,7 +831,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
               </div>
               <img class="mac-frame" src="assets/img/macbook.webp" width="974" height="588" loading="lazy" alt="">
             </div>
-            <div class="tour-meter mono" aria-hidden="true"><b data-tour-n>01</b><i></i><span>14</span><em data-tour-name>Home</em></div>
+            <div class="tour-meter mono"><b data-tour-n aria-hidden="true">01</b><i aria-hidden="true"></i><span aria-hidden="true">14</span><em data-tour-name aria-hidden="true">Home</em><button class="tour-zoom" type="button" data-tour-zoom><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Full size</button></div>
             <div class="tour-bar" aria-hidden="true"><i data-tour-bar></i></div>
           </div>
         </div>
@@ -1011,6 +1043,11 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     </div>
   </section>
 </main>
+
+<dialog class="shot-box" data-shotbox aria-label="Screen at full size">
+  <div class="shot-bar"><b data-shotnum></b><span data-shotcap></span><button class="shot-close" type="button" data-shotclose aria-label="Close">&times;</button></div>
+  <img alt="" data-shotimg>
+</dialog>
 
 <footer>
   <div class="wrap foot">
@@ -1383,6 +1420,28 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     if (Math.abs(y - lastY) > 6) { navEl.classList.toggle('tucked', y > lastY && y > 420); lastY = y; }
   }, { passive: true });
 
+  /* The full-size viewer, shared by the hero and the tour. Its entrance is CSS: GSAP measures a
+     fixed element by moving it in the page, which would close a modal dialog. */
+  const box = document.querySelector('[data-shotbox]');
+  const openBox = (img, num, name) => {
+    if (!box || !box.showModal) { open(img.currentSrc || img.src, '_blank'); return; }
+    const bImg = box.querySelector('[data-shotimg]');
+    bImg.src = img.currentSrc || img.src; bImg.alt = img.alt;
+    box.querySelector('[data-shotnum]').textContent = num;
+    box.querySelector('[data-shotcap]').textContent = name;
+    box.showModal();
+    document.documentElement.style.overflow = 'hidden';
+  };
+  if (box) {
+    box.addEventListener('click', e => { if (e.target === box || e.target.closest('[data-shotclose]')) box.close(); });
+    box.addEventListener('close', () => { document.documentElement.style.overflow = ''; });
+  }
+  const heroZoom = document.querySelector('[data-hero-zoom]');
+  if (heroZoom) heroZoom.addEventListener('click', () => {
+    const card = document.querySelector('.hero-deck .card[data-pos="0"]');
+    if (card) openBox(card.querySelector('img'), 'Windows', card.dataset.name);
+  });
+
   /* Tour: the step crossing the focus line leads, and the laptop brings up its screen.
      The focus line is the middle of the window, or on a phone the middle of what the laptop leaves free. */
   const tour = document.querySelector('[data-tour]');
@@ -1438,6 +1497,13 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       const r = s.getBoundingClientRect();
       scrollTo({ top: scrollY + r.top + r.height / 2 - focus(), behavior: reduce ? 'auto' : 'smooth' });
     }));
+
+    /* Full size: the laptop's screen, or the button under it, opens the screen at its real size. */
+    const view = tour.querySelector('[data-tour-view]');
+    const openShot = () => openBox(shots[cur], String(cur + 1).padStart(2, '0'), names[cur]);
+    view.addEventListener('click', openShot);
+    view.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openShot(); } });
+    tour.querySelector('[data-tour-zoom]').addEventListener('click', openShot);
   }
 
   /* GSAP: sections rise in as they arrive, and the hero drifts back as you leave it. */
