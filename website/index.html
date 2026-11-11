@@ -99,18 +99,27 @@ p { margin: 0; }
 
 /* Buttons */
 .btn {
+  position: relative; overflow: hidden; isolation: isolate;
   display: inline-flex; align-items: center; gap: 12px;
   min-height: 56px; padding: 10px 22px 10px 16px; border-radius: 999px;
   text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.15;
   transition: transform 0.4s var(--spring), background-color 0.2s, box-shadow 0.2s;
 }
-.btn svg { width: 24px; height: 24px; flex: none; }
+.btn svg { width: 24px; height: 24px; flex: none; transition: transform 0.45s var(--spring); }
+.btn::after {
+  content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.20) 50%, transparent 70%);
+  transform: translateX(-110%); transition: transform 0.8s var(--ease);
+}
+.btn:hover::after { transform: translateX(110%); }
+.btn:hover svg { transform: translateY(1px) scale(1.06); }
 .btn small { display: block; font-weight: 500; font-size: 12.5px; opacity: 0.78; margin-top: 2px; font-family: var(--mono); letter-spacing: -0.01em; }
-.btn:hover { transform: translateY(-2px) scale(1.015); }
-.btn:active { transform: scale(0.98); }
-.btn-red { background: var(--red); color: #fff; box-shadow: 0 10px 30px rgba(250, 45, 72, 0.32), inset 0 1px 0 rgba(255,255,255,0.25); }
-.btn-red:hover { background: #ff3954; }
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: translateY(0) scale(0.98); }
+.btn-red { background: var(--red); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.12); }
+.btn-red:hover { background: #ff3753; }
 .btn-glass { color: var(--label); }
+.btn.glass { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
 .btn-glass:hover { background-color: rgba(255,255,255,0.10); }
 
 /* Nav */
@@ -157,7 +166,7 @@ p { margin: 0; }
 .hero-grid { display: grid; gap: 56px; align-items: center; }
 @media (min-width: 1000px) {
   .hero-grid { grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: 40px; }
-  .stage { margin-right: calc(-1 * min(9vw, 140px)); }
+  .stage { margin-right: calc(-1 * min(7vw, 110px)); }
 }
 .hero-copy { min-width: 0; }
 .hero h1 {
@@ -171,11 +180,56 @@ p { margin: 0; }
 .hero-meta { margin-top: 22px; font-size: 13px; color: var(--label-3); display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .hero-meta span::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--label-3); margin-right: 8px; vertical-align: middle; }
 
-.stage { position: relative; min-width: 0; padding: 0 0 8% 9%; }
+.stage { position: relative; min-width: 0; padding: 9% 7% 10% 11%; perspective: 1700px; perspective-origin: 40% 50%; }
+.scene {
+  position: relative; transform-style: preserve-3d;
+  transform: rotateX(calc(4deg + var(--rx, 0deg))) rotateY(calc(-9deg + var(--ry, 0deg)));
+}
+.deck { position: relative; aspect-ratio: 1440 / 900; transform-style: preserve-3d; cursor: pointer; border-radius: 14px; }
+.card {
+  position: absolute; inset: 0; margin: 0; border-radius: 14px; overflow: hidden; background: #050505;
+  border: 1px solid rgba(255,255,255,0.14);
+  box-shadow: 0 50px 110px -24px rgba(0,0,0,0.9);
+  transition: transform 0.95s var(--spring), opacity 0.6s var(--ease), filter 0.6s var(--ease);
+}
+.card img { width: 100%; height: 100%; object-fit: cover; }
+.card[data-pos="0"] { transform: translate3d(0, 0, 0); }
+.card[data-pos="1"] { transform: translate3d(5%, -8%, -110px) scale(0.95); opacity: 0.75; filter: brightness(0.62) saturate(0.85); border-color: rgba(255,255,255,0.2); }
+.card[data-pos="2"] { transform: translate3d(10%, -16%, -220px) scale(0.9); opacity: 0.4; filter: brightness(0.5) saturate(0.7); border-color: rgba(255,255,255,0.2); }
+.card[data-pos="3"] { transform: translate3d(14%, -22%, -320px) scale(0.85); opacity: 0; }
+.card[data-pos="out"] {
+  transform: translate3d(-8%, 18%, 140px) rotateX(-16deg) rotateZ(-3deg) scale(1.02); opacity: 0;
+  transition: transform 0.6s var(--ease), opacity 0.45s var(--ease);
+}
+.card.snap { transition: none !important; }
+.glare {
+  position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
+  background: radial-gradient(55% 65% at var(--gx, 30%) var(--gy, 15%), rgba(255,255,255,0.13), transparent 62%);
+  opacity: var(--glare, 0.5); transition: opacity 0.5s var(--ease);
+}
+.deck > .glare { transform: translateZ(1px); }
+.stage .hero-phone { position: absolute; left: -8%; bottom: -13%; width: 27%; transform: translateZ(110px); cursor: pointer; }
+.hero-phone .scr-box { position: relative; overflow: hidden; border-radius: 13% / 6%; aspect-ratio: 640 / 1378; background: #000; }
+.hero-phone .scr {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; aspect-ratio: auto;
+  opacity: 0; transform: translateY(9%) scale(1.08); filter: blur(10px);
+  transition: opacity 0.55s var(--ease), transform 0.9s var(--spring), filter 0.55s var(--ease);
+}
+.hero-phone .scr.is-on { opacity: 1; transform: none; filter: none; }
+.hero-phone .scr.is-off { opacity: 0; transform: translateY(-7%) scale(0.93); filter: blur(8px); }
+.deck:focus-visible, .hero-phone:focus-visible { outline-offset: 10px; border-radius: 16px; }
+.stage-cap {
+  position: absolute; right: 7%; bottom: 0; display: flex; gap: 14px; align-items: center;
+  font-size: 12px; color: var(--label-3);
+}
+.stage-cap b { color: var(--label-2); font-weight: 500; }
+.stage-dots { display: flex; gap: 5px; }
+.stage-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.22); transition: width 0.45s var(--spring), background-color 0.3s; }
+.stage-dots i.on { width: 18px; background: var(--label-2); }
 .screen {
   margin: 0; border-radius: 14px; overflow: hidden; background: #050505;
   border: 1px solid rgba(255,255,255,0.13);
-  box-shadow: 0 50px 120px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,0,0,0.8), 0 0 80px rgba(190, 22, 96, 0.12);
+  box-shadow: 0 50px 120px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,0,0,0.8);
 }
 .screen img { width: 100%; height: auto; aspect-ratio: 1440 / 900; object-fit: cover; }
 .phone {
@@ -184,7 +238,6 @@ p { margin: 0; }
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16), 0 40px 90px rgba(0,0,0,0.75);
 }
 .phone img { width: 100%; height: auto; aspect-ratio: 640 / 1378; object-fit: cover; border-radius: 13% / 6%; }
-.stage .phone { position: absolute; left: 0; bottom: 0; width: 27%; }
 
 /* Sections */
 .band { padding-block: clamp(80px, 11vw, 150px); position: relative; }
@@ -433,7 +486,9 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   .cta-row .btn, .dl .btn { width: 100%; }
   .zone span { display: none; }
   .deck-b .deck-label { margin-left: 0; justify-content: flex-end; }
-  .stage .phone { width: 30%; }
+  .stage .hero-phone { width: 30%; left: -6%; }
+  .stage-cap { right: 0; }
+  .stage-cap .hint { display: none; }
   .studio-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .studio-facts .fact:last-child { grid-column: 1 / -1; }
   .party-code b { font-size: 20px; }
@@ -506,13 +561,24 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       </div>
       <p class="hero-meta mono"><span>Free</span><span>Open source, GPL-3.0</span><span>No account needed</span></p>
     </div>
-    <div class="stage">
-      <figure class="screen">
-        <img src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: the Home page with Top Picks for You, mood chips and the glass side bar">
-      </figure>
-      <figure class="phone">
-        <img src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
-      </figure>
+    <div class="stage" data-stage>
+      <div class="scene">
+        <div class="deck" data-deck tabindex="0" role="button" aria-label="Show the next Windows screen">
+          <figure class="card" data-pos="0" data-name="Home"><img src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: the Home page with Top Picks for You, mood chips and the glass side bar"></figure>
+          <figure class="card" data-pos="1" data-name="Player"><img src="assets/img/win-player.webp" width="1440" height="900" alt="Convx for Windows: the full-screen player with the vinyl design"></figure>
+          <figure class="card" data-pos="2" data-name="Disc Studio"><img src="assets/img/disc-editor.webp" width="1600" height="1000" alt="Convx for Windows: Disc Studio, designing a CD covered in stickers"></figure>
+          <figure class="card" data-pos="3" data-name="Moods &amp; Genres"><img src="assets/img/win-moods.webp" width="1440" height="900" alt="Convx for Windows: Moods and Genres tiles"></figure>
+          <span class="glare" aria-hidden="true"></span>
+        </div>
+        <div class="phone hero-phone" data-phone tabindex="0" role="button" aria-label="Show the next Android screen">
+          <div class="scr-box">
+            <img class="scr is-on" src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
+            <img class="scr" src="assets/img/phone-now-playing.webp" width="640" height="1399" alt="Convx on Android: the now playing screen">
+            <span class="glare" aria-hidden="true"></span>
+          </div>
+        </div>
+      </div>
+      <p class="stage-cap mono" aria-live="polite"><span class="hint" data-hint>Hover the screens</span><b data-cap>Home</b><span class="stage-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span></p>
     </div>
   </div>
 </header>
@@ -833,6 +899,78 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       setAll('[data-ver="android"]', el => el.textContent = name + ' · Android 8.0 or later');
       setAll('[data-dl="android"]', el => el.href = rel.html_url);
     }).catch(() => {});
+
+  /* Live hero: the stage tilts toward the pointer and the screens shuffle on hover or tap. */
+  const stage = document.querySelector('[data-stage]');
+  if (stage) {
+    const scene = stage.querySelector('.scene'), deck = stage.querySelector('[data-deck]'), phone = stage.querySelector('[data-phone]');
+    const cards = [...deck.querySelectorAll('.card')], shots = [...phone.querySelectorAll('.scr')];
+    const cap = stage.querySelector('[data-cap]'), dots = [...stage.querySelectorAll('.stage-dots i')], hint = stage.querySelector('[data-hint]');
+    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    if (!fine && hint) hint.textContent = 'Tap the screens';
+    let order = cards.slice(), lastDeck = 0, shot = 0, lastPhone = 0;
+
+    const flipDeck = () => {
+      const now = performance.now(); if (now - lastDeck < 650) return; lastDeck = now;
+      const front = order.shift(); order.push(front);
+      front.dataset.pos = 'out';
+      order.slice(0, -1).forEach((c, i) => c.dataset.pos = i);
+      setTimeout(() => {
+        front.classList.add('snap'); front.dataset.pos = order.length; void front.offsetWidth;
+        front.classList.remove('snap'); front.dataset.pos = order.length - 1;
+      }, reduce ? 0 : 520);
+      const idx = cards.indexOf(order[0]);
+      cap.textContent = order[0].dataset.name;
+      dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+    };
+    const flipPhone = () => {
+      const now = performance.now(); if (now - lastPhone < 650) return; lastPhone = now;
+      const prev = shots[shot]; shot = (shot + 1) % shots.length; const next = shots[shot];
+      prev.classList.remove('is-on'); prev.classList.add('is-off');
+      next.classList.remove('is-off'); void next.offsetWidth; next.classList.add('is-on');
+      setTimeout(() => prev.classList.remove('is-off'), 700);
+    };
+    const bind = (el, flip) => {
+      let timer = 0;
+      el.addEventListener('click', flip);
+      el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); flip(); } });
+      if (fine) {
+        el.addEventListener('pointerenter', () => { flip(); clearInterval(timer); timer = setInterval(flip, 2600); });
+        el.addEventListener('pointerleave', () => clearInterval(timer));
+      }
+    };
+    bind(deck, flipDeck); bind(phone, flipPhone);
+
+    if (fine && !reduce) {
+      const hero = stage.closest('.hero');
+      let tx = 0, ty = 0, cx = 0, cy = 0, raf = 0;
+      const tick = () => {
+        cx += (tx - cx) * 0.075; cy += (ty - cy) * 0.075;
+        scene.style.setProperty('--ry', (cx * 9).toFixed(2) + 'deg');
+        scene.style.setProperty('--rx', (-cy * 7).toFixed(2) + 'deg');
+        stage.style.setProperty('--gx', (50 + cx * 55).toFixed(1) + '%');
+        stage.style.setProperty('--gy', (35 + cy * 55).toFixed(1) + '%');
+        raf = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.002 ? requestAnimationFrame(tick) : 0;
+      };
+      const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
+      hero.addEventListener('pointermove', e => {
+        const r = stage.getBoundingClientRect();
+        tx = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width / 2)));
+        ty = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height / 2)));
+        stage.style.setProperty('--glare', '1'); kick();
+      });
+      hero.addEventListener('pointerleave', () => { tx = 0; ty = 0; stage.style.setProperty('--glare', '0.5'); kick(); });
+    }
+
+    /* On touch screens nothing hovers, so the screens take turns on their own while in view. */
+    if (!fine && !reduce) {
+      let auto = 0, turn = 0;
+      new IntersectionObserver(([e]) => {
+        clearInterval(auto);
+        if (e.isIntersecting) auto = setInterval(() => { (turn++ % 2 ? flipPhone : flipDeck)(); }, 3200);
+      }).observe(stage);
+    }
+  }
 
   /* Stars, like the Convx poster. */
   const canvas = document.querySelector('.stars');
