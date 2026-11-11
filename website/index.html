@@ -353,21 +353,50 @@ p { margin: 0; }
 .phone-back {
   position: absolute; inset: 0; z-index: -1; border-radius: 12.5% / 5.8%;
   transform: translate(-50%, -3%) rotate(-10deg);
-  background: linear-gradient(160deg, #c3cbd8, #9aa6b8 38%, #7a879b 72%, #66728a);
-  box-shadow: inset 0 0 0 3px #d4d7dc, inset 0 0 0 4px rgba(0,0,0,0.28), inset 0 0 0 6px rgba(255,255,255,0.12), 0 40px 80px rgba(0,0,0,0.7);
+  border: 3px solid transparent;
+  background:
+    linear-gradient(112deg, transparent 28%, rgba(255,255,255,0.16) 40%, rgba(255,255,255,0.04) 50%, transparent 58%) padding-box,
+    radial-gradient(120% 60% at 20% 0%, rgba(255,255,255,0.22), transparent 60%) padding-box,
+    linear-gradient(170deg, #b9c2d0, #98a3b5 40%, #7c889c 75%, #6a7589) padding-box,
+    linear-gradient(135deg, #f1f3f6, #8b9097 18%, #dfe2e6 40%, #6f747b 62%, #e4e7eb 82%, #9a9fa6) border-box;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.25), inset 0 1px 2px rgba(255,255,255,0.35), 0 40px 80px rgba(0,0,0,0.7), 0 6px 14px rgba(0,0,0,0.35);
 }
 .phone-back::before, .phone-back::after {
-  content: ""; position: absolute; right: -1.2%; width: 1.3%; border-radius: 0 3px 3px 0;
-  background: linear-gradient(90deg, #63666c, #c9ccd1 55%, #84878d);
+  content: ""; position: absolute; right: calc(-1.2% - 3px); width: 1.3%; border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, #63666c, #d2d5da 55%, #84878d);
 }
 .phone-back::before { top: 19%; height: 10%; }
 .phone-back::after { top: 32%; height: 5.5%; }
 .phone-back .island {
   position: absolute; left: 6.5%; top: 2.9%; width: 28%; height: 36.2%; border-radius: 999px;
-  background: linear-gradient(160deg, #b6bfcd, #8995a9);
-  box-shadow: inset 0 0 0 2px #d9dde3, inset 0 0 0 3px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.25);
+  border: 1.5px solid transparent;
+  background:
+    linear-gradient(165deg, #a9b3c3, #8793a7 60%, #7a869a) padding-box,
+    linear-gradient(150deg, #f3f5f8, #7f858d 40%, #d8dce1 70%, #8a9097) border-box;
+  box-shadow: inset 0 2px 5px rgba(0,0,0,0.28), 0 1px 0 rgba(255,255,255,0.35), 0 3px 8px rgba(0,0,0,0.22);
 }
 .phone-back .lens, .phone-back .lens-s, .phone-back .flash { position: absolute; aspect-ratio: 1; border-radius: 50%; }
+.phone-back .lens, .phone-back .lens-s {
+  background: conic-gradient(from 210deg, #f4f6f8, #7d838c 22%, #e8eaee 45%, #646a73 68%, #dfe2e6 86%, #f4f6f8);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.45), 0 0 0 1px rgba(0,0,0,0.35);
+}
+.phone-back .lens::after, .phone-back .lens-s::after {
+  content: ""; position: absolute; inset: 13%; border-radius: 50%;
+  background:
+    radial-gradient(circle at 36% 32%, rgba(200, 215, 255, 0.55) 0 4%, transparent 5%),
+    radial-gradient(circle at 62% 66%, rgba(140, 90, 255, 0.28) 0 7%, transparent 9%),
+    radial-gradient(circle, #24304a 0 13%, #070910 15% 40%, #1a1d24 42% 48%, #030305 50% 86%, #2c3038 88%);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.9);
+}
+.phone-back .lens { left: 9%; width: 23%; }
+.phone-back .lens:nth-of-type(2) { top: 4.2%; }
+.phone-back .lens:nth-of-type(3) { top: 15.6%; }
+.phone-back .lens:nth-of-type(4) { top: 27%; }
+.phone-back .lens-s { left: 38%; width: 11%; }
+.phone-back .lens-s::after { inset: 17%; }
+.phone-back .lens-s.a { top: 7%; }
+.phone-back .lens-s.b { top: 18.4%; }
+.phone-back .flash { position: absolute; aspect-ratio: 1; border-radius: 50%; }
 .phone-back .lens {
   left: 9%; width: 23%;
   background:
