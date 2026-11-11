@@ -226,38 +226,17 @@ p { margin: 0; }
 .mock-front > .mock-frame { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
 .mock-front > .mock-screen { position: absolute; z-index: 1; left: 3.89%; top: 1.88%; width: 93.13%; height: 95.88%; overflow: hidden; border-radius: 15.5% / 7.4%; background: #000; }
 .mock-screen > img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
-.mac { position: relative; }
-.hero-mac { width: 94%; margin-left: auto; }
-.mac-lid {
-  position: relative; padding: 1.9% 1.9% 2.5%; border-radius: 2.6% / 4%; background: #0a0a0b;
-  box-shadow: 0 0 0 1px #4a4c51, 0 0 0 2.5px #c6c9ce, 0 0 0 3.5px #707378, inset 0 0 0 1px rgba(255,255,255,0.05);
-}
-.mac-screen { position: relative; overflow: hidden; border-radius: 0.6% / 1%; background: #000; container-type: inline-size; }
+.mac { position: relative; aspect-ratio: 487 / 294; filter: drop-shadow(0 50px 50px rgba(0,0,0,0.6)); }
+.hero-mac { width: 100%; }
+.mac-frame { position: absolute; inset: 0; z-index: 2; width: 100%; height: 100%; pointer-events: none; }
+.mac-screen { position: absolute; z-index: 1; left: 9.86%; top: 2.72%; width: 80.08%; height: 86.73%; overflow: hidden; background: #000; container-type: inline-size; }
 .mac-bar {
   display: flex; align-items: center; gap: 1.8cqw; height: 2.9cqw; padding: 0 1.7cqw; background: #161618;
   color: rgba(255,255,255,0.85); font: 500 1.15cqw/1 var(--font); white-space: nowrap; overflow: hidden;
 }
 .mac-bar b { font-weight: 700; }
 .mac-bar .r { margin-left: auto; }
-.mac-notch {
-  position: absolute; z-index: 5; top: 0; left: 50%; width: 11.5cqw; height: 2.9cqw; translate: -50% 0;
-  border-radius: 0 0 1cqw 1cqw; background: #0a0a0b;
-}
-.mac-notch::after {
-  content: ""; position: absolute; left: 50%; top: 45%; width: 0.75cqw; height: 0.75cqw; translate: -50% -50%; border-radius: 50%;
-  background: radial-gradient(circle at 35% 35%, #33415e, #07080b 62%);
-}
 .mac-view { position: relative; aspect-ratio: 1440 / 900; overflow: hidden; background: #050505; }
-.mac-base {
-  position: relative; width: 116%; margin-left: -8%; height: 0; padding-bottom: 3%;
-  border-radius: 0.5% 0.5% 6% 6% / 10% 10% 100% 100%;
-  background: linear-gradient(180deg, #f4f5f7 0%, #d6d8dc 16%, #babdc2 52%, #8c8f95 80%, #4a4c50 100%);
-  box-shadow: 0 34px 60px -16px rgba(0,0,0,0.95);
-}
-.mac-base::before {
-  content: ""; position: absolute; left: 50%; top: 0; width: 13%; height: 46%; translate: -50% 0;
-  border-radius: 0 0 40% 40% / 0 0 100% 100%; background: linear-gradient(180deg, #8f9298, #c3c5ca);
-}
 
 /* Sections */
 .band { padding-block: clamp(80px, 11vw, 150px); position: relative; }
@@ -656,20 +635,17 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     <div class="stage" data-stage>
       <div class="scene">
         <div class="mac hero-mac">
-          <div class="mac-lid">
-            <div class="mac-screen">
-              <div class="mac-bar" aria-hidden="true"><b>Convx</b><span>File</span><span>Edit</span><span>View</span><span>Playback</span><span>Window</span><span class="r" data-clock>Wed 4:26 PM</span></div>
-              <i class="mac-notch" aria-hidden="true"></i>
-              <div class="mac-view hero-deck" data-deck tabindex="0" role="button" aria-label="Show the next desktop screen">
+          <div class="mac-screen">
+            <div class="mac-bar" aria-hidden="true"><b>Convx</b><span>File</span><span>Edit</span><span>View</span><span>Playback</span><span>Window</span><span class="r" data-clock>Wed 4:26 PM</span></div>
+            <div class="mac-view hero-deck" data-deck tabindex="0" role="button" aria-label="Show the next desktop screen">
               <figure class="card" data-pos="0" data-name="Home"><img src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: the Home page with Top Picks for You, mood chips and the glass side bar"></figure>
               <figure class="card" data-pos="1" data-name="Player"><img src="assets/img/win-player.webp" width="1440" height="900" alt="Convx for Windows: the full-screen player with the vinyl design"></figure>
               <figure class="card" data-pos="2" data-name="Disc Studio"><img src="assets/img/disc-editor.webp" width="1600" height="1000" alt="Convx for Windows: Disc Studio, designing a CD covered in stickers"></figure>
               <figure class="card" data-pos="3" data-name="Moods &amp; Genres"><img src="assets/img/win-moods.webp" width="1440" height="900" alt="Convx for Windows: Moods and Genres tiles"></figure>
                 <span class="glare" aria-hidden="true"></span>
               </div>
-            </div>
           </div>
-          <div class="mac-base" aria-hidden="true"></div>
+          <img class="mac-frame" src="assets/img/macbook.webp" width="974" height="588" alt="">
         </div>
         <div class="mock hero-phone" data-phone tabindex="0" role="button" aria-label="Show the next Android screen">
           <img class="mock-back" src="assets/img/iphone-back.webp" width="600" height="1600" alt="">
