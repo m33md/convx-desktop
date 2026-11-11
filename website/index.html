@@ -160,7 +160,7 @@ p { margin: 0; }
 .hero-grid { display: grid; gap: 56px; align-items: center; }
 @media (min-width: 1000px) {
   .hero-grid { grid-template-columns: minmax(0, 4.4fr) minmax(0, 7.6fr); gap: 40px; }
-  .stage { margin-right: calc(-1 * min(7vw, 110px)); }
+  .stage { margin-right: calc(-1 * min(3vw, 40px)); }
 }
 .hero-copy { min-width: 0; }
 .hero h1 { margin: 0 0 30px; line-height: 0; }
@@ -176,31 +176,23 @@ p { margin: 0; }
   position: relative; transform-style: preserve-3d;
   transform: rotateX(calc(4deg + var(--rx, 0deg))) rotateY(calc(-9deg + var(--ry, 0deg)));
 }
-.hero-deck { position: relative; aspect-ratio: 1440 / 900; transform-style: preserve-3d; cursor: pointer; border-radius: 14px; }
-.card {
-  position: absolute; inset: 0; margin: 0; border-radius: 14px; overflow: hidden; background: #050505;
-  border: 1px solid rgba(255,255,255,0.14);
-  box-shadow: 0 50px 110px -24px rgba(0,0,0,0.9);
-  transition: transform 0.95s var(--spring), opacity 0.6s var(--ease), filter 0.6s var(--ease);
+.hero-deck { cursor: pointer; }
+.mac-view .card {
+  position: absolute; inset: 0; margin: 0; z-index: 1;
+  transform: translateX(100%); filter: brightness(1);
+  transition: transform 0.85s cubic-bezier(0.22, 0.9, 0.24, 1), filter 0.85s var(--ease);
 }
-.card img { width: 100%; height: 100%; object-fit: cover; }
-.card[data-pos="0"] { transform: translate3d(0, 0, 0); }
-.card[data-pos="1"] { transform: translate3d(5%, -8%, -110px) scale(0.95); opacity: 0.75; filter: brightness(0.62) saturate(0.85); border-color: rgba(255,255,255,0.2); }
-.card[data-pos="2"] { transform: translate3d(10%, -16%, -220px) scale(0.9); opacity: 0.4; filter: brightness(0.5) saturate(0.7); border-color: rgba(255,255,255,0.2); }
-.card[data-pos="3"] { transform: translate3d(14%, -22%, -320px) scale(0.85); opacity: 0; }
-.card[data-pos="out"] {
-  transform: translate3d(-8%, 18%, 140px) rotateX(-16deg) rotateZ(-3deg) scale(1.02); opacity: 0;
-  transition: transform 0.6s var(--ease), opacity 0.45s var(--ease);
-}
+.mac-view .card img { width: 100%; height: 100%; object-fit: cover; }
+.mac-view .card[data-pos="0"] { z-index: 2; transform: none; }
+.mac-view .card[data-pos="out"] { transform: translateX(-32%); filter: brightness(0.35); }
 .card.snap { transition: none !important; }
 .glare {
   position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
   background: radial-gradient(55% 65% at var(--gx, 30%) var(--gy, 15%), rgba(255,255,255,0.13), transparent 62%);
   opacity: var(--glare, 0.5); transition: opacity 0.5s var(--ease);
 }
-.hero-deck > .glare { transform: translateZ(1px); }
+.mac-view > .glare { z-index: 4; }
 .stage .hero-phone { position: absolute; left: -8%; bottom: -13%; width: 27%; transform: translateZ(110px); cursor: pointer; }
-.hero-phone .scr-box { position: relative; overflow: hidden; border-radius: 13% / 6%; aspect-ratio: 640 / 1378; background: #000; }
 .hero-phone .scr {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; aspect-ratio: auto;
   opacity: 0; transform: translateY(9%) scale(1.08); filter: blur(10px);
@@ -223,12 +215,57 @@ p { margin: 0; }
   box-shadow: 0 50px 120px -20px rgba(0,0,0,0.85), 0 0 0 1px rgba(0,0,0,0.8);
 }
 .screen img { width: 100%; height: auto; aspect-ratio: 1440 / 900; object-fit: cover; }
+/* Devices drawn around the real screenshots: a Galaxy S-style phone and a MacBook-style laptop. */
 .phone {
-  margin: 0; position: relative; padding: 6px; border-radius: 15% / 7%;
-  background: linear-gradient(150deg, #3a3a40, #121214 40%, #26262a);
-  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.16), 0 40px 90px rgba(0,0,0,0.75);
+  margin: 0; position: relative; padding: 1.1%; border-radius: 12.5% / 5.8%;
+  background: linear-gradient(135deg, #e4e6ea, #8d9097 20%, #d2d4d9 46%, #73767d 74%, #bfc2c8);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.4), inset 0 0 0 2px rgba(0,0,0,0.25), 0 40px 90px rgba(0,0,0,0.75);
 }
-.phone img { width: 100%; height: auto; aspect-ratio: 640 / 1378; object-fit: cover; border-radius: 13% / 6%; }
+.phone::before, .phone::after {
+  content: ""; position: absolute; right: -1.2%; width: 1.3%; border-radius: 0 3px 3px 0;
+  background: linear-gradient(90deg, #63666c, #c9ccd1 55%, #84878d);
+}
+.phone::before { top: 19%; height: 10%; }
+.phone::after { top: 32%; height: 5.5%; }
+.bezel { padding: 2.4%; border-radius: 11.7% / 5.4%; background: #030303; }
+.scr-box { position: relative; overflow: hidden; border-radius: 9.6% / 4.4%; aspect-ratio: 9 / 19.5; background: #000; }
+.scr-box img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 0; }
+.cam {
+  position: absolute; z-index: 3; top: 1.35%; left: 50%; width: 3.7%; aspect-ratio: 1; translate: -50% 0; border-radius: 50%;
+  background: radial-gradient(circle at 36% 34%, #3a4866 0, #0c0f15 42%, #000 72%); box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
+}
+.mac { position: relative; }
+.hero-mac { width: 94%; margin-left: auto; }
+.mac-lid {
+  position: relative; padding: 1.9% 1.9% 2.5%; border-radius: 2.6% / 4%; background: #0a0a0b;
+  box-shadow: 0 0 0 1px #4a4c51, 0 0 0 2.5px #c6c9ce, 0 0 0 3.5px #707378, inset 0 0 0 1px rgba(255,255,255,0.05);
+}
+.mac-screen { position: relative; overflow: hidden; border-radius: 0.6% / 1%; background: #000; container-type: inline-size; }
+.mac-bar {
+  display: flex; align-items: center; gap: 1.8cqw; height: 2.9cqw; padding: 0 1.7cqw; background: #161618;
+  color: rgba(255,255,255,0.85); font: 500 1.15cqw/1 var(--font); white-space: nowrap; overflow: hidden;
+}
+.mac-bar b { font-weight: 700; }
+.mac-bar .r { margin-left: auto; }
+.mac-notch {
+  position: absolute; z-index: 5; top: 0; left: 50%; width: 11.5cqw; height: 2.9cqw; translate: -50% 0;
+  border-radius: 0 0 1cqw 1cqw; background: #0a0a0b;
+}
+.mac-notch::after {
+  content: ""; position: absolute; left: 50%; top: 45%; width: 0.75cqw; height: 0.75cqw; translate: -50% -50%; border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #33415e, #07080b 62%);
+}
+.mac-view { position: relative; aspect-ratio: 1440 / 900; overflow: hidden; background: #050505; }
+.mac-base {
+  position: relative; width: 116%; margin-left: -8%; height: 0; padding-bottom: 3%;
+  border-radius: 0.5% 0.5% 6% 6% / 10% 10% 100% 100%;
+  background: linear-gradient(180deg, #f4f5f7 0%, #d6d8dc 16%, #babdc2 52%, #8c8f95 80%, #4a4c50 100%);
+  box-shadow: 0 34px 60px -16px rgba(0,0,0,0.95);
+}
+.mac-base::before {
+  content: ""; position: absolute; left: 50%; top: 0; width: 13%; height: 46%; translate: -50% 0;
+  border-radius: 0 0 40% 40% / 0 0 100% 100%; background: linear-gradient(180deg, #8f9298, #c3c5ca);
+}
 
 /* Sections */
 .band { padding-block: clamp(80px, 11vw, 150px); position: relative; }
@@ -525,7 +562,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   .hero-copy > .title { animation: none; }
   .title svg { animation: draw-in 1.1s var(--ease) 0.12s backwards; }
   .title .t-dot { animation: dot-in 0.7s var(--spring) 0.95s backwards; }
-  .hero-deck { animation: deck-in 1.3s var(--spring) 0.25s backwards; }
+  .hero-mac { animation: deck-in 1.3s var(--spring) 0.25s backwards; }
   .stage .hero-phone { animation: phone-in 1.2s var(--spring) 0.5s backwards; }
   .stage-cap { animation: rise-in 0.8s var(--ease) 1s backwards; }
   @keyframes rise-in { from { opacity: 0; translate: 0 22px; filter: blur(6px); } }
@@ -626,18 +663,30 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     </div>
     <div class="stage" data-stage>
       <div class="scene">
-        <div class="hero-deck" data-deck tabindex="0" role="button" aria-label="Show the next Windows screen">
-          <figure class="card" data-pos="0" data-name="Home"><img src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: the Home page with Top Picks for You, mood chips and the glass side bar"></figure>
-          <figure class="card" data-pos="1" data-name="Player"><img src="assets/img/win-player.webp" width="1440" height="900" alt="Convx for Windows: the full-screen player with the vinyl design"></figure>
-          <figure class="card" data-pos="2" data-name="Disc Studio"><img src="assets/img/disc-editor.webp" width="1600" height="1000" alt="Convx for Windows: Disc Studio, designing a CD covered in stickers"></figure>
-          <figure class="card" data-pos="3" data-name="Moods &amp; Genres"><img src="assets/img/win-moods.webp" width="1440" height="900" alt="Convx for Windows: Moods and Genres tiles"></figure>
-          <span class="glare" aria-hidden="true"></span>
+        <div class="mac hero-mac">
+          <div class="mac-lid">
+            <div class="mac-screen">
+              <div class="mac-bar" aria-hidden="true"><b>Convx</b><span>File</span><span>Edit</span><span>View</span><span>Playback</span><span>Window</span><span class="r" data-clock>Wed 4:26 PM</span></div>
+              <i class="mac-notch" aria-hidden="true"></i>
+              <div class="mac-view hero-deck" data-deck tabindex="0" role="button" aria-label="Show the next desktop screen">
+              <figure class="card" data-pos="0" data-name="Home"><img src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: the Home page with Top Picks for You, mood chips and the glass side bar"></figure>
+              <figure class="card" data-pos="1" data-name="Player"><img src="assets/img/win-player.webp" width="1440" height="900" alt="Convx for Windows: the full-screen player with the vinyl design"></figure>
+              <figure class="card" data-pos="2" data-name="Disc Studio"><img src="assets/img/disc-editor.webp" width="1600" height="1000" alt="Convx for Windows: Disc Studio, designing a CD covered in stickers"></figure>
+              <figure class="card" data-pos="3" data-name="Moods &amp; Genres"><img src="assets/img/win-moods.webp" width="1440" height="900" alt="Convx for Windows: Moods and Genres tiles"></figure>
+                <span class="glare" aria-hidden="true"></span>
+              </div>
+            </div>
+          </div>
+          <div class="mac-base" aria-hidden="true"></div>
         </div>
         <div class="phone hero-phone" data-phone tabindex="0" role="button" aria-label="Show the next Android screen">
-          <div class="scr-box">
-            <img class="scr is-on" src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
-            <img class="scr" src="assets/img/phone-now-playing.webp" width="640" height="1399" alt="Convx on Android: the now playing screen">
-            <span class="glare" aria-hidden="true"></span>
+          <div class="bezel">
+            <div class="scr-box">
+                <img class="scr is-on" src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
+                <img class="scr" src="assets/img/phone-now-playing.webp" width="640" height="1399" alt="Convx on Android: the now playing screen">
+                <i class="cam" aria-hidden="true"></i>
+                <span class="glare" aria-hidden="true"></span>
+            </div>
           </div>
         </div>
       </div>
@@ -696,7 +745,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           <div class="plat-foot">
             <a class="btn btn-glass glass" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Get it on Android</span></a>
           </div>
-          <div class="shot"><figure class="phone"><img src="assets/img/phone-now-playing.webp" width="640" height="1399" loading="lazy" alt="Convx on Android: the now playing screen with a lossless badge"></figure></div>
+          <div class="shot"><figure class="phone"><div class="bezel"><div class="scr-box"><img src="assets/img/phone-now-playing.webp" width="640" height="1399" loading="lazy" alt="Convx on Android: the now playing screen with a lossless badge"><i class="cam" aria-hidden="true"></i></div></div></figure></div>
         </article>
         <article class="plat plat-windows">
           <div>
@@ -1036,6 +1085,13 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         if (e.isIntersecting) auto = setInterval(() => { (turn++ % 2 ? flipPhone : flipDeck)(); }, 3200);
       }).observe(stage);
     }
+  }
+
+  /* The laptop's menu bar shows the visitor's own time. */
+  const clock = document.querySelector('[data-clock]');
+  if (clock) {
+    const t = new Date();
+    clock.textContent = t.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
   }
 
   /* Stars, like the Convx poster. */
