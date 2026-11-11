@@ -238,6 +238,53 @@ p { margin: 0; }
 .mac-bar .r { margin-left: auto; }
 .mac-view { position: relative; aspect-ratio: 1440 / 900; overflow: hidden; background: #050505; }
 
+/* Tour: the laptop holds still while the steps scroll past it, and each step brings up its own screen. */
+.tour { display: grid; }
+.tour-stage { position: sticky; top: 0; z-index: 2; padding: 72px 0 18px; background: var(--black); }
+.tour-stage::after {
+  content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 56px; pointer-events: none;
+  background: linear-gradient(var(--black), transparent);
+}
+.tour-dev { width: min(100%, 600px); margin: 0 auto; }
+.tour-mac { filter: drop-shadow(0 40px 40px rgba(0,0,0,0.55)); }
+.tour-view .tour-shot {
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: 0; transition: opacity 0.5s var(--ease);
+}
+.tour-view .tour-shot.is-on { opacity: 1; z-index: 1; }
+.has-gsap .tour-view .tour-shot { transition: none; }
+.tour-meter { display: flex; align-items: center; gap: 10px; margin: 20px 10% 12px; font-size: 12px; color: var(--label-3); }
+.tour-meter b { color: var(--label); font-weight: 500; }
+.tour-meter i { width: 30px; height: 1px; background: currentColor; }
+.tour-meter em { margin-left: auto; font-style: normal; color: var(--label-2); }
+.tour-bar { height: 2px; margin: 0 10%; border-radius: 2px; background: rgba(255,255,255,0.12); overflow: hidden; }
+.tour-bar i { display: block; height: 100%; background: var(--red); transform-origin: 0 50%; transform: scaleX(var(--p, 0.036)); }
+.tour-steps { list-style: none; margin: 0; padding: 2vh 0 16vh; }
+.tour-step {
+  min-height: 40vh; display: flex; flex-direction: column; justify-content: center; padding: 32px 0;
+  border-top: 1px solid rgba(255,255,255,0.07); opacity: 0.3; cursor: pointer; transition: opacity 0.5s var(--ease);
+}
+.tour-step:first-child { border-top: 0; }
+.tour-step:hover { opacity: 0.55; }
+.tour-step.is-on { opacity: 1; cursor: default; }
+.tour-num { display: flex; gap: 10px; margin-bottom: 12px; font-size: 12px; color: var(--red); }
+.tour-num b { font-weight: 500; color: var(--label-3); }
+.tour-step h3 { font-size: clamp(26px, 3.2vw, 40px); line-height: 1.08; letter-spacing: -0.025em; transition: transform 0.7s var(--spring); }
+.tour-step p { margin: 14px 0 0; color: var(--label-2); max-width: 30em; transition: transform 0.7s var(--spring) 0.04s; }
+.tour-step.is-on h3, .tour-step.is-on p { transform: translateX(6px); }
+@media (min-width: 960px) {
+  .tour { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(48px, 6vw, 88px); align-items: start; }
+  .tour-stage { height: 100vh; height: 100svh; padding: 0; display: flex; flex-direction: column; justify-content: center; background: none; }
+  .tour-stage::after { display: none; }
+  .tour-dev { width: 100%; }
+  .tour-steps { padding: 22vh 0; }
+  .tour-step { min-height: 56vh; }
+}
+@media (max-width: 959px) and (max-height: 620px) {
+  .tour-stage { position: relative; }
+  .tour-stage::after { display: none; }
+}
+
 /* Sections */
 .band { padding-block: clamp(80px, 11vw, 150px); position: relative; }
 .band + .band { border-top: 1px solid rgba(255,255,255,0.06); }
@@ -542,27 +589,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   @keyframes deck-in { from { opacity: 0; transform: translate3d(10%, 8%, -320px) rotateY(16deg); } }
   @keyframes phone-in { from { opacity: 0; transform: translate3d(-40%, 30%, 110px) rotate(-8deg); } }
 
-  /* Sections ease in as they scroll into view, and the hero drifts away. */
-  @supports (animation-timeline: view()) {
-    .section-head, #lyrics .split > div, .plat, .tile, .studio-grid > div, .rack, .dl, .oss, .community, .foot {
-      animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% cover 26%;
-    }
-    .plat:nth-child(2), .studio-grid > div:nth-child(2), .dl:nth-child(2) { animation-range: entry 8% cover 32%; }
-    .tile:nth-child(2) { animation-range: entry 6% cover 30%; }
-    .tile:nth-child(3) { animation-range: entry 0% cover 26%; }
-    .tile:nth-child(4) { animation-range: entry 6% cover 30%; }
-    .tile:nth-child(5) { animation-range: entry 0% cover 26%; }
-    .tile:nth-child(6) { animation-range: entry 8% cover 32%; }
-    .lyrics-demo, .plat-windows .screen, .studio-shot .screen {
-      animation: tilt-in linear both; animation-timeline: view(); animation-range: entry 0% cover 38%;
-    }
-    .stage { animation: drift-away linear both; animation-timeline: scroll(root); animation-range: 0 90vh; }
-    .hero-copy { animation: copy-away linear both; animation-timeline: scroll(root); animation-range: 0 80vh; }
-    @keyframes reveal { from { opacity: 0.12; translate: 0 56px; scale: 0.97; } to { opacity: 1; translate: 0 0; scale: 1; } }
-    @keyframes tilt-in { from { opacity: 0.3; rotate: x 18deg; translate: 0 50px; scale: 0.94; } to { opacity: 1; rotate: x 0deg; translate: 0 0; scale: 1; } }
-    @keyframes drift-away { to { translate: 0 -70px; scale: 0.94; opacity: 0.25; } }
-    @keyframes copy-away { to { translate: 0 -40px; opacity: 0.2; } }
-  }
+  /* Scroll motion (section reveals, the hero drifting away, the tour) is driven by GSAP ScrollTrigger below. */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -606,8 +633,10 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       <span class="puck" aria-hidden="true"></span>
       <a href="#lyrics">Lyrics</a>
       <a href="#apps">Phone &amp; PC</a>
+      <a href="#tour">Tour</a>
       <a href="#features">Features</a>
       <a href="#disc-studio">Disc Studio</a>
+      <a href="docs.html">Docs</a>
     </div>
     <a class="btn btn-red nav-cta" href="#download">Download</a>
   </div>
@@ -734,6 +763,62 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           </div>
           <figure class="screen"><img src="assets/img/win-player.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: the full-screen player with the vinyl design and a blurred cover background"></figure>
         </article>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="tour">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow" style="margin:0">Tour</p>
+        <h2>Fourteen things to try first.</h2>
+        <p class="lede">Scroll, and the screen follows along. Everything here is Convx for Windows, running for real.</p>
+      </div>
+      <div class="tour" data-tour>
+        <div class="tour-stage">
+          <div class="tour-dev">
+            <div class="mac tour-mac">
+              <div class="mac-screen">
+                <div class="mac-bar" aria-hidden="true"><b>Convx</b><span>File</span><span>Edit</span><span>View</span><span>Playback</span><span>Window</span><span class="r" data-clock>Wed 4:26 PM</span></div>
+                <div class="mac-view tour-view">
+                <img class="tour-shot is-on" src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: The Home page with Top Picks for You and mood chips">
+                <img class="tour-shot" src="assets/img/tour-search.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Search results for an artist: top result, songs, videos and albums">
+                <img class="tour-shot" src="assets/img/tour-menu.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: A song menu with Play next, Start radio, AI DJ Mix and Track insights">
+                <img class="tour-shot" src="assets/img/win-moods.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Moods and Genres tiles">
+                <img class="tour-shot" src="assets/img/win-player.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: The full-screen player with the vinyl design">
+                <img class="tour-shot" src="assets/img/tour-diy.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Editing the player with stickers around the artwork">
+                <img class="tour-shot" src="assets/img/tour-eq.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Convx Equalizer with ten bands and a preamp">
+                <img class="tour-shot" src="assets/img/tour-ai-dj.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: An AI DJ Mix built from one song">
+                <img class="tour-shot" src="assets/img/tour-recognize.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Recognize Music with a big red mic button">
+                <img class="tour-shot" src="assets/img/tour-stats.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Stats with top songs, artists and albums">
+                <img class="tour-shot" src="assets/img/tour-library.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Your Library with playlists shown as CDs">
+                <img class="tour-shot" src="assets/img/tour-vinyl.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Disc Studio, designing a pink vinyl with sunflowers">
+                <img class="tour-shot" src="assets/img/tour-party.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: A party with a code, ready for friends to join">
+                <img class="tour-shot" src="assets/img/tour-accounts.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: Accounts and Services settings">
+                </div>
+              </div>
+              <img class="mac-frame" src="assets/img/macbook.webp" width="974" height="588" loading="lazy" alt="">
+            </div>
+            <div class="tour-meter mono" aria-hidden="true"><b data-tour-n>01</b><i></i><span>14</span><em data-tour-name>Home</em></div>
+            <div class="tour-bar" aria-hidden="true"><i data-tour-bar></i></div>
+          </div>
+        </div>
+        <ol class="tour-steps">
+        <li class="tour-step is-on"><span class="tour-num mono">01 <b>Home</b></span><h3>A Home that learns your taste.</h3><p>Top Picks, Speed dial and mood chips, built from what you play. Sign in to YouTube Music and your own mixes and playlists show up too.</p></li>
+        <li class="tour-step"><span class="tour-num mono">02 <b>Search</b></span><h3>Find anything in one search.</h3><p>Songs, videos, albums, artists and playlists come back together, with the best match on top.</p></li>
+        <li class="tour-step"><span class="tour-num mono">03 <b>Song menu</b></span><h3>Right-click any song.</h3><p>Play it next, start a radio, pin it to Speed dial, or turn it into an AI DJ Mix. Track insights tell you more about it.</p></li>
+        <li class="tour-step"><span class="tour-num mono">04 <b>Moods &amp; Genres</b></span><h3>A mood for every moment.</h3><p>Chill, Focus, Workout, Sleep and dozens of genres, each a shelf of playlists picked for the moment.</p></li>
+        <li class="tour-step"><span class="tour-num mono">05 <b>Player</b></span><h3>Pick your player.</h3><p>Card, Vinyl, Clover and two more designs, each with the cover’s colours filling the screen behind it. This one spins like a record.</p></li>
+        <li class="tour-step"><span class="tour-num mono">06 <b>Make your own</b></span><h3>Decorate the player.</h3><p>Drop stickers and emoji around the artwork, then size, turn and flip them until it feels like yours.</p></li>
+        <li class="tour-step"><span class="tour-num mono">07 <b>Sound</b></span><h3>Tune the sound.</h3><p>A simple three-way dial or ten bands with a preamp. Import a ParametricEQ profile for your headphones, or add spatial audio.</p></li>
+        <li class="tour-step"><span class="tour-num mono">08 <b>AI DJ Mix</b></span><h3>One song, a whole set.</h3><p>Start from a song, add a vibe if you like, and get a set. Concert mode shapes it like a show: an opener, rising energy, a peak and a closer.</p></li>
+        <li class="tour-step"><span class="tour-num mono">09 <b>Recognize</b></span><h3>What’s this song?</h3><p>Click the mic and Convx listens, names the song and keeps a history of everything it found.</p></li>
+        <li class="tour-step"><span class="tour-num mono">10 <b>Stats &amp; Replay</b></span><h3>See what you really play.</h3><p>Your top songs, artists and albums for a week, a month or all time, and a Replay that sums up your year.</p></li>
+        <li class="tour-step"><span class="tour-num mono">11 <b>Library</b></span><h3>Your library, on CDs.</h3><p>Every playlist gets a jewel-case cover Convx draws for it. Liked Songs, downloads and your mixes sit up top.</p></li>
+        <li class="tour-step"><span class="tour-num mono">12 <b>Disc Studio</b></span><h3>Design the disc.</h3><p>Make a CD or a vinyl for any playlist with pictures, words, patterns, a brush and over 4,000 stickers. The playlist wears it as its cover.</p></li>
+        <li class="tour-step"><span class="tour-num mono">13 <b>Listen Together</b></span><h3>Press play together.</h3><p>Start a party and share the code. Everyone who joins hears the same song at the same moment, on phones and PCs.</p></li>
+        <li class="tour-step"><span class="tour-num mono">14 <b>Accounts</b></span><h3>Bring your accounts, if you want.</h3><p>Link YouTube Music, Spotify playlists, Last.fm, ListenBrainz and Discord. Every one is optional. Convx works without an account.</p></li>
+        </ol>
       </div>
     </div>
   </section>
@@ -936,6 +1021,9 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     </div>
     <nav class="foot-links" aria-label="Footer">
       <a href="#download">Download</a>
+      <a href="docs.html">Docs</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="privacy.html">Privacy</a>
       <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
       <a href="https://github.com/m33md/convx-desktop">Windows source</a>
       <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
@@ -945,6 +1033,8 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   </div>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
 <script>
 (() => {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -1057,11 +1147,10 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   }
 
   /* The laptop's menu bar shows the visitor's own time. */
-  const clock = document.querySelector('[data-clock]');
-  if (clock) {
-    const t = new Date();
-    clock.textContent = t.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  }
+  const now = new Date();
+  document.querySelectorAll('[data-clock]').forEach(c => {
+    c.textContent = now.toLocaleDateString('en-US', { weekday: 'short' }) + ' ' + now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  });
 
   /* Stars, like the Convx poster. */
   const canvas = document.querySelector('.stars');
@@ -1101,7 +1190,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   }
 
   /* Nav puck that springs to the section you're reading. */
-  const links = [...document.querySelectorAll('.nav-links a')];
+  const links = [...document.querySelectorAll('.nav-links a[href^="#"]')];
   const puck = document.querySelector('.puck');
   const movePuck = a => {
     links.forEach(l => l.classList.toggle('on', l === a));
@@ -1293,6 +1382,81 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     const y = scrollY;
     if (Math.abs(y - lastY) > 6) { navEl.classList.toggle('tucked', y > lastY && y > 420); lastY = y; }
   }, { passive: true });
+
+  /* Tour: the step crossing the focus line leads, and the laptop brings up its screen.
+     The focus line is the middle of the window, or on a phone the middle of what the laptop leaves free. */
+  const tour = document.querySelector('[data-tour]');
+  const gs = window.gsap && window.ScrollTrigger ? window.gsap : null;
+  if (gs) { gs.registerPlugin(ScrollTrigger); document.documentElement.classList.add('has-gsap'); }
+  if (tour) {
+    const steps = [...tour.querySelectorAll('.tour-step')], shots = [...tour.querySelectorAll('.tour-shot')], n = steps.length;
+    const stageEl = tour.querySelector('.tour-stage'), num = tour.querySelector('[data-tour-n]'), nameEl = tour.querySelector('[data-tour-name]'), bar = tour.querySelector('[data-tour-bar]');
+    const names = steps.map(s => s.querySelector('.tour-num b').textContent);
+    const wide = matchMedia('(min-width: 960px)');
+    const focus = () => wide.matches || getComputedStyle(stageEl).position !== 'sticky' ? innerHeight / 2 : (stageEl.offsetHeight + innerHeight) / 2;
+    let cur = 0;
+    const setBar = p => bar.style.setProperty('--p', Math.min(1, Math.max(0.5 / n, p)).toFixed(4));
+    const go = i => {
+      if (i === cur) return;
+      const prev = cur, dir = i > prev ? 1 : -1, inc = shots[i], out = shots[prev];
+      cur = i;
+      steps.forEach((s, k) => s.classList.toggle('is-on', k === i));
+      shots.forEach(s => s.classList.toggle('is-on', s === inc));
+      num.textContent = String(i + 1).padStart(2, '0');
+      nameEl.textContent = names[i];
+      if (!gs) return;
+      gs.killTweensOf(shots);
+      shots.forEach(s => { if (s !== inc && s !== out) gs.set(s, { opacity: 0, zIndex: 0, clearProps: 'transform,filter,clipPath' }); });
+      if (reduce) { gs.set(out, { opacity: 0 }); gs.set(inc, { opacity: 1, zIndex: 2 }); return; }
+      gs.set(out, { zIndex: 1 });
+      gs.fromTo(inc, { opacity: 1, zIndex: 2, scale: 1.06, clipPath: dir > 0 ? 'inset(100% 0% 0% 0%)' : 'inset(0% 0% 100% 0%)' },
+        { scale: 1, clipPath: 'inset(0% 0% 0% 0%)', duration: 0.9, ease: 'expo.out' });
+      gs.to(out, { scale: 0.94, yPercent: -5 * dir, filter: 'brightness(0.35)', duration: 0.9, ease: 'expo.out',
+        onComplete: () => gs.set(out, { opacity: 0, clearProps: 'transform,filter' }) });
+    };
+    if (gs) {
+      gs.set(shots, { opacity: (k) => (k === 0 ? 1 : 0) });
+      steps.forEach((s, i) => ScrollTrigger.create({
+        trigger: s, start: () => 'top ' + focus() + 'px', end: () => 'bottom ' + focus() + 'px',
+        onToggle: self => { if (self.isActive) go(i); },
+        onUpdate: self => { if (self.isActive) setBar((i + self.progress) / n); }
+      }));
+    } else {
+      let ticking = false;
+      const update = () => {
+        ticking = false;
+        const f = focus();
+        steps.forEach((s, i) => {
+          const r = s.getBoundingClientRect();
+          if (r.top <= f && r.bottom > f) { go(i); setBar((i + (f - r.top) / r.height) / n); }
+        });
+      };
+      addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(update); } }, { passive: true });
+      update();
+    }
+    steps.forEach(s => s.addEventListener('click', () => {
+      const r = s.getBoundingClientRect();
+      scrollTo({ top: scrollY + r.top + r.height / 2 - focus(), behavior: reduce ? 'auto' : 'smooth' });
+    }));
+  }
+
+  /* GSAP: sections rise in as they arrive, and the hero drifts back as you leave it. */
+  if (gs && !reduce) {
+    const rise = (sel, from, stagger) => {
+      const els = gs.utils.toArray(sel);
+      if (!els.length) return;
+      gs.set(els, { opacity: 0, ...from });
+      const show = batch => gs.to(batch, { opacity: 1, x: 0, y: 0, scale: 1, rotationX: 0, duration: 1.1, ease: 'expo.out', stagger, overwrite: true, clearProps: 'transform,opacity' });
+      ScrollTrigger.batch(els, { start: 'top 90%', once: true, onEnter: show, onEnterBack: show, onLeave: show });
+    };
+    rise('.section-head, #lyrics .split > div:first-child, .plat, .studio-grid > div, .oss, .community, .foot', { y: 56, scale: 0.97 }, 0.12);
+    rise('.tile, .dl', { y: 64, scale: 0.96 }, 0.09);
+    rise('.tour-stage', { y: 40 }, 0);
+    rise('.lyrics-demo, .studio-shot .screen', { y: 50, scale: 0.94, rotationX: 18, transformPerspective: 1400 }, 0);
+    gs.to('.stage', { y: -70, scale: 0.94, opacity: 0.25, ease: 'none', scrollTrigger: { start: 0, end: () => innerHeight * 0.9, scrub: 0.4 } });
+    gs.to('.hero-copy', { y: -40, opacity: 0.2, ease: 'none', scrollTrigger: { start: 0, end: () => innerHeight * 0.8, scrub: 0.4 } });
+  }
+  if (gs && document.fonts) document.fonts.ready.then(() => ScrollTrigger.refresh());
 
   /* Disc rack: repeat the discs so the slide loops without a gap. */
   const rack = document.querySelector('[data-rack]');

@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Docs · Convx</title>
+<meta name="description" content="How to install and use Convx for Windows: sign-in, importing playlists, lyrics, AutoMix, modules, Disc Studio and more.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/pages.css">
+</head>
+<body>
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-bar glass">
+    <a class="brand" href="index.html" aria-label="Convx home">
+      <img src="assets/convx-mark.svg" width="30" height="30" alt="">
+      <img src="assets/convx-word.svg" width="79" height="15" alt="">
+    </a>
+    <div class="nav-links">
+      <a href="index.html#tour">Tour</a>
+      <a href="index.html#features">Features</a>
+      <a href="docs.html" aria-current="page">Docs</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+    <a class="btn btn-red" href="index.html#download">Download</a>
+  </div>
+</nav>
+
+<header class="wrap page-head">
+  <p class="eyebrow">Docs</p>
+  <h1>Getting the most out of Convx.</h1>
+  <p class="lede">Everything in Convx for Windows, from the first launch to building it yourself. Settings paths look like <span class="path">Settings › Playback &amp; Audio</span>.</p>
+  
+  <div class="tabs" role="navigation" aria-label="Help pages"><a href="docs.html" aria-current="page">Docs</a><a href="faq.html">Q&amp;A</a><a href="privacy.html">Privacy</a></div>
+</header>
+
+<main class="wrap page-body">
+    <nav class="toc" aria-label="On this page">
+      <p>On this page</p>
+      <ol>
+        <li><a href="#install">Install</a></li>
+        <li><a href="#first-steps">First steps</a></li>
+        <li><a href="#bring-music">Bring your music</a></li>
+        <li><a href="#playing">Playing</a></li>
+        <li><a href="#lyrics">Lyrics</a></li>
+        <li><a href="#sound">Sound and AutoMix</a></li>
+        <li><a href="#looks">Player and looks</a></li>
+        <li><a href="#modules">Modules</a></li>
+        <li><a href="#disc-studio">Disc Studio</a></li>
+        <li><a href="#together">Listen Together</a></li>
+        <li><a href="#accounts">Discord and scrobbling</a></li>
+        <li><a href="#data">Backup and storage</a></li>
+        <li><a href="#troubleshooting">Troubleshooting</a></li>
+        <li><a href="#build">Build it yourself</a></li>
+      </ol>
+    </nav>
+    <div class="doc">
+      <section id="install">
+        <h2>Install</h2>
+        <h3>On Windows</h3>
+        <ol class="steps">
+          <li>Download <code>Convx-Setup-&lt;version&gt;.exe</code> from the <a href="https://github.com/m33md/convx-desktop/releases/latest">latest release</a>.</li>
+          <li>Run it. If Windows says it protected your PC, click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
+          <li>Open Convx from the Start menu.</li>
+        </ol>
+        <p style="margin-top:16px">The same page has an <code>.msi</code> installer, and a portable <code>.zip</code> that runs without installing. Convx needs Windows 10 or newer.</p>
+        <h3>On Android</h3>
+        <ol class="steps">
+          <li>Download the APK from <a href="https://github.com/cosmictaserdev-creator/Convx/releases">Convx’s releases</a>.</li>
+          <li>Open it, and allow your browser or file manager to install apps if Android asks.</li>
+        </ol>
+        <p style="margin-top:16px">The phone app needs Android 8.0 or newer. The rest of these docs follow Convx for Windows; the phone app has the same features, in the phone’s own menus.</p>
+      </section>
+
+      <section id="first-steps">
+        <h2>First steps</h2>
+        <p>Convx works straight away: Home, search, moods and the player need no account. To bring your own YouTube Music library, playlists and recommendations, sign in.</p>
+        <ol class="steps">
+          <li>Open <span class="path">Settings › Accounts &amp; Services › YouTube Music</span>.</li>
+          <li>Click <strong>Log in</strong>. Convx opens a browser window with Google’s sign-in page; sign in there as you normally would.</li>
+          <li>If your Google account has more than one YouTube channel, pick the one for your library, likes and playlists. You can switch later.</li>
+        </ol>
+        <p style="margin-top:16px">With <strong>Auto sync with account</strong>, your YouTube Music likes, albums, artists and playlists come into Convx, and what you like or save in Convx goes back. <strong>More content</strong> adds recommendations from your account to Home. If the browser sign-in doesn’t suit you, <strong>Login with token</strong> takes the token from the phone app, or a browser’s cookie for music.youtube.com.</p>
+      </section>
+
+      <section id="bring-music">
+        <h2>Bring your music</h2>
+        <h3>From Spotify</h3>
+        <p>Link your account in <span class="path">Settings › Accounts &amp; Services › Spotify</span> to see your Spotify playlists and Liked Songs in the side bar, or use <strong>Import from Spotify</strong> to copy them into your library. Without Premium, or if Spotify won’t answer, export your playlists as CSV files from <a href="https://exportify.net">exportify.net</a> and import them in <span class="path">Settings › Privacy &amp; Storage › Backup &amp; restore › Import a CSV playlist</span>.</p>
+        <p>Each song is found on YouTube Music by its title, artist and length. Songs with no close match are skipped, and Convx tells you how many.</p>
+        <h3>From Apple Music, files and playlists</h3>
+        <ul>
+          <li><strong>Apple Music:</strong> import a playlist from its link, or from an export, in <span class="path">Settings › Accounts &amp; Services › Apple Music import</span>.</li>
+          <li><strong>CSV and M3U playlists:</strong> <span class="path">Settings › Privacy &amp; Storage › Backup &amp; restore</span>.</li>
+          <li><strong>Your own music files:</strong> add folders in <span class="path">Settings › Library &amp; Content › Music folders</span>. SMB and WebDAV network shares work too, and you can leave folders out.</li>
+        </ul>
+      </section>
+
+      <section id="playing">
+        <h2>Playing</h2>
+        <ul>
+          <li><strong>Right-click any song</strong> to play it next, add it to the queue, start a radio, make an AI DJ Mix from it, see track insights, pin it to Speed dial, download it, or go to its artist or album.</li>
+          <li><strong>Downloads</strong> play with no connection and live in Library under Downloaded. Turn on <strong>Auto download on like</strong> to keep every liked song, and <strong>Save downloads to Music folder</strong> for copies in <code>Music\Convx</code>.</li>
+          <li><strong>The queue</strong> can carry on with similar songs when it ends, come back after a restart, and remember shuffle and repeat. Find these in <span class="path">Settings › Playback &amp; Audio</span>.</li>
+          <li><strong>Media keys</strong> and the play buttons on Convx’s taskbar thumbnail work while Convx is in the background.</li>
+          <li><strong>Recognize</strong> listens through your microphone and names the song playing around you, with a history of what it found.</li>
+        </ul>
+      </section>
+
+      <section id="lyrics">
+        <h2>Lyrics</h2>
+        <p>Convx asks every lyrics source at once and shows the first good answer straight away. When a word-timed version arrives, it takes over: letters fill as they’re sung and the line you’re on lifts.</p>
+        <ul>
+          <li><strong>Style:</strong> 13 lyrics styles, plus position, auto-scroll and swipe-to-skip, in <span class="path">Settings › Player &amp; Lyrics › Lyrics style</span>. Font, size, glow and blur are in <strong>Lyrics effects</strong>.</li>
+          <li><strong>Sources:</strong> choose and order the providers Convx asks in <strong>Sources &amp; priority</strong>. A PaxSenix or Spicy Lyrics key unlocks more word-synced lyrics.</li>
+          <li><strong>Romanization:</strong> show lyrics in Latin letters, under the original or in its place.</li>
+          <li><strong>Translation:</strong> add an AI provider and your own API key in <strong>AI lyrics translation</strong>, then turn it on from the lyrics menu in the player. Each song keeps its translation, so it’s only paid for once per language.</li>
+          <li><strong>Fixing a song:</strong> from the lyrics menu, nudge the timing, search for other lyrics, or edit them.</li>
+        </ul>
+      </section>
+
+      <section id="sound">
+        <h2>Sound and AutoMix</h2>
+        <h3>Equalizer</h3>
+        <p><span class="path">Settings › Playback &amp; Audio › Equalizer</span> has a <strong>Simple</strong> three-way dial for bass, mids and treble, and an <strong>Advanced</strong> view with ten bands and a preamp. Turn the preamp down as far as your biggest boost so loud parts don’t distort. <strong>Import Profile</strong> loads a ParametricEQ <code>.txt</code> preset made for your headphones, and <strong>Spatial audio</strong> widens stereo for an out-of-the-head feel.</p>
+        <p>The same section has audio quality, audio normalization to even out loud and quiet songs, skip silence, and the sound output to use.</p>
+        <h3>AutoMix</h3>
+        <p>In <span class="path">Settings › Playback &amp; Audio › Song transitions</span>, pick <strong>AutoMix</strong> or a plain crossfade. AutoMix measures each song’s tempo and key, lines up the beats, sweeps filters and plans the handover like a DJ. <strong>Creative transitions</strong> add reverb, delay, echo freezes and tape stops. Tempo and pitch can be changed for the song playing, from the player.</p>
+      </section>
+
+      <section id="looks">
+        <h2>Player and looks</h2>
+        <ul>
+          <li><strong>Player design:</strong> Card, Vinyl, Clover and the Apple Music designs, with a background of gradient, blur, glow, mesh or glass, and a seek bar that’s default, wavy, slim or a waveform. <span class="path">Settings › Player &amp; Lyrics › Player design</span>.</li>
+          <li><strong>Decorate the player:</strong> add stickers, emoji and images around the artwork, then move, size, turn and flip them.</li>
+          <li><strong>Custom player icons:</strong> use your own images for the player’s buttons.</li>
+          <li><strong>Liquid Glass:</strong> blur, lens and highlights in <span class="path">Settings › Appearance › Liquid Glass</span>. On a slower PC, <strong>Reduce live blur</strong> helps.</li>
+          <li><strong>App font:</strong> Plus Jakarta Sans by default, a handful of others, or install your own <code>.ttf</code> or <code>.otf</code>.</li>
+          <li><strong>Home:</strong> choose the tab Convx opens on, show or hide the hero card and mood filters, and reorder Home’s sections.</li>
+          <li><strong>Presets:</strong> save a complete look, apply it later, or share it as a file.</li>
+        </ul>
+      </section>
+
+      <section id="modules">
+        <h2>Modules</h2>
+        <p>Modules let Convx play songs from other sources, often in lossless FLAC, before falling back to YouTube Music. They work the same way as on the phone.</p>
+        <ol class="steps">
+          <li>Open <span class="path">Settings › Library &amp; Content › Modules</span>.</li>
+          <li>Click <strong>Add module source</strong> and paste an 8spine module index, or add an Eclipse addon.</li>
+          <li>Drag the modules into the order you want. The first module that has a song plays it.</li>
+        </ol>
+        <p class="note"><b>Only add modules you trust.</b> Modules are made by other people and fetch songs from wherever their authors chose.</p>
+      </section>
+
+      <section id="disc-studio">
+        <h2>Disc Studio</h2>
+        <p>Disc Studio, in the side bar, designs a CD or a vinyl record for any playlist. The playlist then wears it as its cover.</p>
+        <ol class="steps">
+          <li>Click <strong>New CD</strong> or <strong>New vinyl</strong>, or start from a preset.</li>
+          <li>Add layers: a fill, images, text that can curve around the disc, patterns, shapes, stickers from a library of thousands, and your own brush strokes.</li>
+          <li>Pick the record’s colours, grooves, label size and shine, then click <strong>Use on</strong> to give it to the playlist.</li>
+        </ol>
+        <p style="margin-top:16px">Designs save as <code>.convxdisc</code> files, so you can share them and open other people’s with <strong>Open a design file</strong>.</p>
+      </section>
+
+      <section id="together">
+        <h2>Listen Together</h2>
+        <ol class="steps">
+          <li>Click the people button at the top right, type the name others will see, and click <strong>Create party</strong>.</li>
+          <li>Share the code or the invite link. Friends join with <strong>Join party</strong>, on a PC or on a phone.</li>
+          <li>Everyone hears the same song at the same moment, kept in step by the server’s clock.</li>
+        </ol>
+        <p style="margin-top:16px">Turn on <strong>Only the host controls playback</strong> so guests listen along without pausing, skipping or changing the queue. Songs from files on your own PC can’t be shared, because the others don’t have them.</p>
+      </section>
+
+      <section id="accounts">
+        <h2>Discord and scrobbling</h2>
+        <h3>Discord</h3>
+        <p>Keep the Discord app open on your PC and turn on Discord in <span class="path">Settings › Accounts &amp; Services › Discord</span>. Your profile shows the song, its artists, the cover and a time bar while it plays, and the status goes away when you pause. The two buttons’ text can use <code>{song_name}</code>, <code>{artist_name}</code> and <code>{album_name}</code>, up to 32 characters.</p>
+        <h3>Last.fm</h3>
+        <p>Last.fm only lets an app scrobble with an API key of its own, so add yours first; <span class="path">Settings › Accounts &amp; Services › Last.fm</span> links to the page that makes one. Then log in and approve Convx on Last.fm’s page. You can also send Now Playing, and love songs on Last.fm when you like them in Convx.</p>
+        <h3>ListenBrainz</h3>
+        <p>Paste your user token from <a href="https://listenbrainz.org/settings/">listenbrainz.org/settings</a>. A song is scrobbled once you’ve heard enough of it; paused time doesn’t count.</p>
+      </section>
+
+      <section id="data">
+        <h2>Backup and storage</h2>
+        <ul>
+          <li><strong>Backup &amp; restore</strong> saves your library, playlists, history and settings to one file, and brings them back. Sign-ins stay on the PC they were made on.</li>
+          <li><strong>Storage</strong> shows the room downloads and caches take, sets the largest song and image caches, and clears them. Clearing a cache never touches downloads.</li>
+          <li><strong>Privacy</strong> pauses or clears listen and search history, sets when a song counts as a listen, and can keep Convx out of screenshots and screen sharing.</li>
+        </ul>
+        <p style="margin-top:16px">All three are in <span class="path">Settings › Privacy &amp; Storage</span>. Convx keeps its data in <code>%APPDATA%\Convx</code> (library and settings) and <code>%LOCALAPPDATA%\Convx</code> (caches, downloads and logs). More in the <a href="privacy.html">Privacy</a> page.</p>
+      </section>
+
+      <section id="troubleshooting">
+        <h2>Troubleshooting</h2>
+        <ul>
+          <li><strong>A song won’t play:</strong> Convx asks YouTube for a fresh link and retries on its own. If it still won’t play, try again later, or let a module play it.</li>
+          <li><strong>Convx closed unexpectedly:</strong> <span class="path">Settings › Help &amp; About › Crash report</span> shows what happened. Share it on the Discord or in a GitHub issue.</li>
+          <li><strong>Behind a proxy, or having IPv6 trouble:</strong> <span class="path">Settings › Accounts &amp; Services › Network &amp; proxy</span>.</li>
+          <li><strong>Convx feels slow:</strong> turn on <strong>Reduce live blur</strong>, or make everything smaller with <strong>Display density</strong>, in <span class="path">Settings › Player &amp; Lyrics › Controls &amp; layout</span>.</li>
+          <li><strong>Updates:</strong> <span class="path">Settings › Help &amp; About › App updates</span> checks for and installs a newer version.</li>
+        </ul>
+      </section>
+
+      <section id="build">
+        <h2>Build it yourself</h2>
+        <p>Convx for Windows is written in Kotlin with Compose Multiplatform. It compiles the phone app’s own YouTube Music, lyrics, artwork, song recognition and module code, decodes audio with FFmpeg, and runs modules in QuickJS. You need JDK 21.</p>
+        <pre><code>git clone https://github.com/m33md/convx-desktop
+cd convx-desktop/desktop
+./gradlew run          # start the app
+./gradlew packageMsi   # build the installer</code></pre>
+        <p style="margin-top:16px">The phone app’s code is at <a href="https://github.com/cosmictaserdev-creator/Convx">cosmictaserdev-creator/Convx</a>. Both are GPL-3.0.</p>
+      </section>
+    </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <img src="assets/convx-word.svg" width="115" height="22" alt="Convx">
+      <p>Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
+      <p>Convx is an independent project and is not affiliated with, endorsed by, or connected to YouTube, Google, or their affiliates.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="index.html#download">Download</a>
+      <a href="docs.html">Docs</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
+      <a href="https://github.com/m33md/convx-desktop">Windows source</a>
+      <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
+      <a href="https://ko-fi.com/cosmictaser">Ko-fi</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gs = window.gsap && window.ScrollTrigger ? window.gsap : null;
+  if (gs) gs.registerPlugin(ScrollTrigger);
+
+  /* The bar tucks away while you read down the page and comes back when you scroll up. */
+  const nav = document.querySelector('.nav');
+  let lastY = scrollY;
+  addEventListener('scroll', () => {
+    const y = scrollY;
+    if (Math.abs(y - lastY) > 6) { nav.classList.toggle('tucked', y > lastY && y > 300); lastY = y; }
+  }, { passive: true });
+
+  /* Contents: the section you're reading is marked. */
+  const toc = [...document.querySelectorAll('.toc a')];
+  const secs = toc.map(a => document.querySelector(a.getAttribute('href')));
+  const mark = i => toc.forEach((a, k) => {
+    a.classList.toggle('on', k === i);
+    if (k === i) { const ol = a.closest('ol'); if (ol.scrollWidth > ol.clientWidth) ol.scrollTo({ left: a.parentElement.offsetLeft - 16, behavior: reduce ? 'auto' : 'smooth' }); }
+  });
+  if (gs) secs.forEach((s, i) => s && ScrollTrigger.create({ trigger: s, start: 'top 40%', end: 'bottom 40%', onToggle: self => { if (self.isActive) mark(i); } }));
+  else if (secs.length) addEventListener('scroll', () => {
+    const y = innerHeight * 0.4;
+    secs.forEach((s, i) => { const r = s.getBoundingClientRect(); if (r.top < y && r.bottom > y) mark(i); });
+  }, { passive: true });
+
+  /* GSAP: the heading settles in, and the page rises in as you read. */
+  if (gs && !reduce) {
+    gs.from('.page-head > *', { y: 34, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.07 });
+    gs.from('.toc', { x: -20, opacity: 0, duration: 1, ease: 'expo.out', delay: 0.3 });
+    const els = gs.utils.toArray('.doc section > *, .qa');
+    gs.set(els, { opacity: 0, y: 36 });
+    const show = b => gs.to(b, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.05, overwrite: true, clearProps: 'transform,opacity' });
+    ScrollTrigger.batch(els, { start: 'top 94%', once: true, onEnter: show, onEnterBack: show, onLeave: show });
+  }
+
+  /* Q&A: answers open and close smoothly. */
+  document.querySelectorAll('.qa').forEach(d => {
+    const s = d.querySelector('summary'), a = d.querySelector('.a');
+    s.addEventListener('click', e => {
+      if (!gs || reduce) return;
+      e.preventDefault();
+      gs.killTweensOf(a);
+      if (d.open) gs.to(a, { height: 0, paddingBottom: 0, opacity: 0, duration: 0.35, ease: 'power2.inOut', onComplete: () => { d.open = false; gs.set(a, { clearProps: 'height,paddingBottom,opacity' }); } });
+      else { d.open = true; gs.from(a, { height: 0, paddingBottom: 0, opacity: 0, duration: 0.55, ease: 'expo.out', clearProps: 'height,paddingBottom,opacity' }); }
+    });
+  });
+  const hashOpen = () => { const t = location.hash && document.getElementById(location.hash.slice(1)); if (t && t.tagName === 'DETAILS') t.open = true; };
+  hashOpen(); addEventListener('hashchange', hashOpen);
+  if (gs && document.fonts) document.fonts.ready.then(() => ScrollTrigger.refresh());
+})();
+</script>
+</body>
+</html>

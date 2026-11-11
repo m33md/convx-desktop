@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy · Convx</title>
+<meta name="description" content="What Convx keeps on your device, which services it talks to and when, and how to control it.">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/pages.css">
+</head>
+<body>
+
+<nav class="nav" aria-label="Main">
+  <div class="nav-bar glass">
+    <a class="brand" href="index.html" aria-label="Convx home">
+      <img src="assets/convx-mark.svg" width="30" height="30" alt="">
+      <img src="assets/convx-word.svg" width="79" height="15" alt="">
+    </a>
+    <div class="nav-links">
+      <a href="index.html#tour">Tour</a>
+      <a href="index.html#features">Features</a>
+      <a href="docs.html">Docs</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="privacy.html" aria-current="page">Privacy</a>
+    </div>
+    <a class="btn btn-red" href="index.html#download">Download</a>
+  </div>
+</nav>
+
+<header class="wrap page-head">
+  <p class="eyebrow">Privacy</p>
+  <h1>Your music, your device.</h1>
+  <p class="lede">Convx has no accounts and no servers of its own keeping your data. Here is exactly what it stores, who it talks to, and how to turn things off.</p>
+  <p class="page-meta mono">Last updated 11 November 2026</p>
+  <div class="tabs" role="navigation" aria-label="Help pages"><a href="docs.html">Docs</a><a href="faq.html">Q&amp;A</a><a href="privacy.html" aria-current="page">Privacy</a></div>
+</header>
+
+<main class="wrap page-body">
+    <nav class="toc" aria-label="On this page">
+      <p>On this page</p>
+      <ol>
+        <li><a href="#short">The short version</a></li>
+        <li><a href="#on-device">What stays on your device</a></li>
+        <li><a href="#sign-ins">Sign-ins and keys</a></li>
+        <li><a href="#services">Who Convx talks to</a></li>
+        <li><a href="#controls">Your controls</a></li>
+        <li><a href="#android">On Android</a></li>
+        <li><a href="#changes">Changes and contact</a></li>
+      </ol>
+    </nav>
+    <div class="doc">
+      <section id="short">
+        <h2>The short version</h2>
+        <p>Convx is a free, open-source music app. There is no Convx account and no Convx server that keeps your data. Your library lives on your device, every sign-in is optional, and you can read every line of the code.</p>
+        <div class="cards">
+          <div class="card"><h3><span class="dot"></span>No Convx account</h3><p>Nothing to sign up for. Convx works the moment you open it.</p></div>
+          <div class="card"><h3><span class="dot"></span>Your library stays with you</h3><p>Likes, playlists, history and settings are saved on your device, not on a server of ours.</p></div>
+          <div class="card"><h3><span class="dot"></span>Every link is optional</h3><p>YouTube Music, Spotify, Last.fm, ListenBrainz, Discord and AI providers only hear from Convx if you turn them on.</p></div>
+          <div class="card"><h3><span class="dot"></span>No ads or analytics code</h3><p>Convx for Windows has no analytics, advertising or tracking code. Its logs and crash reports stay on your PC.</p></div>
+        </div>
+        <p class="note">This page describes Convx for Windows, checked against <a href="https://github.com/m33md/convx-desktop">its source code</a>. The Android app shares its music, lyrics, recognition and party code; see <a href="#android">On Android</a>.</p>
+      </section>
+
+      <section id="on-device">
+        <h2>What stays on your device</h2>
+        <p>Convx keeps everything it needs on your PC, in two folders:</p>
+        <div class="table">
+          <div class="row"><b><code>%APPDATA%\Convx</code></b><span>Your library (likes, playlists, listen and search history), your settings and your downloads.</span></div>
+          <div class="row"><b><code>%LOCALAPPDATA%\Convx</code></b><span>The song, artwork and lyrics caches, logs and the last crash report.</span></div>
+        </div>
+        <p style="margin-top:18px">Stats and Replay are worked out on your PC from that library. Nothing in these folders is sent anywhere unless you send it yourself, for example by sharing a backup file.</p>
+      </section>
+
+      <section id="sign-ins">
+        <h2>Sign-ins and keys</h2>
+        <p>When you sign in to YouTube Music or Spotify, link Last.fm or ListenBrainz, or add an AI provider’s key, Convx saves that sign-in on your PC, encrypted for your Windows user account the way browsers keep their cookies. Each one is only ever sent to the service it belongs to.</p>
+        <p>Backups made in <span class="path">Settings › Privacy &amp; Storage › Backup &amp; restore</span> hold your library, playlists, history and settings, but never your sign-ins, so a backup file is safe to keep or move.</p>
+      </section>
+
+      <section id="services">
+        <h2>Who Convx talks to, and when</h2>
+        <p>Convx is an app that plays music from the internet, so it has to talk to other services. Here is each one, when it happens, and what it gets.</p>
+        <div class="table">
+          <div class="row"><b>YouTube Music</b><div class="when">Always</div><span>Convx finds and plays music through YouTube Music, so YouTube receives your searches, the songs you play and your IP address, like any YouTube Music app. If you sign in, requests carry your account, and songs you play are added to your YouTube history so Listen again and Home recommendations follow along. Pausing listen history stops that too.</span></div>
+          <div class="row"><b>Lyrics providers</b><div class="when">When lyrics show</div><span>To find lyrics, Convx sends the song’s title, artist, album and length to the lyrics sources turned on in <span class="path">Settings › Player &amp; Lyrics › Sources &amp; priority</span>, such as LRCLIB, KuGou, BetterLyrics, LyricsPlus, SimpMusic and Spicy Lyrics. You choose which ones Convx asks, and in what order.</span></div>
+          <div class="row"><b>Song recognition</b><div class="when">When you click Recognize</div><span>Convx turns a few seconds of what your microphone hears into a sound fingerprint on your PC and sends only that fingerprint to Shazam, which answers with the song. The recording itself isn’t sent.</span></div>
+          <div class="row"><b>Listen Together</b><div class="when">When you start or join a party</div><span>The party server passes the name you choose, the songs, the queue and where playback is to the other people in your party.</span></div>
+          <div class="row"><b>Discord</b><div class="when">When Discord status is on</div><span>Convx hands the song, artist and cover to the Discord app running on your PC, which shows them on your profile. There’s nothing to log into and no Discord password or token is kept.</span></div>
+          <div class="row"><b>Last.fm and ListenBrainz</b><div class="when">When you link them</div><span>The songs you play are scrobbled to your account, and Last.fm can also get your likes. You approve Convx on Last.fm’s own page, so Convx never sees your password.</span></div>
+          <div class="row"><b>Spotify and Apple Music</b><div class="when">When you link or import</div><span>Convx reads the playlists and Liked Songs you choose to bring over, then finds each song on YouTube Music by its title, artist and length.</span></div>
+          <div class="row"><b>AI providers</b><div class="when">Only with your own API key</div><span>AI lyrics translation and the AI features (AI DJ Mix with a vibe, Modify with AI, Track insights) send the lyrics or your request to the provider you picked, such as OpenRouter, Groq, OpenAI, Anthropic, Google Gemini, Mistral or DeepL, using the key you entered.</span></div>
+          <div class="row"><b>GitHub</b><div class="when">When Convx opens</div><span>Convx asks GitHub whether a newer version is out. Turn this off in <span class="path">Settings › Help &amp; About › App updates</span>.</span></div>
+          <div class="row"><b>Modules</b><div class="when">Only if you add one</div><span>A module you add fetches songs from the sources its author chose. Modules are made by other people, so only add ones you trust.</span></div>
+        </div>
+        <p class="note">Convx isn’t affiliated with any of these services. What they do with what they receive is covered by their own privacy policies.</p>
+      </section>
+
+      <section id="controls">
+        <h2>Your controls</h2>
+        <ul>
+          <li><strong>Pause listen history</strong> stops Convx recording what you play, so it doesn’t show in History, Stats or Home, and isn’t added to your YouTube history. Last.fm and ListenBrainz still scrobble while they’re on.</li>
+          <li><strong>Pause search history</strong> stops Convx remembering what you search for.</li>
+          <li><strong>Clear listen history</strong> and <strong>Clear search history</strong> delete what’s saved.</li>
+          <li><strong>Disable screenshot</strong> keeps Convx’s window out of screenshots, screen recordings and screen sharing.</li>
+          <li><strong>Storage</strong> shows how much room downloads and caches take, and clears them.</li>
+          <li>Sign out of any account, or unlink a service, from <span class="path">Settings › Accounts &amp; Services</span>.</li>
+        </ul>
+        <p style="margin-top:18px">The history controls are in <span class="path">Settings › Privacy &amp; Storage › Privacy</span>. To remove everything, uninstall Convx and delete the two folders above.</p>
+      </section>
+
+      <section id="android">
+        <h2>On Android</h2>
+        <p>The Android app uses the same YouTube Music, lyrics, artwork, recognition and Listen Together code, so the services above work the same way there. The phone also looks songs up on Apple Music and TIDAL to find animated covers. One more difference: Android has no Discord app to hand your status to, so on a phone Discord status signs in to Discord with your account, and keeps that sign-in on your phone.</p>
+      </section>
+
+      <section id="changes">
+        <h2>Changes and contact</h2>
+        <p>If Convx starts handling data differently, this page will change with it, and the date at the top will say when. Questions are welcome on the <a href="https://discord.gg/Ejeb4cmzfd">Convx Discord</a>, or as an issue on <a href="https://github.com/m33md/convx-desktop/issues">GitHub</a>.</p>
+      </section>
+    </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <img src="assets/convx-word.svg" width="115" height="22" alt="Convx">
+      <p>Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
+      <p>Convx is an independent project and is not affiliated with, endorsed by, or connected to YouTube, Google, or their affiliates.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="index.html#download">Download</a>
+      <a href="docs.html">Docs</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
+      <a href="https://github.com/m33md/convx-desktop">Windows source</a>
+      <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
+      <a href="https://ko-fi.com/cosmictaser">Ko-fi</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gs = window.gsap && window.ScrollTrigger ? window.gsap : null;
+  if (gs) gs.registerPlugin(ScrollTrigger);
+
+  /* The bar tucks away while you read down the page and comes back when you scroll up. */
+  const nav = document.querySelector('.nav');
+  let lastY = scrollY;
+  addEventListener('scroll', () => {
+    const y = scrollY;
+    if (Math.abs(y - lastY) > 6) { nav.classList.toggle('tucked', y > lastY && y > 300); lastY = y; }
+  }, { passive: true });
+
+  /* Contents: the section you're reading is marked. */
+  const toc = [...document.querySelectorAll('.toc a')];
+  const secs = toc.map(a => document.querySelector(a.getAttribute('href')));
+  const mark = i => toc.forEach((a, k) => {
+    a.classList.toggle('on', k === i);
+    if (k === i) { const ol = a.closest('ol'); if (ol.scrollWidth > ol.clientWidth) ol.scrollTo({ left: a.parentElement.offsetLeft - 16, behavior: reduce ? 'auto' : 'smooth' }); }
+  });
+  if (gs) secs.forEach((s, i) => s && ScrollTrigger.create({ trigger: s, start: 'top 40%', end: 'bottom 40%', onToggle: self => { if (self.isActive) mark(i); } }));
+  else if (secs.length) addEventListener('scroll', () => {
+    const y = innerHeight * 0.4;
+    secs.forEach((s, i) => { const r = s.getBoundingClientRect(); if (r.top < y && r.bottom > y) mark(i); });
+  }, { passive: true });
+
+  /* GSAP: the heading settles in, and the page rises in as you read. */
+  if (gs && !reduce) {
+    gs.from('.page-head > *', { y: 34, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.07 });
+    gs.from('.toc', { x: -20, opacity: 0, duration: 1, ease: 'expo.out', delay: 0.3 });
+    const els = gs.utils.toArray('.doc section > *, .qa');
+    gs.set(els, { opacity: 0, y: 36 });
+    const show = b => gs.to(b, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.05, overwrite: true, clearProps: 'transform,opacity' });
+    ScrollTrigger.batch(els, { start: 'top 94%', once: true, onEnter: show, onEnterBack: show, onLeave: show });
+  }
+
+  /* Q&A: answers open and close smoothly. */
+  document.querySelectorAll('.qa').forEach(d => {
+    const s = d.querySelector('summary'), a = d.querySelector('.a');
+    s.addEventListener('click', e => {
+      if (!gs || reduce) return;
+      e.preventDefault();
+      gs.killTweensOf(a);
+      if (d.open) gs.to(a, { height: 0, paddingBottom: 0, opacity: 0, duration: 0.35, ease: 'power2.inOut', onComplete: () => { d.open = false; gs.set(a, { clearProps: 'height,paddingBottom,opacity' }); } });
+      else { d.open = true; gs.from(a, { height: 0, paddingBottom: 0, opacity: 0, duration: 0.55, ease: 'expo.out', clearProps: 'height,paddingBottom,opacity' }); }
+    });
+  });
+  const hashOpen = () => { const t = location.hash && document.getElementById(location.hash.slice(1)); if (t && t.tagName === 'DETAILS') t.open = true; };
+  hashOpen(); addEventListener('hashchange', hashOpen);
+  if (gs && document.fonts) document.fonts.ready.then(() => ScrollTrigger.refresh());
+})();
+</script>
+</body>
+</html>
