@@ -169,13 +169,10 @@ p { margin: 0; }
   .stage { margin-right: calc(-1 * min(7vw, 110px)); }
 }
 .hero-copy { min-width: 0; }
-.hero h1 {
-  font-size: clamp(64px, 10.5vw, 138px); line-height: 0.9; letter-spacing: -0.055em;
-  margin: 0 0 28px -0.04em;
-  background: linear-gradient(180deg, #ffffff 30%, #c9c9d1);
-  -webkit-background-clip: text; background-clip: text; color: transparent;
-}
-.hero h1 .dot { color: var(--red); -webkit-text-fill-color: var(--red); }
+.hero h1 { margin: 0 0 30px; line-height: 0; }
+.title svg { display: block; width: min(100%, 500px); height: auto; overflow: visible; }
+.title .t-body { fill: url(#title-fill); }
+.title .t-dot { fill: var(--red); transform-box: fill-box; transform-origin: 50% 50%; }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
 .hero-meta { margin-top: 22px; font-size: 13px; color: var(--label-3); display: flex; flex-wrap: wrap; gap: 6px 18px; }
 .hero-meta span::before { content: ""; display: inline-block; width: 5px; height: 5px; border-radius: 50%; background: var(--label-3); margin-right: 8px; vertical-align: middle; }
@@ -185,7 +182,7 @@ p { margin: 0; }
   position: relative; transform-style: preserve-3d;
   transform: rotateX(calc(4deg + var(--rx, 0deg))) rotateY(calc(-9deg + var(--ry, 0deg)));
 }
-.deck { position: relative; aspect-ratio: 1440 / 900; transform-style: preserve-3d; cursor: pointer; border-radius: 14px; }
+.hero-deck { position: relative; aspect-ratio: 1440 / 900; transform-style: preserve-3d; cursor: pointer; border-radius: 14px; }
 .card {
   position: absolute; inset: 0; margin: 0; border-radius: 14px; overflow: hidden; background: #050505;
   border: 1px solid rgba(255,255,255,0.14);
@@ -207,7 +204,7 @@ p { margin: 0; }
   background: radial-gradient(55% 65% at var(--gx, 30%) var(--gy, 15%), rgba(255,255,255,0.13), transparent 62%);
   opacity: var(--glare, 0.5); transition: opacity 0.5s var(--ease);
 }
-.deck > .glare { transform: translateZ(1px); }
+.hero-deck > .glare { transform: translateZ(1px); }
 .stage .hero-phone { position: absolute; left: -8%; bottom: -13%; width: 27%; transform: translateZ(110px); cursor: pointer; }
 .hero-phone .scr-box { position: relative; overflow: hidden; border-radius: 13% / 6%; aspect-ratio: 640 / 1378; background: #000; }
 .hero-phone .scr {
@@ -217,7 +214,7 @@ p { margin: 0; }
 }
 .hero-phone .scr.is-on { opacity: 1; transform: none; filter: none; }
 .hero-phone .scr.is-off { opacity: 0; transform: translateY(-7%) scale(0.93); filter: blur(8px); }
-.deck:focus-visible, .hero-phone:focus-visible { outline-offset: 10px; border-radius: 16px; }
+.hero-deck:focus-visible, .hero-phone:focus-visible { outline-offset: 10px; border-radius: 16px; }
 .stage-cap {
   position: absolute; right: 7%; bottom: 0; display: flex; gap: 14px; align-items: center;
   font-size: 12px; color: var(--label-3);
@@ -251,6 +248,7 @@ p { margin: 0; }
 
 /* Lyrics demo */
 .lyrics-demo {
+  transform-origin: 50% 100%;
   position: relative; margin: 0; overflow: hidden; border-radius: 28px; min-width: 0;
   height: clamp(420px, 46vw, 520px);
   background: #1a0a10;
@@ -381,17 +379,23 @@ p { margin: 0; }
 
 /* Replay */
 .t-replay { padding-bottom: 0; }
-.replay-fan { position: relative; flex: 1; min-height: 320px; margin: 8px -28px 0; }
-.replay-fan img {
+.swipe { position: relative; flex: 1; min-height: 320px; margin: 8px -28px 0; touch-action: pan-y; cursor: grab; user-select: none; -webkit-user-select: none; }
+.swipe.dragging { cursor: grabbing; }
+.swipe img {
+  --d: 0;
   position: absolute; left: 50%; bottom: -36px; height: min(540px, 90%); width: auto; border-radius: 16px;
-  box-shadow: 0 20px 50px rgba(0,0,0,0.6); transition: transform 0.6s var(--spring);
+  box-shadow: 0 20px 50px rgba(0,0,0,0.6); transform-origin: 50% 100%; -webkit-user-drag: none; pointer-events: none;
+  transition: transform 0.85s var(--spring), opacity 0.5s var(--ease), filter 0.5s var(--ease);
 }
-.replay-fan img:nth-child(1) { transform: translateX(-92%) rotate(-11deg); }
-.replay-fan img:nth-child(2) { transform: translateX(-8%) rotate(10deg); }
-.replay-fan img:nth-child(3) { transform: translate(-50%, -14px); z-index: 2; }
-.t-replay:hover .replay-fan img:nth-child(1) { transform: translateX(-100%) rotate(-15deg); }
-.t-replay:hover .replay-fan img:nth-child(2) { transform: translateX(0%) rotate(14deg); }
-.t-replay:hover .replay-fan img:nth-child(3) { transform: translate(-50%, -28px); }
+.swipe.dragging img { transition: none; }
+.swipe img[data-pos="0"] { z-index: 3; transform: translateX(calc(var(--drag, 0) * 1px)) translateX(-50%) translateY(-14px) rotate(calc(var(--drag, 0) * 0.03deg)); }
+.swipe img[data-pos="-1"] { z-index: 2; transform: translateX(calc(var(--drag, 0) * 0.5px)) translateX(-104%) rotate(-11deg) scale(0.9); filter: brightness(0.62); }
+.swipe img[data-pos="1"] { z-index: 2; transform: translateX(calc(var(--drag, 0) * 0.5px)) translateX(4%) rotate(11deg) scale(0.9); filter: brightness(0.62); }
+.swipe img[data-pos="-2"] { z-index: 1; transform: translateX(-165%) rotate(-24deg) scale(0.8); opacity: 0; }
+.swipe img[data-pos="2"] { z-index: 1; transform: translateX(65%) rotate(24deg) scale(0.8); opacity: 0; }
+.swipe-dots { display: flex; gap: 5px; margin-top: 2px; }
+.swipe-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); transition: width 0.45s var(--spring), background-color 0.3s; }
+.swipe-dots i.on { width: 18px; background: var(--red); }
 
 /* Modules */
 .sources { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 8px; counter-reset: s; }
@@ -494,6 +498,82 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   .party-code b { font-size: 20px; }
 }
 
+/* Motion */
+.nav { transition: transform 0.55s var(--ease); }
+.nav.tucked { transform: translateY(calc(-100% - 8px)); }
+.tile { isolation: isolate; transition: transform 0.55s var(--spring), border-color 0.3s; }
+.tile::before {
+  content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none;
+  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,0.065), transparent 65%);
+  opacity: 0; transition: opacity 0.4s;
+}
+.tile:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.14); }
+.tile:hover::before { opacity: 1; }
+.chip { transition: transform 0.45s var(--spring), background-color 0.2s; }
+.chip:hover { transform: translateY(-2px); background-color: rgba(255,255,255,0.09); }
+.sources li { transition: transform 0.55s var(--spring), border-color 0.3s; }
+.t-modules:hover .sources li { transform: translateX(6px); }
+.t-modules:hover .sources li:nth-child(2) { transition-delay: 0.06s; }
+.t-modules:hover .sources li:nth-child(3) { transition-delay: 0.12s; }
+.party-code b { display: inline-block; min-width: 7.2ch; }
+.plat { transition: border-color 0.3s; }
+.plat:hover { border-color: rgba(255,255,255,0.14); }
+.plat-android .phone { transition: transform 0.9s var(--spring); }
+.plat-android:hover .phone { transform: rotate(0deg) translateY(-16px); }
+#lyrics .split > div:last-child, .plat-windows, .studio-shot { perspective: 1400px; }
+.plat-windows .screen { transition: transform 0.9s var(--spring); }
+.plat-windows:hover .screen { transform: translate(-10px, -10px); }
+.studio-shot .screen { transition: transform 0.9s var(--spring); }
+.studio-shot:hover .screen { transform: perspective(1400px) rotateY(-5deg) rotateX(3deg); }
+.dl { transition: transform 0.55s var(--spring), border-color 0.3s; }
+.dl:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.16); }
+.dl-icon { transition: transform 0.6s var(--spring); }
+.dl:hover .dl-icon { transform: rotate(-8deg) scale(1.08); }
+.fact { transition: transform 0.5s var(--spring), background-color 0.3s; }
+.fact:hover { transform: translateY(-3px); background-color: rgba(255,255,255,0.07); }
+
+@media (prefers-reduced-motion: no-preference) {
+  /* The hero arrives: words rise, the title is drawn, the screens fly in from the dark. */
+  .hero-copy > * { animation: rise-in 0.9s var(--ease) backwards; }
+  .hero-copy > :nth-child(1) { animation-delay: 0.05s; }
+  .hero-copy > :nth-child(3) { animation-delay: 0.35s; }
+  .hero-copy > :nth-child(4) { animation-delay: 0.45s; }
+  .hero-copy > :nth-child(5) { animation-delay: 0.55s; }
+  .hero-copy > .title { animation: none; }
+  .title svg { animation: draw-in 1.1s var(--ease) 0.12s backwards; }
+  .title .t-dot { animation: dot-in 0.7s var(--spring) 0.95s backwards; }
+  .hero-deck { animation: deck-in 1.3s var(--spring) 0.25s backwards; }
+  .stage .hero-phone { animation: phone-in 1.2s var(--spring) 0.5s backwards; }
+  .stage-cap { animation: rise-in 0.8s var(--ease) 1s backwards; }
+  @keyframes rise-in { from { opacity: 0; translate: 0 22px; filter: blur(6px); } }
+  @keyframes draw-in { from { clip-path: inset(-10% 100% -10% 0); translate: -12px 0; } to { clip-path: inset(-10% -10% -10% 0); } }
+  @keyframes dot-in { from { transform: scale(0); } }
+  @keyframes deck-in { from { opacity: 0; transform: translate3d(10%, 8%, -320px) rotateY(16deg); } }
+  @keyframes phone-in { from { opacity: 0; transform: translate3d(-40%, 30%, 110px) rotate(-8deg); } }
+
+  /* Sections ease in as they scroll into view, and the hero drifts away. */
+  @supports (animation-timeline: view()) {
+    .section-head, #lyrics .split > div, .plat, .tile, .studio-grid > div, .rack, .dl, .oss, .community, .foot {
+      animation: reveal linear both; animation-timeline: view(); animation-range: entry 0% cover 26%;
+    }
+    .plat:nth-child(2), .studio-grid > div:nth-child(2), .dl:nth-child(2) { animation-range: entry 8% cover 32%; }
+    .tile:nth-child(2) { animation-range: entry 6% cover 30%; }
+    .tile:nth-child(3) { animation-range: entry 0% cover 26%; }
+    .tile:nth-child(4) { animation-range: entry 6% cover 30%; }
+    .tile:nth-child(5) { animation-range: entry 0% cover 26%; }
+    .tile:nth-child(6) { animation-range: entry 8% cover 32%; }
+    .lyrics-demo, .plat-windows .screen, .studio-shot .screen {
+      animation: tilt-in linear both; animation-timeline: view(); animation-range: entry 0% cover 38%;
+    }
+    .stage { animation: drift-away linear both; animation-timeline: scroll(root); animation-range: 0 90vh; }
+    .hero-copy { animation: copy-away linear both; animation-timeline: scroll(root); animation-range: 0 80vh; }
+    @keyframes reveal { from { opacity: 0.12; translate: 0 56px; scale: 0.97; } to { opacity: 1; translate: 0 0; scale: 1; } }
+    @keyframes tilt-in { from { opacity: 0.3; rotate: x 18deg; translate: 0 50px; scale: 0.94; } to { opacity: 1; rotate: x 0deg; translate: 0 0; scale: 1; } }
+    @keyframes drift-away { to { translate: 0 -70px; scale: 0.94; opacity: 0.25; } }
+    @keyframes copy-away { to { translate: 0 -40px; opacity: 0.2; } }
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html { scroll-behavior: auto; }
   *, *::before, *::after { animation: none !important; transition-duration: 0.01ms !important; }
@@ -504,6 +584,10 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
 
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
   <defs>
+    <linearGradient id="title-fill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0.3" stop-color="#ffffff"/>
+      <stop offset="1" stop-color="#c4c4cc"/>
+    </linearGradient>
     <linearGradient id="crimson" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#e0306f"/>
       <stop offset="1" stop-color="#8a1748"/>
@@ -547,7 +631,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <div class="wrap hero-grid">
     <div class="hero-copy">
       <p class="eyebrow">Free music app for Android and Windows</p>
-      <h1>Just listen<span class="dot">.</span></h1>
+      <h1 class="title"><span class="sr">Just listen.</span><svg viewBox="0 0 3772 1782" aria-hidden="true"><path class="t-body" fill-rule="evenodd" d="M398,1772 511,1185 516,1179 524,1176 679,1176 684,1180 685,1188 572,1769 567,1775 559,1778 407,1778ZM847,1562 843,1554 804,1524 787,1500 774,1465 772,1425 791,1324 806,1284 838,1240 886,1202 926,1184 967,1176 1290,1177 1321,1184 1348,1198 1375,1222 1391,1248 1400,1276 1403,1300 1402,1324 1392,1366 1381,1372 1301,1373 1292,1378 1287,1387 1290,1400 1324,1425 1346,1454 1359,1489 1361,1529 1342,1630 1327,1670 1295,1714 1247,1752 1207,1770 1165,1778 851,1778 826,1774 798,1764 763,1737 737,1693 730,1647 738,1594 743,1586 751,1582 832,1581 844,1572ZM1220,1370 1217,1358 1205,1351 977,1351 967,1354 957,1367 957,1382 969,1389 1200,1389 1213,1383ZM913,1588 918,1600 927,1603 1156,1603 1170,1596 1176,1581 1172,1568 1163,1565 932,1565 917,1573ZM124,1778 78,1767 37,1737 11,1693 4,1647 128,997 133,989 139,985 295,985 304,991 189,1592 198,1602 293,1603 301,1612 272,1766 267,1774 258,1778ZM517,1152 547,998 553,989 561,986 713,986 721,990 722,998 693,1150 687,1159 679,1162 527,1162 519,1159ZM1181,778 1135,767 1098,742 1070,700 1061,655 1064,622 1149,188 1153,180 1163,176 1314,176 1324,182 1246,587 1247,596 1259,603 1487,603 1497,600 1506,587 1586,182 1598,176 1749,176 1757,179 1759,188 1672,630 1657,670 1626,713 1600,737 1571,756 1539,770 1513,776ZM274,778 234,770 206,756 179,731 160,698 152,668 151,636 172,527 176,519 186,515 344,516 349,525 337,589 342,597 351,600 705,600 715,597 724,584 830,42 842,36 998,36 1005,39 1007,48 894,627 874,676 840,719 812,742 782,760 756,770 723,777ZM2146,1777 2102,1764 2067,1737 2043,1700 2034,1654 2037,1622 2095,1324 2110,1284 2136,1247 2168,1217 2197,1198 2230,1184 2263,1177 2586,1176 2625,1184 2658,1202 2679,1223 2694,1247 2704,1276 2706,1300 2703,1332 2660,1553 2656,1561 2646,1565 2239,1565 2225,1572 2219,1587 2220,1596 2232,1603 2644,1604 2648,1615 2616,1772 2605,1778ZM2256,1398 2260,1406 2269,1409 2497,1409 2507,1406 2515,1398 2521,1367 2520,1358 2509,1351 2281,1351 2271,1354 2263,1362ZM2786,1772 2898,1188 2904,1179 2912,1176 3371,1177 3416,1190 3456,1223 3479,1269 3483,1292 3482,1323 3396,1766 3390,1775 3382,1778 3230,1778 3221,1772 3298,1367 3297,1358 3286,1351 3058,1351 3043,1358 3038,1367 2959,1772 2947,1778 2795,1778ZM1624,1778 1578,1767 1536,1737 1510,1693 1503,1647 1624,1016 1628,1008 1635,1004 1789,1004 1797,1007 1799,1016 1771,1160 1772,1169 1779,1175 1971,1176 1978,1179 1980,1185 1951,1339 1945,1348 1937,1351 1750,1351 1740,1354 1730,1367 1688,1587 1689,1596 1701,1603 1888,1603 1895,1606 1897,1615 1866,1772 1854,1778ZM1950,562 1947,554 1908,524 1891,500 1877,465 1875,425 1894,324 1910,284 1941,240 1990,202 2029,184 2070,176 2393,177 2424,184 2452,198 2478,222 2494,248 2504,276 2506,300 2505,324 2495,366 2484,372 2404,373 2395,378 2390,387 2393,400 2427,425 2449,454 2462,489 2465,529 2445,630 2430,670 2399,714 2350,752 2310,770 2268,778 1954,778 1930,774 1902,764 1866,737 1840,693 1833,647 1842,594 1846,586 1854,582 1936,581 1948,572ZM2323,370 2320,358 2309,351 2080,351 2070,354 2061,367 2061,382 2073,389 2303,389 2317,383ZM2017,588 2021,600 2030,603 2259,603 2273,596 2279,581 2278,572 2266,565 2035,565 2020,573ZM2727,778 2681,767 2639,737 2613,693 2606,647 2727,16 2732,8 2738,4 2893,4 2900,7 2902,16 2874,160 2875,169 2882,175 3074,176 3082,179 3084,185 3054,339 3049,348 3040,351 2853,351 2839,358 2834,367 2791,587 2792,596 2804,603 2991,603 2999,606 3001,615 2969,772 2957,778Z"/><path class="t-dot" d="M3573,1778 3566,1775 3564,1766 3593,1615 3598,1607 3607,1603 3759,1603 3766,1606 3768,1615 3739,1766 3734,1774 3725,1778Z"/></svg></h1>
       <p class="lede">Convx brings your music, lyrics and library together under a calm sheet of glass. Stream from YouTube Music, sing along word by word, and let one song flow into the next.</p>
       <div class="cta-row" data-cta>
         <a class="btn btn-red" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases">
@@ -563,7 +647,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     </div>
     <div class="stage" data-stage>
       <div class="scene">
-        <div class="deck" data-deck tabindex="0" role="button" aria-label="Show the next Windows screen">
+        <div class="hero-deck" data-deck tabindex="0" role="button" aria-label="Show the next Windows screen">
           <figure class="card" data-pos="0" data-name="Home"><img src="assets/img/win-home.webp" width="1440" height="900" alt="Convx for Windows: the Home page with Top Picks for You, mood chips and the glass side bar"></figure>
           <figure class="card" data-pos="1" data-name="Player"><img src="assets/img/win-player.webp" width="1440" height="900" alt="Convx for Windows: the full-screen player with the vinyl design"></figure>
           <figure class="card" data-pos="2" data-name="Disc Studio"><img src="assets/img/disc-editor.webp" width="1600" height="1000" alt="Convx for Windows: Disc Studio, designing a CD covered in stickers"></figure>
@@ -687,10 +771,13 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           <span class="kicker">Replay</span>
           <h3>Your year in music.</h3>
           <p>Minutes listened, top songs and top artists, told as a story you tap through. Then save it as a playlist.</p>
-          <div class="replay-fan">
-            <img src="assets/img/replay-intro.webp" width="458" height="820" loading="lazy" alt="Replay intro card">
-            <img src="assets/img/replay-minutes.webp" width="458" height="820" loading="lazy" alt="Replay card: minutes listened this year">
-            <img src="assets/img/replay-summary.webp" width="458" height="820" loading="lazy" alt="Replay summary card with minutes, songs, artists and albums">
+          <div class="swipe-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="on"></i></div>
+          <div class="swipe" data-swipe tabindex="0" role="group" aria-roledescription="carousel" aria-label="Replay pages. Use the arrow keys to swipe.">
+            <img src="assets/img/replay-intro.webp" width="458" height="820" loading="lazy" alt="Replay intro: Replay 26">
+            <img src="assets/img/replay-minutes.webp" width="458" height="820" loading="lazy" alt="Replay: minutes listened this year">
+            <img src="assets/img/replay-top-song.webp" width="458" height="820" loading="lazy" alt="Replay: your top song">
+            <img src="assets/img/replay-top-artists.webp" width="458" height="820" loading="lazy" alt="Replay: your top five artists">
+            <img src="assets/img/replay-summary.webp" width="458" height="820" loading="lazy" alt="Replay summary: minutes, songs, artists and albums">
           </div>
         </article>
 
@@ -1122,6 +1209,86 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       }, { threshold: 0.2 }).observe(list.closest('figure'));
     }
   }
+
+  /* Replay swipes like stories: hover the right side to go forward, the left to go back, or drag. */
+  const swipe = document.querySelector('[data-swipe]');
+  if (swipe) {
+    const pages = [...swipe.querySelectorAll('img')], n = pages.length, tile = swipe.closest('.tile');
+    const sdots = [...tile.querySelectorAll('.swipe-dots i')];
+    const fine = matchMedia('(hover: hover) and (pointer: fine)').matches;
+    let cur = n - 1, last = 0, timer = 0, side = 1, auto = 0, pausedUntil = 0;
+    const place = () => {
+      pages.forEach((img, i) => { let o = ((i - cur) % n + n) % n; if (o > n / 2) o -= n; img.dataset.pos = Math.max(-2, Math.min(2, o)); });
+      sdots.forEach((d, i) => d.classList.toggle('on', i === cur));
+    };
+    const go = (dir, force) => {
+      const now = performance.now(); if (!force && now - last < 420) return; last = now;
+      cur = (cur + dir + n) % n; place();
+    };
+    const sideOf = e => { const r = swipe.getBoundingClientRect(); return e.clientX < r.left + r.width / 2 ? -1 : 1; };
+    place();
+    if (fine) {
+      tile.addEventListener('pointerenter', e => { side = sideOf(e); go(side); clearInterval(timer); timer = setInterval(() => go(side), 2300); });
+      tile.addEventListener('pointermove', e => { side = sideOf(e); });
+      tile.addEventListener('pointerleave', () => clearInterval(timer));
+    }
+    let startX = null, dx = 0, moved = false;
+    swipe.addEventListener('pointerdown', e => { startX = e.clientX; dx = 0; moved = false; swipe.setPointerCapture(e.pointerId); });
+    swipe.addEventListener('pointermove', e => {
+      if (startX === null) return; dx = e.clientX - startX;
+      if (Math.abs(dx) > 6) { moved = true; swipe.classList.add('dragging'); swipe.style.setProperty('--drag', dx.toFixed(0)); }
+    });
+    const end = e => {
+      if (startX === null) return; startX = null;
+      swipe.classList.remove('dragging'); swipe.style.setProperty('--drag', '0');
+      if (moved && Math.abs(dx) > 40) go(dx < 0 ? 1 : -1, true);
+      else if (!moved) go(sideOf(e), true);
+      pausedUntil = performance.now() + 6000;
+    };
+    swipe.addEventListener('pointerup', end); swipe.addEventListener('pointercancel', end);
+    swipe.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(1, true); }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(-1, true); }
+    });
+    if (!fine && !reduce) new IntersectionObserver(([e]) => {
+      clearInterval(auto);
+      if (e.isIntersecting) auto = setInterval(() => { if (performance.now() > pausedUntil) go(1); }, 2800);
+    }).observe(swipe);
+  }
+
+  /* Feature tiles: a soft light follows the pointer. */
+  document.querySelectorAll('.tile').forEach(t => t.addEventListener('pointermove', e => {
+    const r = t.getBoundingClientRect();
+    t.style.setProperty('--mx', (e.clientX - r.left).toFixed(0) + 'px');
+    t.style.setProperty('--my', (e.clientY - r.top).toFixed(0) + 'px');
+  }));
+
+  /* Listen Together: a new party code shuffles in on hover. */
+  const party = document.querySelector('.t-party'), code = party && party.querySelector('.party-code b');
+  if (party && code) {
+    const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    const pick = () => chars[Math.floor(Math.random() * chars.length)];
+    let busy = false;
+    party.addEventListener('pointerenter', () => {
+      if (busy || reduce) return; busy = true;
+      const target = Array.from({ length: 6 }, pick); let frame = 0;
+      const run = () => {
+        frame++;
+        const s = target.map((c, i) => frame > 6 + i * 3 ? c : pick());
+        code.textContent = s.slice(0, 3).join('') + '·' + s.slice(3).join('');
+        if (frame < 6 + 5 * 3 + 1) setTimeout(run, 40); else busy = false;
+      };
+      run();
+    });
+  }
+
+  /* The bar tucks away while you read down the page and comes back when you scroll up. */
+  const navEl = document.querySelector('.nav');
+  let lastY = scrollY;
+  addEventListener('scroll', () => {
+    const y = scrollY;
+    if (Math.abs(y - lastY) > 6) { navEl.classList.toggle('tucked', y > lastY && y > 420); lastY = y; }
+  }, { passive: true });
 
   /* Disc rack: repeat the discs so the slide loops without a gap. */
   const rack = document.querySelector('[data-rack]');
