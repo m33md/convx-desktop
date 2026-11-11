@@ -152,7 +152,15 @@
 (() => {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const gs = window.gsap && window.ScrollTrigger ? window.gsap : null;
-  if (gs) gs.registerPlugin(ScrollTrigger);
+  if (gs) { gs.registerPlugin(ScrollTrigger); ScrollTrigger.clearScrollMemory('manual'); }
+
+  /* Always open at the top, unless the link points into the page; a reload otherwise lands part-way down. */
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  let touched = false;
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(t => addEventListener(t, () => { touched = true; }, { once: true, passive: true }));
+  const toTop = () => { if (!touched && !location.hash) scrollTo({ top: 0, left: 0, behavior: 'instant' }); };
+  toTop();
+  addEventListener('load', toTop);
 
   /* The bar tucks away while you read down the page and comes back when you scroll up. */
   const nav = document.querySelector('.nav');
@@ -198,7 +206,7 @@
   });
   const hashOpen = () => { const t = location.hash && document.getElementById(location.hash.slice(1)); if (t && t.tagName === 'DETAILS') t.open = true; };
   hashOpen(); addEventListener('hashchange', hashOpen);
-  if (gs && document.fonts) document.fonts.ready.then(() => ScrollTrigger.refresh());
+  if (gs && document.fonts) document.fonts.ready.then(() => { ScrollTrigger.refresh(); toTop(); });
 })();
 </script>
 </body>

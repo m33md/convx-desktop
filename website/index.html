@@ -1076,6 +1076,15 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
 (() => {
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* Always open at the top, unless the link points into the page. Without this a reload (and every
+     update of the preview) puts you back where you were, part-way down. */
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  let touched = false;
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(t => addEventListener(t, () => { touched = true; }, { once: true, passive: true }));
+  const toTop = () => { if (!touched && !location.hash) scrollTo({ top: 0, left: 0, behavior: 'instant' }); };
+  toTop();
+  addEventListener('load', toTop);
+
   /* Platform: put the visitor's own download first. */
   const ua = navigator.userAgent || '';
   const cta = document.querySelector('[data-cta]');
@@ -1446,7 +1455,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
      The focus line is the middle of the window, or on a phone the middle of what the laptop leaves free. */
   const tour = document.querySelector('[data-tour]');
   const gs = window.gsap && window.ScrollTrigger ? window.gsap : null;
-  if (gs) { gs.registerPlugin(ScrollTrigger); document.documentElement.classList.add('has-gsap'); }
+  if (gs) { gs.registerPlugin(ScrollTrigger); ScrollTrigger.clearScrollMemory('manual'); document.documentElement.classList.add('has-gsap'); }
   if (tour) {
     const steps = [...tour.querySelectorAll('.tour-step')], shots = [...tour.querySelectorAll('.tour-shot')], n = steps.length;
     const stageEl = tour.querySelector('.tour-stage'), num = tour.querySelector('[data-tour-n]'), nameEl = tour.querySelector('[data-tour-name]'), bar = tour.querySelector('[data-tour-bar]');
@@ -1522,7 +1531,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     gs.to('.stage', { y: -70, scale: 0.94, opacity: 0.25, ease: 'none', scrollTrigger: { start: 0, end: () => innerHeight * 0.9, scrub: 0.4 } });
     gs.to('.hero-copy', { y: -40, opacity: 0.2, ease: 'none', scrollTrigger: { start: 0, end: () => innerHeight * 0.8, scrub: 0.4 } });
   }
-  if (gs && document.fonts) document.fonts.ready.then(() => ScrollTrigger.refresh());
+  if (gs && document.fonts) document.fonts.ready.then(() => { ScrollTrigger.refresh(); toTop(); });
 
   /* Disc rack: repeat the discs so the slide loops without a gap. */
   const rack = document.querySelector('[data-rack]');
