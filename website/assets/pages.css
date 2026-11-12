@@ -74,8 +74,7 @@ p { margin: 0; }
   padding: 7px 7px 7px 14px; border-radius: 999px; background: rgba(20, 20, 22, 0.58);
 }
 .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; }
-.brand img:first-child { width: 30px; height: 30px; }
-.brand img:last-child { height: 15px; width: auto; }
+.brand img { height: 19px; width: auto; }
 .nav-links { display: none; gap: 2px; }
 .nav-links a {
   padding: 9px 15px; border-radius: 999px; color: var(--label-2);
