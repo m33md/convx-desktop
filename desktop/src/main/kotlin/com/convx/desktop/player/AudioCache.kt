@@ -47,6 +47,9 @@ object AudioCache {
 
     private val active = ConcurrentHashMap<String, Download>()
 
+    /** How many of an HLS song's pieces are fetched at once. */
+    private const val PiecesAhead = 4
+
     /** How many times one download may swap to a fresh address before it gives up. */
     private const val MaxRenewals = 3
 
@@ -266,6 +269,18 @@ object AudioCache {
         @Volatile var finished = false
             private set
 
+        /** For an HLS song: how many seconds of it are on disk so far, by its playlist. */
+        @Volatile var secondsSaved = 0.0
+            private set
+
+        // For an HLS song: where each piece starts in the file and at which sample, so a jump can
+        // be found between two of them. Not used at all if one piece's start couldn't be read.
+        private val pieceStarts = ArrayList<LongArray>()
+        private var marksBroken = false
+
+        /** For an HLS song: a (byte, sample) pair for the start of each piece on disk. */
+        fun seekPoints(): List<LongArray> = lock.withLock { if (marksBroken) emptyList() else pieceStarts.toList() }
+
         val running: Boolean get() = !finished && !failed && !cancelled
 
         /** Whether [other] is this download's file: the same address, or the same format and length under a renewed one. */
@@ -284,8 +299,12 @@ object AudioCache {
         private fun run() {
             try {
                 marker.delete()
-                makeRoom(totalBytes.takeIf { it > 0 } ?: (8 * ChunkBytes), keep = videoId)
-                RandomAccessFile(file, "rw").use { out ->
+                val hls = stream.hls
+                makeRoom(totalBytes.takeIf { it > 0 } ?: hls?.estimatedBytes ?: (8 * ChunkBytes), keep = videoId)
+                if (hls != null) RandomAccessFile(file, "rw").use { out ->
+                    out.setLength(0)
+                    joinPieces(hls, out)
+                } else RandomAccessFile(file, "rw").use { out ->
                     out.setLength(0)
                     var position = 0L
                     val refused = mutableSetOf<String>()
@@ -360,6 +379,82 @@ object AudioCache {
             }
         }
 
+        /**
+         * An HLS song: the FLAC header, then each piece's FLAC frames in order, so the file is a
+         * plain .flac from the first bytes on. A few pieces are fetched ahead while one is written.
+         */
+        private fun joinPieces(media: HlsAudio.Media, out: RandomAccessFile) {
+            out.write(media.header)
+            var position = media.header.size.toLong()
+            lock.withLock {
+                downloaded = position
+                progress.signalAll()
+            }
+            val fetcher = java.util.concurrent.Executors.newFixedThreadPool(PiecesAhead) { task ->
+                Thread(task, "convx-pieces-$videoId").apply { isDaemon = true }
+            }
+            // A playlist without durations is taken as even pieces of the song's length.
+            val even = if (media.segments.all { it.seconds <= 0 }) (media.durationMs ?: 0L) / 1000.0 / media.segments.size else null
+            var seconds = 0.0
+            try {
+                val pending = ArrayDeque<java.util.concurrent.Future<ByteArray>>()
+                var next = 0
+                fun queue() {
+                    val part = media.segments[next++]
+                    pending.addLast(fetcher.submit<ByteArray> { fetchPiece(part) })
+                }
+                // The first piece comes alone, with the whole line to itself, so the song starts
+                // sooner; then one more is fetched ahead for each piece in, up to PiecesAhead. A
+                // slow line shared four ways would bring the next piece in late.
+                var done = 0
+                queue()
+                while (pending.isNotEmpty() && !cancelled) {
+                    val piece = try {
+                        pending.removeFirst().get()
+                    } catch (e: java.util.concurrent.ExecutionException) {
+                        throw e.cause as? IOException ?: IOException(e.cause)
+                    }
+                    val part = media.segments[next - pending.size - 1]
+                    done++
+                    while (next < media.segments.size && pending.size < minOf(PiecesAhead, done + 1)) queue()
+                    val written = HlsAudio.writeFrames(piece, media.trackId, out, position, media.info.blockSize)
+                    if (position + written.bytes > MaxSongBytes) throw IOException("Stopped a download that went past ${MaxSongBytes / 1_048_576} MB")
+                    seconds += even ?: part.seconds
+                    lock.withLock {
+                        if (written.bytes > 0) {
+                            // Only marks that move forward: one out of order would send FFmpeg's search astray.
+                            val last = pieceStarts.lastOrNull()
+                            val first = written.firstSample?.takeIf { last == null || (it > last[1] && position > last[0]) }
+                            if (first != null) pieceStarts += longArrayOf(position, first) else marksBroken = true
+                        }
+                        position += written.bytes
+                        downloaded = position
+                        secondsSaved = seconds
+                        progress.signalAll()
+                    }
+                }
+            } finally {
+                fetcher.shutdownNow()
+            }
+            if (cancelled) return
+            if (position == media.header.size.toLong()) throw IOException("The song's pieces held no audio")
+            totalBytes = position
+        }
+
+        /** One piece, tried three times; a refusal (HTTP 4xx) isn't tried again. */
+        private fun fetchPiece(part: HlsAudio.Part): ByteArray {
+            var attempt = 0
+            while (true) {
+                if (cancelled) throw IOException("Download cancelled")
+                try {
+                    return HlsAudio.fetchPart(part)
+                } catch (e: IOException) {
+                    if (e is HlsAudio.Unsupported || (e is HttpStatusException && e.code in 400..499) || ++attempt >= 3) throw e
+                    Thread.sleep(500L * attempt)
+                }
+            }
+        }
+
         private fun fetch(request: Request, out: RandomAccessFile, position: Long): Long {
             Http.client.newCall(request).execute().use { response ->
                 if (response.code == 416) return 0
@@ -399,6 +494,36 @@ object AudioCache {
                     }
                 }
                 return written
+            }
+        }
+
+        /**
+         * For an HLS song, blocks until [seconds] of it are on disk and a piece starting after
+         * [sample] has arrived, or the download ends. FFmpeg can only find a time in the part of
+         * a FLAC file that has arrived, and finds it between two piece starts ([seekPoints]):
+         * past the last one it looks for the end of the file, which isn't there yet. So a jump
+         * waits here first, as a jump in a YouTube song waits for its bytes. Gives up when nothing
+         * arrives for [stallMs], and returns false at once when [abandon] says the jump is no
+         * longer wanted.
+         */
+        fun awaitSeek(seconds: Double, sample: Long, stallMs: Long = 30_000, abandon: () -> Boolean = { false }): Boolean {
+            lock.withLock {
+                fun ready() = finished || (secondsSaved >= seconds && (marksBroken || (pieceStarts.lastOrNull()?.let { it[1] > sample } ?: false)))
+                var seen = secondsSaved
+                var deadline = System.currentTimeMillis() + stallMs
+                while (!ready()) {
+                    error?.let { throw it }
+                    if (cancelled) throw IOException("Download cancelled")
+                    if (abandon()) return false
+                    if (secondsSaved > seen) {
+                        seen = secondsSaved
+                        deadline = System.currentTimeMillis() + stallMs
+                    }
+                    val left = deadline - System.currentTimeMillis()
+                    if (left <= 0) throw IOException("Timed out waiting for audio data")
+                    progress.await(minOf(left, 200), java.util.concurrent.TimeUnit.MILLISECONDS)
+                }
+                return true
             }
         }
 

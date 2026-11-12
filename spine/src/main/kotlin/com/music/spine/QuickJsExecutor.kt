@@ -31,6 +31,7 @@ internal object QuickJsExecutor {
     private const val TAG = "SpineDebug"
     private const val MAX_MODULES = 12
     private const val ENGINES_PER_MODULE = 3
+    private const val MAX_TIMER_WAIT_MS = 60_000L
     private val httpClient by lazy {
         OkHttpClient.Builder()
             .connectTimeout(15, TimeUnit.SECONDS)
@@ -148,7 +149,7 @@ internal object QuickJsExecutor {
                             })();
                             """.trimIndent()
                         )
-                        qjs.evaluate<String>("__spine_resolved_json")
+                        awaitAnswer(qjs, functionName)
                     }
                     val response = JSONObject(answer)
                     check(!response.has("error")) {
@@ -168,6 +169,29 @@ internal object QuickJsExecutor {
             Result.failure(e)
         } finally {
             release(pool)
+        }
+    }
+
+    /**
+     * The export's answer. Each evaluate returns once the network calls it started are done, but
+     * an answer can still wait on a timer (a module's sleep before a retry): the timers that are
+     * due run until the answer is there. Timers left when it is, such as a module warming up the
+     * next songs, are dropped, so they never hold up the song being asked for.
+     */
+    private suspend fun awaitAnswer(qjs: QuickJs, functionName: String): String {
+        val started = System.currentTimeMillis()
+        try {
+            while (true) {
+                val answer = qjs.evaluate<String>("typeof __spine_resolved_json === 'string' ? __spine_resolved_json : ''")
+                if (answer.isNotEmpty()) return answer
+                val wait = qjs.evaluate<String>("String(__spine_next_timer())").toDouble().toLong()
+                check(wait >= 0) { "$functionName returned nothing" }
+                check(System.currentTimeMillis() + wait - started <= MAX_TIMER_WAIT_MS) { "$functionName is waiting too long" }
+                if (wait > 0) kotlinx.coroutines.delay(wait)
+                qjs.evaluate<String>("String(__spine_run_timers())")
+            }
+        } finally {
+            runCatching { qjs.evaluate<String>("__spine_clear_timers(); 'ok'") }
         }
     }
 
@@ -276,18 +300,6 @@ internal object QuickJsExecutor {
                     return respObj.toString()
                 }
             })
-            asyncFunction("setTimeout", object : AsyncFunctionBinding<String> {
-                override suspend fun invoke(args: Array<Any?>): String {
-                    val ms = args.getOrNull(1)?.toString()?.toLongOrNull() ?: 0L
-                    kotlinx.coroutines.delay(ms)
-                    return "0"
-                }
-            })
-            asyncFunction("clearTimeout", object : AsyncFunctionBinding<String> {
-                override suspend fun invoke(args: Array<Any?>): String {
-                    return "ok"
-                }
-            })
         }
         qjs.evaluate<Unit>(
             """
@@ -325,12 +337,50 @@ internal object QuickJsExecutor {
                 };
             };
 
-            var setTimeout = async function(fn, ms) {
-                await __spine.setTimeout(null, ms || 0);
-                if (typeof fn === 'function') fn();
-                return 0;
+            // Timers wait in a list that callExport runs while an answer is still pending.
+            var __spine_timers = {};
+            var __spine_timer_id = 0;
+            var __spine_add_timer = function(fn, ms, args, repeat) {
+                var id = ++__spine_timer_id;
+                var delay = Math.max(0, Number(ms) || 0);
+                __spine_timers[id] = { fn: fn, at: Date.now() + delay, args: args, every: repeat ? Math.max(1, delay) : 0 };
+                return id;
             };
-            var clearTimeout = function(id) {};
+            var setTimeout = function(fn, ms) {
+                return __spine_add_timer(fn, ms, Array.prototype.slice.call(arguments, 2), false);
+            };
+            var setInterval = function(fn, ms) {
+                return __spine_add_timer(fn, ms, Array.prototype.slice.call(arguments, 2), true);
+            };
+            var clearTimeout = function(id) { delete __spine_timers[id]; };
+            var clearInterval = clearTimeout;
+            var __spine_next_timer = function() {
+                var next = -1;
+                var now = Date.now();
+                for (var id in __spine_timers) {
+                    var wait = Math.max(0, __spine_timers[id].at - now);
+                    if (next < 0 || wait < next) next = wait;
+                }
+                return next;
+            };
+            var __spine_run_timers = function() {
+                var now = Date.now();
+                var due = [];
+                for (var id in __spine_timers) {
+                    if (__spine_timers[id].at <= now) due.push(Number(id));
+                }
+                due.sort(function(a, b) { return (__spine_timers[a].at - __spine_timers[b].at) || (a - b); });
+                due.forEach(function(id) {
+                    var timer = __spine_timers[id];
+                    if (!timer) return;
+                    if (timer.every > 0) timer.at = now + timer.every; else delete __spine_timers[id];
+                    if (typeof timer.fn === 'function') {
+                        try { timer.fn.apply(null, timer.args); } catch (e) { console.warn('timer failed: ' + (e && e.message || e)); }
+                    }
+                });
+                return due.length;
+            };
+            var __spine_clear_timers = function() { __spine_timers = {}; };
             """.trimIndent()
         )
     }
@@ -473,24 +523,6 @@ internal object QuickJsExecutor {
                     buffer = chars.indexOf(buffer);
                 }
                 return output;
-            };
-        }
-
-        if (typeof setTimeout === 'undefined') {
-            var __spine_timers = {};
-            var __spine_timer_id = 0;
-            var setTimeout = function(fn, ms) {
-                var id = ++__spine_timer_id;
-                __spine_timers[id] = { fn: fn, ms: ms || 0 };
-                return id;
-            };
-            var clearTimeout = function(id) {
-                if (__spine_timers[id]) delete __spine_timers[id];
-            };
-        }
-        if (typeof clearTimeout === 'undefined') {
-            var clearTimeout = function(id) {
-                if (typeof __spine_timers !== 'undefined' && __spine_timers[id]) delete __spine_timers[id];
             };
         }
 

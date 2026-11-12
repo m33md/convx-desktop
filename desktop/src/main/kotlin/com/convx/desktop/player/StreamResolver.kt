@@ -52,6 +52,8 @@ data class ResolvedStream(
     val module: String? = null,
     /** Bits per sample, when a module says: 16 for CD quality, 24 for hi-res. */
     val bitDepth: Int? = null,
+    /** A module's song sent as HLS pieces: what the download joins into one FLAC file. */
+    val hls: HlsAudio.Media? = null,
 ) {
     val codec: String
         get() = mimeType.substringAfter("codecs=\"", "").substringBefore('"').substringBefore('.').ifBlank {
@@ -67,6 +69,7 @@ data class ResolvedStream(
         get() = when {
             mimeType.contains("webm") -> "webm"
             module == null -> "m4a"
+            mimeType.startsWith("audio/mp4") -> "mp4"
             mimeType.contains("flac") -> "flac"
             mimeType.contains("mpeg") -> "mp3"
             mimeType.contains("ogg") -> "ogg"

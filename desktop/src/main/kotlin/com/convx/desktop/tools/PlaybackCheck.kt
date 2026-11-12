@@ -41,7 +41,7 @@ fun main(args: Array<String>) {
             "kJQP7kiw5Fk",
         )
     }
-    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck() and streamFailureCheck() and modulesCheck()
+    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck() and streamFailureCheck() and modulesCheck() and hlsCheck()
     partyServerCheck()
     runBlocking(Dispatchers.IO) { initYouTube() }
     var passed = 0
@@ -620,12 +620,185 @@ private fun modulesCheck(): Boolean {
             expect("module without exports refused", bad.isFailure, bad.exceptionOrNull()?.message.orEmpty())
             com.music.spine.QuickJsExecutor.unload("ci-bad")
         }
+        // Timers: a module warming up the next songs in the background doesn't hold up the answer,
+        // while one that sleeps before answering is waited for.
+        val timers = """
+            const settings = {};
+            async function searchTracks(query, limit, context) {
+                await new Promise(function (resolve) { setTimeout(resolve, 200); });
+                return { tracks: [], total: 0 };
+            }
+            async function getTrackStreamUrl(id, quality, context) {
+                setTimeout(function () { return new Promise(function () {}); }, 0);
+                setTimeout(function () { searchTracks("later", 1, {}); }, 5000);
+                var t = setTimeout(function () { throw new Error("cleared timer ran"); }, 10);
+                clearTimeout(t);
+                return { streamUrl: "https://example.com/" + id + ".flac" };
+            }
+            module.exports = { searchTracks, getTrackStreamUrl, settings };
+        """.trimIndent()
+        runBlocking(Dispatchers.IO) {
+            com.music.spine.QuickJsExecutor.loadModule("ci-timers", timers, "https://example.com/m/").getOrThrow()
+            var started = System.currentTimeMillis()
+            val slept = com.music.spine.QuickJsExecutor.callExport("ci-timers", "searchTracks", listOf("\"x\"", "1", "{}"))
+            val sleptMs = System.currentTimeMillis() - started
+            expect("timer before an answer", slept.isSuccess && sleptMs in 180..2000, "$sleptMs ms ${slept.exceptionOrNull()?.message.orEmpty()}")
+            started = System.currentTimeMillis()
+            val quick = com.music.spine.QuickJsExecutor.callExport("ci-timers", "getTrackStreamUrl", listOf("\"t1\"", "\"LOSSLESS\"", "{}"))
+            val quickMs = System.currentTimeMillis() - started
+            expect("background timers don't hold the answer", quick.getOrNull()?.contains("t1.flac") == true && quickMs < 1000, "$quickMs ms ${quick.exceptionOrNull()?.message.orEmpty()}")
+            com.music.spine.QuickJsExecutor.unload("ci-timers")
+        }
         val addon = com.music.spine.EclipseAddon
         val dash = addon.parseStream(kotlinx.serialization.json.Json { ignoreUnknownKeys = true }, "x", """{"url":"https://example.com/a.mpd","manifest":"dash"}""")
         expect("addon dash", dash.streamType == "dash", "${dash.streamType}")
         expect("addon urls", addon.searchUrl("https://a.example/t0k", "a b") == "https://a.example/t0k/search?q=a%20b", addon.searchUrl("https://a.example/t0k", "a b"))
     } catch (e: Throwable) {
         expect("engine", false, "${e::class.simpleName}: ${e.message}")
+    }
+    return ok
+}
+
+/**
+ * A module's song sent as HLS pieces, as Tidal sends it: FLAC in fragmented MP4, a setup piece
+ * and short pieces each at a signed address. The pieces are made here from a FLAC encode, served
+ * from this machine, joined by the player's download and decoded sample for sample.
+ */
+fun hlsCheck(): Boolean {
+    var ok = true
+    fun expect(name: String, pass: Boolean, detail: String) {
+        if (!pass) ok = false
+        println("${if (pass) "PASS" else "FAIL"} modules hls $name: $detail")
+    }
+    val rate = 44_100
+    val pcm = ShortArray(rate * 2 * 9) { i ->
+        val t = (i / 2).toDouble() / rate
+        val v = if (i % 2 == 0) kotlin.math.sin(2 * Math.PI * (220 + 40 * t) * t) else kotlin.math.sin(2 * Math.PI * 330 * t)
+        (v * 12_000 + ((i * 7919) % 401 - 200)).toInt().toShort()
+    }
+    val dir = java.nio.file.Files.createTempDirectory("convx-hls").toFile()
+    val mp4 = java.io.File(dir, "song.mp4")
+    val server = com.sun.net.httpserver.HttpServer.create(java.net.InetSocketAddress("127.0.0.1", 0), 0)
+    try {
+        org.bytedeco.javacv.FFmpegFrameRecorder(mp4, 2).apply {
+            format = "mp4"
+            sampleRate = rate
+            audioCodec = org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_FLAC
+            setOption("movflags", "frag_keyframe+empty_moov+default_base_moof")
+            setOption("frag_duration", "2000000")
+            start()
+            recordSamples(rate, 2, java.nio.ShortBuffer.wrap(pcm))
+            stop()
+            release()
+        }
+        // The setup piece is ftyp + moov; each piece after it is a moof and its mdat.
+        val bytes = mp4.readBytes()
+        val boxes = generateSequence(0) { at ->
+            val size = java.nio.ByteBuffer.wrap(bytes, at, 4).int
+            (at + size).takeIf { size >= 8 && it < bytes.size }
+        }.map { at -> at to String(bytes, at + 4, 4, Charsets.ISO_8859_1) }.toList()
+        val firstMoof = boxes.first { it.second == "moof" }.first
+        val init = bytes.copyOfRange(0, firstMoof)
+        val starts = boxes.filter { it.second == "moof" }.map { it.first } + bytes.size
+        val pieces = starts.zipWithNext { a, b -> bytes.copyOfRange(a, b) }
+        val sig = "Policy=x&Signature=a~b-c_&Key-Pair-Id=K"
+        val base = "http://127.0.0.1:${server.address.port}"
+        fun media(extra: String = "", end: Boolean = true, folder: String = "") = buildString {
+            append("#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-TARGETDURATION:2\n$extra")
+            append("#EXT-X-MAP:URI=\"$base/init.mp4?$sig\"\n")
+            pieces.indices.forEach { append("#EXTINF:2.0,\n$base$folder/p$it.mp4?$sig\n") }
+            if (end) append("#EXT-X-ENDLIST\n")
+        }
+        val files = mutableMapOf(
+            "/master.m3u8" to "#EXTM3U\n#EXT-X-STREAM-INF:BANDWIDTH=900000,CODECS=\"fLaC\"\n$base/media.m3u8?$sig\n".toByteArray(),
+            "/media.m3u8" to media().toByteArray(),
+            "/locked.m3u8" to media("#EXT-X-KEY:METHOD=AES-128,URI=\"$base/key\"\n").toByteArray(),
+            "/live.m3u8" to media(end = false).toByteArray(),
+            "/slow.m3u8" to media(folder = "/slow").toByteArray(),
+            "/init.mp4" to init,
+        )
+        pieces.forEachIndexed { i, piece -> files["/p$i.mp4"] = piece }
+        server.executor = java.util.concurrent.Executors.newCachedThreadPool { task -> Thread(task).apply { isDaemon = true } }
+        server.createContext("/") { exchange ->
+            // A slow line: each piece takes half a second.
+            val slow = exchange.requestURI.path.startsWith("/slow/")
+            if (slow) Thread.sleep(500)
+            val body = files[exchange.requestURI.path.removePrefix(if (slow) "/slow" else "")]
+            // Like a signed CDN address: the query string has to come along.
+            if (body == null || exchange.requestURI.query?.contains("Signature=") != true) {
+                exchange.sendResponseHeaders(403, -1)
+                exchange.close()
+                return@createContext
+            }
+            exchange.sendResponseHeaders(200, body.size.toLong())
+            exchange.responseBody.use { it.write(body) }
+        }
+        server.start()
+
+        val hls = com.convx.desktop.player.HlsAudio.load("$base/master.m3u8?$sig")
+        expect(
+            "playlist",
+            hls.segments.size == pieces.size && hls.info.sampleRate == rate && hls.info.bitDepth == 16 && hls.info.channels == 2,
+            "${pieces.size} pieces, ${hls.info}",
+        )
+        val stream = com.convx.desktop.player.ResolvedStream(
+            videoId = "ci-hls", url = "$base/master.m3u8?$sig", mimeType = "audio/flac", bitrate = 900_000, sampleRate = rate,
+            contentLength = 0, loudnessDb = null, durationMs = 9_000, client = com.convx.desktop.player.ModuleStreams.Client,
+            expiresAt = Long.MAX_VALUE, module = "CI", bitDepth = 16, hls = hls,
+        )
+        AudioCache.discard("ci-hls")
+        val decoded = ArrayList<Short>(pcm.size)
+        Decoder(AudioCache.open(stream), rate, 2).use { decoder ->
+            decoder.start()
+            while (true) {
+                val frame = decoder.grabSamples() ?: break
+                val buffer = frame.samples?.firstOrNull() as? java.nio.ShortBuffer ?: continue
+                while (buffer.hasRemaining()) decoded += buffer.get()
+            }
+        }
+        val exact = decoded.size == pcm.size && decoded.indices.all { decoded[it] == pcm[it] }
+        expect("plays sample for sample", exact, "${decoded.size / 2} of ${pcm.size / 2} frames")
+        val saved = AudioCache.completeModuleFile("ci-hls")
+        expect("kept as FLAC", saved?.extension == "flac" && com.convx.desktop.player.HlsAudio.flacInfo(saved)?.bitDepth == 16, "${saved?.name}")
+        AudioCache.discard("ci-hls")
+
+        // The same song arriving slowly: a jump past what has arrived waits for it, and every jump
+        // lands where it was asked, to the sample the decoder says.
+        val slow = stream.copy(videoId = "ci-hls-slow", hls = com.convx.desktop.player.HlsAudio.load("$base/slow.m3u8?$sig"))
+        AudioCache.discard("ci-hls-slow")
+        Decoder(AudioCache.open(slow), rate, 2).use { decoder ->
+            decoder.start()
+            for (target in listOf(7.0, 1.5, 5.25, 0.2)) {
+                val started = System.currentTimeMillis()
+                val moved = decoder.seek((target * 1_000_000).toLong())
+                val chunk = ShortArray(4000)
+                var n = 0
+                while (n < chunk.size) {
+                    val frame = decoder.grabSamples() ?: break
+                    val buffer = frame.samples?.firstOrNull() as? java.nio.ShortBuffer ?: continue
+                    val take = minOf(buffer.remaining(), chunk.size - n)
+                    buffer.get(chunk, n, take)
+                    n += take
+                }
+                val at = (0..(pcm.size - chunk.size) / 2).firstOrNull { f -> chunk.indices.all { pcm[f * 2 + it] == chunk[it] } }
+                expect(
+                    "jump to $target s while it downloads",
+                    moved && n == chunk.size && at != null && kotlin.math.abs(at - target * rate) < rate / 10,
+                    "landed at ${at?.let { it * 1000L / rate }} ms after ${System.currentTimeMillis() - started} ms",
+                )
+            }
+        }
+        AudioCache.discard("ci-hls-slow")
+
+        for ((name, path) in listOf("encrypted" to "/locked.m3u8", "live" to "/live.m3u8")) {
+            val refused = runCatching { com.convx.desktop.player.HlsAudio.load("$base$path?$sig") }.exceptionOrNull()
+            expect("$name refused", refused is com.convx.desktop.player.HlsAudio.Unsupported, "${refused?.message}")
+        }
+    } catch (e: Throwable) {
+        expect("run", false, "${e::class.simpleName}: ${e.message}")
+    } finally {
+        server.stop(0)
+        dir.deleteRecursively()
     }
     return ok
 }

@@ -5,6 +5,8 @@
 
 package com.convx.desktop.player
 
+import org.bytedeco.ffmpeg.avformat.AVIndexEntry
+import org.bytedeco.ffmpeg.global.avformat
 import org.bytedeco.ffmpeg.global.avutil
 import org.bytedeco.javacv.FFmpegFrameGrabber
 import org.bytedeco.javacv.Frame
@@ -43,11 +45,44 @@ class Decoder(source: CachedAudio, outputRate: Int, outputChannels: Int) : AutoC
         }
     }
 
-    fun seek(timestampUs: Long) {
+    /**
+     * Moves to [timestampUs]. An HLS song still arriving waits for its pieces up to just past that
+     * point first; that wait ends early, returning false without moving, once [abandon] says so.
+     */
+    fun seek(timestampUs: Long, abandon: () -> Boolean = { false }): Boolean {
+        val download = download
+        val hls = download?.stream?.hls
+        if (hls != null) {
+            // Two seconds past the point, as FFmpeg reads a few frames ahead to find one, and the
+            // start of the piece after it, so the point lies between two pieces it's told of.
+            val sample = timestampUs * hls.info.sampleRate / 1_000_000
+            if (!download.awaitSeek(timestampUs / 1_000_000.0 + 2.0, sample, abandon = abandon)) return false
+            markPieces(download, hls.info.sampleRate)
+        }
         try {
             grabber.timestamp = timestampUs
         } catch (e: FrameGrabber.Exception) {
             throw failure ?: e
+        }
+        return true
+    }
+
+    /**
+     * Tells FFmpeg where an HLS song's pieces start, so a jump is looked for between two of them.
+     * Without that FFmpeg first looks for the end of the file, which hasn't arrived, and waits
+     * for more pieces to land: seconds on a slow line. Only real frame starts are given: a mark
+     * at the end of the song would make FFmpeg's search fail.
+     */
+    private fun markPieces(download: AudioCache.Download, sampleRate: Int) {
+        val context = grabber.formatContext ?: return
+        val stream = (0 until context.nb_streams()).map { context.streams(it) }
+            .firstOrNull { it.codecpar().codec_type() == avutil.AVMEDIA_TYPE_AUDIO } ?: return
+        val base = stream.time_base()
+        if (base.num() <= 0 || base.den() <= 0 || sampleRate <= 0) return
+        for ((position, sample) in download.seekPoints()) {
+            val timestamp = if (base.num() == 1 && base.den() == sampleRate) sample
+            else sample * base.den() / (sampleRate.toLong() * base.num())
+            avformat.av_add_index_entry(stream, position, timestamp, 0, 0, AVIndexEntry.AVINDEX_KEYFRAME)
         }
     }
 
