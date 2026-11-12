@@ -47,6 +47,9 @@ object AudioCache {
 
     private val active = ConcurrentHashMap<String, Download>()
 
+    /** How many of an HLS song's pieces are fetched at once. */
+    private const val PiecesAhead = 4
+
     /** How many times one download may swap to a fresh address before it gives up. */
     private const val MaxRenewals = 3
 
@@ -284,8 +287,12 @@ object AudioCache {
         private fun run() {
             try {
                 marker.delete()
-                makeRoom(totalBytes.takeIf { it > 0 } ?: (8 * ChunkBytes), keep = videoId)
-                RandomAccessFile(file, "rw").use { out ->
+                val hls = stream.hls
+                makeRoom(totalBytes.takeIf { it > 0 } ?: hls?.estimatedBytes ?: (8 * ChunkBytes), keep = videoId)
+                if (hls != null) RandomAccessFile(file, "rw").use { out ->
+                    out.setLength(0)
+                    joinPieces(hls, out)
+                } else RandomAccessFile(file, "rw").use { out ->
                     out.setLength(0)
                     var position = 0L
                     val refused = mutableSetOf<String>()
@@ -357,6 +364,64 @@ object AudioCache {
                     progress.signalAll()
                 }
                 active.remove(videoId, this)
+            }
+        }
+
+        /**
+         * An HLS song: the FLAC header, then each piece's FLAC frames in order, so the file is a
+         * plain .flac from the first bytes on. A few pieces are fetched ahead while one is written.
+         */
+        private fun joinPieces(media: HlsAudio.Media, out: RandomAccessFile) {
+            out.write(media.header)
+            var position = media.header.size.toLong()
+            lock.withLock {
+                downloaded = position
+                progress.signalAll()
+            }
+            val fetcher = java.util.concurrent.Executors.newFixedThreadPool(PiecesAhead) { task ->
+                Thread(task, "convx-pieces-$videoId").apply { isDaemon = true }
+            }
+            try {
+                val pending = ArrayDeque<java.util.concurrent.Future<ByteArray>>()
+                var next = 0
+                fun queue() {
+                    val part = media.segments[next++]
+                    pending.addLast(fetcher.submit<ByteArray> { fetchPiece(part) })
+                }
+                while (next < media.segments.size && pending.size < PiecesAhead) queue()
+                while (pending.isNotEmpty() && !cancelled) {
+                    val piece = try {
+                        pending.removeFirst().get()
+                    } catch (e: java.util.concurrent.ExecutionException) {
+                        throw e.cause as? IOException ?: IOException(e.cause)
+                    }
+                    if (next < media.segments.size) queue()
+                    position += HlsAudio.writeFrames(piece, media.trackId, out, position)
+                    if (position > MaxSongBytes) throw IOException("Stopped a download that went past ${MaxSongBytes / 1_048_576} MB")
+                    lock.withLock {
+                        downloaded = position
+                        progress.signalAll()
+                    }
+                }
+            } finally {
+                fetcher.shutdownNow()
+            }
+            if (cancelled) return
+            if (position == media.header.size.toLong()) throw IOException("The song's pieces held no audio")
+            totalBytes = position
+        }
+
+        /** One piece, tried three times; a refusal (HTTP 4xx) isn't tried again. */
+        private fun fetchPiece(part: HlsAudio.Part): ByteArray {
+            var attempt = 0
+            while (true) {
+                if (cancelled) throw IOException("Download cancelled")
+                try {
+                    return HlsAudio.fetchPart(part)
+                } catch (e: IOException) {
+                    if (e is HlsAudio.Unsupported || (e is HttpStatusException && e.code in 400..499) || ++attempt >= 3) throw e
+                    Thread.sleep(500L * attempt)
+                }
             }
         }
 

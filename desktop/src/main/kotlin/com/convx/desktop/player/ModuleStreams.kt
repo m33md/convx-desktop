@@ -38,9 +38,10 @@ import java.util.concurrent.ConcurrentHashMap
  * for the song at once, a few at a time, and the highest one in the user's order that has it
  * plays. A song matches on its title, an artist, and a length within ten seconds.
  *
- * Playback here saves each song to disk as it plays, so only answers that are one audio file
- * are taken. A DASH or HLS answer moves on to the module's next quality, and Dolby Atmos is
- * left for stereo, which is what the PC plays.
+ * Playback here saves each song to disk as it plays. An answer that is one audio file is taken
+ * as it is, and FLAC sent as HLS pieces (as Tidal sends it) is joined into one FLAC file by
+ * [HlsAudio]. Other HLS, and DASH, move on to the module's next quality, and Dolby Atmos is left
+ * for stereo, which is what the PC plays. Why a module's answer was passed over goes to the log.
  */
 object ModuleStreams {
     private const val Tag = "Modules"
@@ -92,19 +93,22 @@ object ModuleStreams {
             "wav" -> "audio/wav"
             else -> "audio/mp4"
         }
+        val flac = if (mime == "audio/flac") HlsAudio.flacInfo(file) else null
         val durationMs = song.duration?.takeIf { it > 0 }?.times(1000L)
+            ?: flac?.takeIf { it.totalSamples > 0 }?.let { it.totalSamples * 1000 / it.sampleRate }
         return ResolvedStream(
             videoId = song.id,
             url = file.toURI().toString(),
             mimeType = mime,
             bitrate = durationMs?.let { (file.length() * 8_000 / it).toInt() } ?: 0,
-            sampleRate = null,
+            sampleRate = flac?.sampleRate,
             contentLength = file.length(),
             loudnessDb = null,
             durationMs = durationMs,
             client = Client,
             expiresAt = Long.MAX_VALUE,
             module = "Saved from a module",
+            bitDepth = flac?.bitDepth,
         )
     }
 
@@ -162,6 +166,7 @@ object ModuleStreams {
         val mimeType: String,
         val contentLength: Long,
         val priority: Int,
+        val hls: HlsAudio.Media? = null,
     )
 
     private suspend fun find(sourceUrls: List<String>, request: Request): Match? = withTimeoutOrNull(BudgetMs) {
@@ -215,10 +220,11 @@ object ModuleStreams {
         val loaded = ModuleManager.shared.loadModule(module) { source.substringBeforeLast('/') }.getOrThrow()
         val moduleSettings = request.settings[module.id].orEmpty()
         val configured = loaded.manifest.defaults + moduleSettings.filterValues { it.isNotBlank() }
-        val wanted = stereo(loaded, compatibleQuality(loaded, selectedQuality(request.quality, moduleSettings)))
+        val wanted = stereo(loaded, compatibleQuality(loaded, selectedQuality(request.quality, moduleSettings, loaded.manifest.defaults)))
         fun settingsFor(tier: String) = configured + mapOf("quality" to tier, "dolbyAtmos" to "false")
 
         val candidates = candidates(loaded, request, settingsFor(wanted))
+        if (candidates.isEmpty()) Log.i(Tag, "${module.name}: no exact match for \"${request.title}\"")
         // Hi-res often comes as DASH, which isn't one file: CD quality is next, then AAC.
         val tiers = buildList {
             add(wanted)
@@ -230,14 +236,44 @@ object ModuleStreams {
             // A URL on a search result is often only the add-on's default AAC; the stream endpoint
             // is asked for each tier first, so the quality setting can reach FLAC.
             for (tier in tiers) {
-                val stream = ModuleManager.shared.getStreamUrl(loaded, track.id, settingsFor(tier), hostTier(tier))
-                    .getOrNull() ?: continue
-                val url = stream.streamUrl?.takeIf(::validUrl) ?: continue
-                if (isManifest(stream, url)) continue
+                fun skip(reason: String) = Log.i(Tag, "${module.name}: passed over its $tier answer for \"${track.title}\": $reason")
+                val answer = ModuleManager.shared.getStreamUrl(loaded, track.id, settingsFor(tier), hostTier(tier))
+                val stream = answer.getOrNull() ?: run {
+                    skip(answer.exceptionOrNull()?.message ?: "no answer")
+                    null
+                } ?: continue
+                val url = stream.streamUrl?.takeIf(::validUrl) ?: run {
+                    skip("no address")
+                    null
+                } ?: continue
+                if (HlsAudio.isPlaylist(url, stream.mimeType, stream.streamType)) {
+                    val hls = try {
+                        withContext(Dispatchers.IO) { HlsAudio.load(url) }
+                    } catch (e: CancellationException) {
+                        throw e
+                    } catch (e: java.io.IOException) {
+                        skip("HLS, but ${e.message}")
+                        continue
+                    }
+                    return Match(module, track, stream, "audio/flac", 0, request.enabledOrder.indexOf(module.id), hls)
+                }
+                if (isManifest(stream, url)) {
+                    skip("DASH, which isn't one file")
+                    continue
+                }
                 val mime = mimeType(stream, track, url)
-                if (isAtmos(stream, mime)) continue
-                if (isLossless(tier) && !mime.isLosslessMime()) continue
-                val length = StreamResolver.probe(url) ?: continue
+                if (isAtmos(stream, mime)) {
+                    skip("Dolby Atmos")
+                    continue
+                }
+                if (isLossless(tier) && !mime.isLosslessMime()) {
+                    skip("$mime, not lossless")
+                    continue
+                }
+                val length = StreamResolver.probe(url) ?: run {
+                    skip("its address doesn't send audio")
+                    null
+                } ?: continue
                 return Match(module, track, stream, mime, length, request.enabledOrder.indexOf(module.id))
             }
             // Older modules put a playable URL on the search result and have no stream endpoint.
@@ -273,8 +309,12 @@ object ModuleStreams {
 
     private fun Match.toStream(song: Song): ResolvedStream {
         val lossless = mimeType.isLosslessMime()
-        val rate = stream.track?.sampleRate?.let { if (it < 1000) (it * 1000).toInt() else it.toInt() }
-        val bitrate = stream.track?.bitrate?.let { if (it < 10_000) it * 1000 else it }
+        val label = qualityLabel(stream)
+        val rate = hls?.info?.sampleRate
+            ?: stream.track?.sampleRate?.let { if (it < 1000) (it * 1000).toInt() else it.toInt() }
+            ?: label?.let(::labelRate)
+        val bitrate = hls?.bandwidth?.toInt()
+            ?: stream.track?.bitrate?.let { if (it < 10_000) it * 1000 else it }
             ?: if (lossless) 1_411_000 else 320_000
         return ResolvedStream(
             videoId = song.id,
@@ -284,23 +324,37 @@ object ModuleStreams {
             sampleRate = rate,
             contentLength = contentLength,
             loudnessDb = null,
-            durationMs = track.duration.takeIf { it > 0 }?.times(1000L) ?: song.duration?.times(1000L),
+            durationMs = track.duration.takeIf { it > 0 }?.times(1000L) ?: hls?.durationMs ?: song.duration?.times(1000L),
             client = Client,
             // Module links can be short-lived; the song is saved as it plays, so this is only for the next minute.
             expiresAt = System.currentTimeMillis() + 60_000L,
             module = module.name,
-            bitDepth = stream.track?.bitDepth,
+            bitDepth = hls?.info?.bitDepth ?: stream.track?.bitDepth ?: label?.let(::labelDepth),
+            hls = hls,
         )
     }
+
+    /** A module's own words for the quality, such as "FLAC 24-bit / 96kHz". */
+    private fun qualityLabel(stream: ModuleStreamResponse): String? =
+        stream.track?.audioQuality?.takeIf { "bit" in it.lowercase(Locale.ROOT) || "khz" in it.lowercase(Locale.ROOT) }
+
+    private fun labelDepth(label: String): Int? =
+        Regex("(\\d{2})\\s*-?\\s*bit", RegexOption.IGNORE_CASE).find(label)?.groupValues?.get(1)?.toIntOrNull()?.takeIf { it in 8..32 }
+
+    private fun labelRate(label: String): Int? =
+        Regex("(\\d{2,3}(?:\\.\\d+)?)\\s*khz", RegexOption.IGNORE_CASE).find(label)?.groupValues?.get(1)?.toDoubleOrNull()
+            ?.let { (it * 1000).toInt() }?.takeIf { it in 8_000..768_000 }
 
     /** What decides the answer, so a miss is forgotten when any of it changes. */
     private fun fingerprint(settings: Settings, quality: AudioQuality): Int =
         listOf(settings.moduleSources, settings.enabledModules, settings.moduleSettings, quality).hashCode()
 
-    private fun selectedQuality(quality: AudioQuality, moduleSettings: Map<String, String>): String {
+    private fun selectedQuality(quality: AudioQuality, moduleSettings: Map<String, String>, defaults: Map<String, String>): String {
         moduleSettings["quality"]?.takeIf { it.isNotBlank() }?.let { return it }
         if (quality == AudioQuality.LOW) return "LOW"
-        // A manifest's default is often its safe AAC tier; lossless is tried unless the user chose otherwise.
+        // A manifest's default is often its safe AAC tier; lossless is tried unless the user chose
+        // otherwise. A hi-res default is kept, since CD quality is tried next when it can't play.
+        defaults["quality"]?.takeIf { isHiRes(it) && !wantsAtmos(it) }?.let { return it }
         return "LOSSLESS"
     }
 

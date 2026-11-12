@@ -183,9 +183,10 @@ fun ModulesSettings() {
     }
     SectionGap()
     InfoNote(
-        "On a PC, a module's song is saved as it plays like any other, so only answers that are one audio file " +
-            "play: a hi-res stream sent as DASH or HLS falls back to the module's CD quality. Dolby Atmos is left " +
-            "for stereo. Downloads always come from YouTube, as on the phone.",
+        "On a PC, a module's song is saved as it plays like any other. Answers that are one audio file play, and " +
+            "so does FLAC sent in pieces (HLS), as Tidal sends it. A stream sent as DASH, or as pieces that aren't " +
+            "FLAC, falls back to the module's CD quality, then to YouTube. Dolby Atmos is left for stereo. Downloads " +
+            "always come from YouTube, as on the phone.",
     )
 }
 
