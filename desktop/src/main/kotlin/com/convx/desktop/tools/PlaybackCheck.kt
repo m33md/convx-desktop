@@ -703,10 +703,10 @@ fun hlsCheck(): Boolean {
         val pieces = starts.zipWithNext { a, b -> bytes.copyOfRange(a, b) }
         val sig = "Policy=x&Signature=a~b-c_&Key-Pair-Id=K"
         val base = "http://127.0.0.1:${server.address.port}"
-        fun media(extra: String = "", end: Boolean = true) = buildString {
+        fun media(extra: String = "", end: Boolean = true, folder: String = "") = buildString {
             append("#EXTM3U\n#EXT-X-VERSION:6\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-TARGETDURATION:2\n$extra")
             append("#EXT-X-MAP:URI=\"$base/init.mp4?$sig\"\n")
-            pieces.indices.forEach { append("#EXTINF:2.0,\n$base/p$it.mp4?$sig\n") }
+            pieces.indices.forEach { append("#EXTINF:2.0,\n$base$folder/p$it.mp4?$sig\n") }
             if (end) append("#EXT-X-ENDLIST\n")
         }
         val files = mutableMapOf(
@@ -714,11 +714,16 @@ fun hlsCheck(): Boolean {
             "/media.m3u8" to media().toByteArray(),
             "/locked.m3u8" to media("#EXT-X-KEY:METHOD=AES-128,URI=\"$base/key\"\n").toByteArray(),
             "/live.m3u8" to media(end = false).toByteArray(),
+            "/slow.m3u8" to media(folder = "/slow").toByteArray(),
             "/init.mp4" to init,
         )
         pieces.forEachIndexed { i, piece -> files["/p$i.mp4"] = piece }
+        server.executor = java.util.concurrent.Executors.newCachedThreadPool { task -> Thread(task).apply { isDaemon = true } }
         server.createContext("/") { exchange ->
-            val body = files[exchange.requestURI.path]
+            // A slow line: each piece takes half a second.
+            val slow = exchange.requestURI.path.startsWith("/slow/")
+            if (slow) Thread.sleep(500)
+            val body = files[exchange.requestURI.path.removePrefix(if (slow) "/slow" else "")]
             // Like a signed CDN address: the query string has to come along.
             if (body == null || exchange.requestURI.query?.contains("Signature=") != true) {
                 exchange.sendResponseHeaders(403, -1)
@@ -756,6 +761,34 @@ fun hlsCheck(): Boolean {
         val saved = AudioCache.completeModuleFile("ci-hls")
         expect("kept as FLAC", saved?.extension == "flac" && com.convx.desktop.player.HlsAudio.flacInfo(saved)?.bitDepth == 16, "${saved?.name}")
         AudioCache.discard("ci-hls")
+
+        // The same song arriving slowly: a jump past what has arrived waits for it, and every jump
+        // lands where it was asked, to the sample the decoder says.
+        val slow = stream.copy(videoId = "ci-hls-slow", hls = com.convx.desktop.player.HlsAudio.load("$base/slow.m3u8?$sig"))
+        AudioCache.discard("ci-hls-slow")
+        Decoder(AudioCache.open(slow), rate, 2).use { decoder ->
+            decoder.start()
+            for (target in listOf(7.0, 1.5, 5.25, 0.2)) {
+                val started = System.currentTimeMillis()
+                val moved = decoder.seek((target * 1_000_000).toLong())
+                val chunk = ShortArray(4000)
+                var n = 0
+                while (n < chunk.size) {
+                    val frame = decoder.grabSamples() ?: break
+                    val buffer = frame.samples?.firstOrNull() as? java.nio.ShortBuffer ?: continue
+                    val take = minOf(buffer.remaining(), chunk.size - n)
+                    buffer.get(chunk, n, take)
+                    n += take
+                }
+                val at = (0..(pcm.size - chunk.size) / 2).firstOrNull { f -> chunk.indices.all { pcm[f * 2 + it] == chunk[it] } }
+                expect(
+                    "jump to $target s while it downloads",
+                    moved && n == chunk.size && at != null && kotlin.math.abs(at - target * rate) < rate / 10,
+                    "landed at ${at?.let { it * 1000L / rate }} ms after ${System.currentTimeMillis() - started} ms",
+                )
+            }
+        }
+        AudioCache.discard("ci-hls-slow")
 
         for ((name, path) in listOf("encrypted" to "/locked.m3u8", "live" to "/live.m3u8")) {
             val refused = runCatching { com.convx.desktop.player.HlsAudio.load("$base$path?$sig") }.exceptionOrNull()

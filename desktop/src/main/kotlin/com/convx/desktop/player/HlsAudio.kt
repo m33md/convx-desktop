@@ -26,11 +26,12 @@ object HlsAudio {
     /** Why a playlist can't be played here, in a few words for the log. */
     class Unsupported(reason: String) : IOException(reason)
 
-    /** One piece: its address, and which bytes of it when the playlist names a range. */
-    data class Part(val url: String, val offset: Long? = null, val length: Long? = null)
+    /** One piece: its address, which bytes of it when the playlist names a range, and how many seconds it plays. */
+    data class Part(val url: String, val offset: Long? = null, val length: Long? = null, val seconds: Double = 0.0)
 
     /** What the stream's FLAC header says: the numbers the quality badge shows. */
-    data class FlacInfo(val sampleRate: Int, val channels: Int, val bitDepth: Int, val totalSamples: Long)
+    /** [blockSize] is the most samples a frame holds: every frame's but the last in most files. */
+    data class FlacInfo(val sampleRate: Int, val channels: Int, val bitDepth: Int, val totalSamples: Long, val blockSize: Int = 0)
 
     /** A playlist ready to download: the FLAC header to start the file with, then the pieces in order. */
     class Media(
@@ -109,12 +110,15 @@ object HlsAudio {
         }
     }
 
+    /** What one piece added to the .flac file: its length in bytes, and the sample its first frame starts at (null when unknown). */
+    class Written(val bytes: Long, val firstSample: Long?)
+
     /**
-     * Writes the FLAC frames of one piece to [out] at [position] and returns how many bytes that
-     * was. The frames are found from the piece's own index (moof/traf/trun), so padding or
-     * other tracks in the piece are left out.
+     * Writes the FLAC frames of one piece to [out] at [position]. The frames are found from the
+     * piece's own index (moof/traf/trun), so padding or other tracks in the piece are left out.
+     * [blockSize] is the stream's, from its header, to count where the frames sit in the song.
      */
-    fun writeFrames(piece: ByteArray, trackId: Long, out: RandomAccessFile, position: Long): Long {
+    fun writeFrames(piece: ByteArray, trackId: Long, out: RandomAccessFile, position: Long, blockSize: Int = 0): Written {
         val frames = flacFrames(piece, trackId)
         out.seek(position)
         var written = 0L
@@ -122,7 +126,50 @@ object HlsAudio {
             out.write(piece, range.first, range.last - range.first + 1)
             written += range.last - range.first + 1
         }
-        return written
+        return Written(written, frames.firstOrNull()?.let { frameSamples(piece, it, blockSize) }?.first)
+    }
+
+    /**
+     * The FLAC frame header at the start of [frame]: the sample the frame starts at and how many
+     * samples it holds. Null when it isn't a frame header. A frame of a fixed block size stream
+     * carries its number, so it starts at that times the stream's [blockSize] (a short last frame
+     * would give the wrong answer from its own size); otherwise it carries its first sample.
+     */
+    internal fun frameSamples(data: ByteArray, frame: IntRange, blockSize: Int = 0): Pair<Long, Int>? {
+        fun at(i: Int) = if (i <= frame.last && i < data.size) data[i].toInt() and 0xFF else -1
+        val start = frame.first
+        if (at(start) != 0xFF || (at(start + 1) and 0xFE) != 0xF8) return null
+        val variable = (at(start + 1) and 1) == 1
+        val sizeCode = at(start + 2) shr 4
+        var p = start + 4
+        val lead = at(p++)
+        if (lead < 0) return null
+        val (bits, more) = when {
+            lead and 0x80 == 0 -> lead to 0
+            lead and 0xE0 == 0xC0 -> (lead and 0x1F) to 1
+            lead and 0xF0 == 0xE0 -> (lead and 0x0F) to 2
+            lead and 0xF8 == 0xF0 -> (lead and 0x07) to 3
+            lead and 0xFC == 0xF8 -> (lead and 0x03) to 4
+            lead and 0xFE == 0xFC -> (lead and 0x01) to 5
+            lead == 0xFE -> 0 to 6
+            else -> return null
+        }
+        var number = bits.toLong()
+        repeat(more) {
+            val c = at(p++)
+            if (c < 0 || c and 0xC0 != 0x80) return null
+            number = (number shl 6) or (c and 0x3F).toLong()
+        }
+        val samples = when (sizeCode) {
+            1 -> 192
+            in 2..5 -> 576 shl (sizeCode - 2)
+            6 -> at(p).takeIf { it >= 0 }?.plus(1) ?: return null
+            7 -> if (at(p) < 0 || at(p + 1) < 0) return null else ((at(p) shl 8) or at(p + 1)) + 1
+            in 8..15 -> 256 shl (sizeCode - 8)
+            else -> return null
+        }
+        val step = if (blockSize >= 16) blockSize else samples
+        return (if (variable) number else number * step) to samples
     }
 
     /** The FLAC header of a finished .flac file, for the badge of a song played from disk. */
@@ -179,6 +226,7 @@ object HlsAudio {
         var init: Part? = null
         var ended = false
         var range: Pair<Long, Long?>? = null
+        var seconds = 0.0
         val ends = HashMap<String, Long>()
         val segments = ArrayList<Part>()
         for (line in lines) {
@@ -196,6 +244,7 @@ object HlsAudio {
                     init = part
                 }
                 line.startsWith("#EXT-X-BYTERANGE:") -> range = byteRange(line.substringAfter(':'))
+                line.startsWith("#EXTINF:") -> seconds = line.substringAfter(':').substringBefore(',').trim().toDoubleOrNull() ?: 0.0
                 line == "#EXT-X-ENDLIST" -> ended = true
                 line.startsWith("#") -> Unit
                 else -> {
@@ -203,9 +252,10 @@ object HlsAudio {
                     val part = range?.let { (length, offset) ->
                         val start = offset ?: ends[url] ?: 0L
                         ends[url] = start + length
-                        Part(url, start, length)
-                    } ?: Part(url)
+                        Part(url, start, length, seconds)
+                    } ?: Part(url, seconds = seconds)
                     range = null
+                    seconds = 0.0
                     segments += part
                     if (segments.size > MaxSegments) throw Unsupported("the playlist has too many pieces")
                 }
@@ -369,8 +419,9 @@ object HlsAudio {
         val channels = ((b[2] shr 1) and 0x7) + 1
         val depth = (((b[2] and 1) shl 4) or (b[3] shr 4)) + 1
         val total = ((b[3] and 0xF).toLong() shl 32) or (b[4].toLong() shl 24) or (b[5].toLong() shl 16) or (b[6].toLong() shl 8) or b[7].toLong()
+        val blockSize = ((data[at + 2].toInt() and 0xFF) shl 8) or (data[at + 3].toInt() and 0xFF)
         if (rate <= 0) throw Unsupported("the FLAC header can't be read")
-        return FlacInfo(rate, channels, depth, total)
+        return FlacInfo(rate, channels, depth, total, blockSize)
     }
 
     /**

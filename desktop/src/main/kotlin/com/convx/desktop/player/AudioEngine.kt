@@ -332,7 +332,7 @@ class AudioEngine(private val listener: Listener) {
                 reader.start()
                 if (closed) return
                 reader.grabber.lengthInTime.takeIf { it > 0 }?.let { durationMs = it / 1000 }
-                if (baseMs > 0) reader.seek(baseMs * 1000)
+                if (baseMs > 0 && !reader.seek(baseMs * 1000) { closed }) return
 
                 val l = openLine()
                 l.open(Format, SampleRate * Channels * 2 * BufferMs / 1000)
@@ -351,7 +351,8 @@ class AudioEngine(private val listener: Listener) {
                     val seekTo = pendingSeekMs
                     if (seekTo >= 0) {
                         l.flush()
-                        reader.seek(seekTo * 1000)
+                        // A newer jump, or the song closing, ends a wait for this one's audio.
+                        if (!reader.seek(seekTo * 1000) { closed || pendingSeekMs != seekTo }) continue
                         baseMs = seekTo
                         framesAtBase = l.longFramePosition
                         synchronized(marks) {
@@ -364,7 +365,7 @@ class AudioEngine(private val listener: Listener) {
                         chain.reset()
                         filter.reset()
                         if (effectsLazy.isInitialized()) effectsLazy.value.reset()
-                        pendingSeekMs = -1
+                        if (pendingSeekMs == seekTo) pendingSeekMs = -1
                         if (playing) l.start()
                     }
                     if (!playing) {
