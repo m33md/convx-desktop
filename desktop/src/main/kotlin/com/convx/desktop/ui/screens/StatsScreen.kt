@@ -5,11 +5,8 @@
 
 package com.convx.desktop.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.horizontalScroll
@@ -24,7 +21,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
@@ -32,7 +28,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -56,7 +51,6 @@ import com.convx.desktop.ui.components.Chip
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Gutter
 import com.convx.desktop.ui.components.ItemCard
-import com.convx.desktop.ui.components.LocalPageInsets
 import com.convx.desktop.ui.components.LocalPlayback
 import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.components.MessageState
@@ -211,6 +205,16 @@ fun StatsScreen() {
             item(key = "title") {
                 Row(Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                     Text("Stats", style = ConvxType.LargeTitle, modifier = Modifier.weight(1f))
+                    // The phone's floating shuffle, in the header here, where it can't cover a shelf's arrows.
+                    if (songs.isNotEmpty()) {
+                        GlassCircleButton(
+                            onClick = { PlayerController.playSongs(songs.map { it.value }.shuffled(), 0, "Most played songs") },
+                            tooltip = "Shuffle",
+                        ) {
+                            ConvxIcon("shuffle", tint = Color.White, size = 22.dp)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
                     // The phone's sparks button, which opens Replay.
                     GlassCircleButton(onClick = Replay::show, tooltip = "Replay ’${java.time.Year.now().value % 100}") {
                         ConvxIcon("sparks", tint = Color.White, size = 22.dp)
@@ -292,22 +296,6 @@ fun StatsScreen() {
                 }
             }
         }
-
-        // The phone's floating shuffle, which slips away while you scroll down the page.
-        AnimatedVisibility(
-            visible = songs.isNotEmpty() && listState.isScrollingUp(),
-            enter = slideInVertically { it * 2 },
-            exit = slideOutVertically { it * 2 },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = Gutter, bottom = LocalPageInsets.current.bottom + 16.dp),
-        ) {
-            GlassCircleButton(
-                onClick = { PlayerController.playSongs(songs.map { it.value }.shuffled(), 0, "Most played songs") },
-                size = 56.dp,
-                tooltip = "Shuffle",
-            ) {
-                ConvxIcon("shuffle", tint = Color.White, size = 24.dp)
-            }
-        }
     }
 }
 
@@ -363,23 +351,4 @@ private fun StatsChips(
         periods.forEachIndexed { index, period -> Chip(period.label, index == selected, { onSelect(index) }) }
         Spacer(Modifier.width(1.dp))
     }
-}
-
-/** True while the list is still or moving back up, the phone's cue to show its floating button. */
-@Composable
-internal fun LazyListState.isScrollingUp(): Boolean {
-    var previousIndex by remember(this) { mutableIntStateOf(firstVisibleItemIndex) }
-    var previousOffset by remember(this) { mutableIntStateOf(firstVisibleItemScrollOffset) }
-    return remember(this) {
-        derivedStateOf {
-            if (previousIndex != firstVisibleItemIndex) {
-                previousIndex > firstVisibleItemIndex
-            } else {
-                previousOffset >= firstVisibleItemScrollOffset
-            }.also {
-                previousIndex = firstVisibleItemIndex
-                previousOffset = firstVisibleItemScrollOffset
-            }
-        }
-    }.value
 }

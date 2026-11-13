@@ -33,6 +33,7 @@
   <String Id="FailureHeader" Value="Setup didn't finish" />
   <String Id="FailureUninstallHeader" Value="Convx couldn't be removed" />
   <String Id="FailureLogText" Value="Nothing was changed. The &lt;a href=&quot;#&quot;&gt;setup log&lt;/a&gt; says what went wrong." />
+  <String Id="Needs64BitHeader" Value="Needs 64-bit Windows" />
   <String Id="FailureRestartText" Value="Restart your PC to finish undoing the changes." />
 
   <String Id="CloseButton" Value="Close" />

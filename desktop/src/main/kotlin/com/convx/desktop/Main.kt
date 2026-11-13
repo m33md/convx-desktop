@@ -123,7 +123,13 @@ fun main() {
         val windowState = rememberWindowState(
             placement = if (saved.windowMaximized) WindowPlacement.Maximized else WindowPlacement.Floating,
             position = WindowPosition(Alignment.Center),
-            size = DpSize(saved.windowWidth.coerceAtLeast(940).dp, saved.windowHeight.coerceAtLeast(600).dp),
+            size = minimumWindowSize().let { min ->
+                val screen = screenWorkArea()
+                DpSize(
+                    saved.windowWidth.coerceAtLeast(min.width).let { if (screen != null) it.coerceAtMost(screen.width) else it }.dp,
+                    saved.windowHeight.coerceAtLeast(min.height).let { if (screen != null) it.coerceAtMost(screen.height) else it }.dp,
+                )
+            },
         )
         val navigator = remember { Navigator(com.convx.desktop.ui.shell.startScreen(saved.defaultTab)) }
 
@@ -161,7 +167,7 @@ fun main() {
         ) {
             LaunchedEffect(Unit) {
                 com.convx.desktop.core.SingleInstance.window = window
-                window.minimumSize = Dimension(940, 600)
+                window.minimumSize = minimumWindowSize()
                 window.background = java.awt.Color.BLACK
                 // Every size of the icon, so the title bar and taskbar get a sharp one (the small
                 // ones drop the sound bars, which blur away) instead of the big one shrunk.
@@ -190,7 +196,10 @@ fun main() {
             }
             // Views that move on their own stop while minimised and slow down behind other apps (see Motion.kt).
             val focused = LocalWindowInfo.current.isWindowFocused
-            LaunchedEffect(focused) { UiState.windowFocused = focused }
+            LaunchedEffect(focused) {
+                UiState.windowFocused = focused
+                if (focused) YouTubeSync.refreshOnReturn()
+            }
             LaunchedEffect(windowState) { snapshotFlow { windowState.isMinimized }.collect { UiState.windowShown = !it } }
             // Ambient mode and F11 fill the screen (ambient also keeps it on, as on the phone), then put the window back.
             val beforeFullscreen = remember { arrayOfNulls<WindowPlacement>(1) }
@@ -249,6 +258,20 @@ fun main() {
             }
         }
     }
+}
+
+/** The screen's room for windows (without the taskbar), in the same units as the window's size. */
+private fun screenWorkArea(): java.awt.Rectangle? =
+    runCatching { java.awt.GraphicsEnvironment.getLocalGraphicsEnvironment().maximumWindowBounds }.getOrNull()
+        ?.takeIf { it.width > 0 && it.height > 0 }
+
+/**
+ * 940 by 600, or less on a screen that hasn't that much room (1366 by 768 at 125% has 582 high
+ * above the taskbar): a minimum bigger than the screen leaves a maximised window running off it.
+ */
+private fun minimumWindowSize(): Dimension {
+    val screen = screenWorkArea() ?: return Dimension(940, 600)
+    return Dimension(minOf(940, screen.width), minOf(600, screen.height))
 }
 
 /** Window-wide shortcuts, Spotify's set where it has one. */

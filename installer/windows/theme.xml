@@ -196,9 +196,10 @@
             <Label X="40" Y="136" Width="300" Height="36" FontId="1" DisablePrefix="yes">
                 <Text>#(loc.FailureHeader)</Text>
                 <Text Condition="WixBundleAction = 3 OR WixBundleAction = 4">#(loc.FailureUninstallHeader)</Text>
+                <Text Condition="NOT VersionNT64 OR ConvxCheckAs32Bit">#(loc.Needs64BitHeader)</Text>
             </Label>
             <Hypertext Name="FailureLogFileLink" X="40" Y="180" Width="300" Height="40" FontId="2" TabStop="yes" HideWhenDisabled="yes">#(loc.FailureLogText)</Hypertext>
-            <Hypertext Name="FailureMessageText" X="40" Y="222" Width="300" Height="24" FontId="2" TabStop="yes" HideWhenDisabled="yes" />
+            <Hypertext Name="FailureMessageText" X="40" Y="222" Width="300" Height="44" FontId="2" TabStop="yes" HideWhenDisabled="yes" />
             <Label X="40" Y="250" Width="300" Height="20" FontId="2" DisablePrefix="yes" VisibleCondition="WixStdBARestartRequired">#(loc.FailureRestartText)</Label>
             <Button Name="FailureRestartButton" X="40" Y="-40" Width="156" Height="44" TabStop="yes" FontId="4" HideWhenDisabled="yes">
                 <Text>#(loc.RestartButton)</Text>

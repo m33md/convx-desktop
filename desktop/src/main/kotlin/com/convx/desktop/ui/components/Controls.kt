@@ -55,7 +55,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.window.PopupPositionProvider
+import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxShapes
@@ -71,10 +77,12 @@ fun Modifier.pressable(
 ): Modifier {
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && enabled) pressScale else 1f)
+    // The squeeze is drawn inside the hit area, so a press near the edge doesn't shrink out
+    // from under the pointer and cancel itself.
     return this
-        .scale(scale)
         .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
         .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+        .scale(scale)
 }
 
 /** Right-click (or the context-menu key path) reports where it happened. */
@@ -111,9 +119,47 @@ fun Tooltip(text: String, content: @Composable () -> Unit) {
             }
         },
         delayMillis = 550,
-        tooltipPlacement = TooltipPlacement.CursorPoint(offset = DpOffset(0.dp, 18.dp)),
+        tooltipPlacement = BesideCursor,
         content = content,
     )
+}
+
+/**
+ * Under the cursor, or above it where the window ends, and never over it. Compose's own cursor
+ * placement shifts a tip that doesn't fit below up by its height only, which puts it on the
+ * pointer near the bottom of the window (the player bar); the tip then takes the click.
+ */
+private object BesideCursor : TooltipPlacement {
+    private val Below = 18.dp
+    private val Above = 8.dp
+    private val Margin = 4.dp
+
+    @Composable
+    override fun positionProvider(cursorPosition: Offset): PopupPositionProvider {
+        val density = LocalDensity.current
+        return remember(cursorPosition, density) {
+            object : PopupPositionProvider {
+                override fun calculatePosition(
+                    anchorBounds: IntRect,
+                    windowSize: IntSize,
+                    layoutDirection: LayoutDirection,
+                    popupContentSize: IntSize,
+                ): IntOffset = with(density) {
+                    val margin = Margin.roundToPx()
+                    val cursorX = anchorBounds.left + cursorPosition.x.roundToInt()
+                    val cursorY = anchorBounds.top + cursorPosition.y.roundToInt()
+                    var x = cursorX
+                    if (x + popupContentSize.width > windowSize.width - margin) x = cursorX - popupContentSize.width - margin
+                    var y = cursorY + Below.roundToPx()
+                    if (y + popupContentSize.height > windowSize.height - margin) y = cursorY - Above.roundToPx() - popupContentSize.height
+                    IntOffset(
+                        x.coerceIn(margin, (windowSize.width - margin - popupContentSize.width).coerceAtLeast(margin)),
+                        y.coerceAtLeast(margin),
+                    )
+                }
+            }
+        }
+    }
 }
 
 /** Round glyph button; [filled] gives it the glass-wash disc the phone's GlassCircleButton has. */

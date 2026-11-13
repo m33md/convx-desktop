@@ -89,6 +89,15 @@ object Library {
         _changes.tryEmit(Change.Artist(artist, followed))
     }
 
+    /** Notes that a saved YouTube Music playlist is one of yours, as its page says, so songs can go into it. */
+    fun markPlaylistEditable(id: String) {
+        val bare = id.removePrefix("VL")
+        if (value.playlists.none { it.id.removePrefix("VL") == bare && !it.editable }) return
+        store.update { data ->
+            data.copy(playlists = data.playlists.map { if (it.id.removePrefix("VL") == bare) it.copy(editable = true) else it })
+        }
+    }
+
     /** Applies what an account sync found, without echoing it back as changes of yours. */
     internal fun applySync(transform: (LibraryData) -> LibraryData) = store.update(transform)
 

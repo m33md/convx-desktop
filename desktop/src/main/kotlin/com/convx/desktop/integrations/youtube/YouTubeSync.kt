@@ -98,8 +98,21 @@ object YouTubeSync {
 
     fun syncNow() {
         if (!enabled || job?.isActive == true) return
+        lastStart = System.currentTimeMillis()
         job = AppScope.launch(Dispatchers.IO) { mutex.withLock { run() } }
     }
+
+    private var lastStart = System.currentTimeMillis()
+
+    /**
+     * Coming back to Convx picks up what changed on the account meanwhile (a song liked on the
+     * phone shows its heart here), at most once every few minutes.
+     */
+    fun refreshOnReturn() {
+        if (System.currentTimeMillis() - lastStart >= ReturnRefreshMs) syncNow()
+    }
+
+    private const val ReturnRefreshMs = 5 * 60_000L
 
     fun flush() = store.flush()
 
@@ -186,7 +199,12 @@ object YouTubeSync {
                     } ?: data.liked,
                     albums = albums?.let { merge(data.albums, it, known.albums, { a -> a.browseId }, { a -> a.browseId }, ::mine) { a, i -> a.copy(savedAt = now - i * 1000L) } } ?: data.albums,
                     artists = artists?.let { merge(data.artists, it, known.artists, { a -> a.id }, { a -> a.id }, ::mine) { a, i -> a.copy(savedAt = now - i * 1000L) } } ?: data.artists,
-                    playlists = playlists?.let { merge(data.playlists, it, known.playlists, { p -> p.id }, { p -> p.id }, ::mine) { p, i -> p.copy(savedAt = now - i * 1000L) } } ?: data.playlists,
+                    playlists = playlists?.let { remote ->
+                        // Ones already here take the account's name, picture and whether they're yours.
+                        val fresh = remote.associateBy { it.id }
+                        merge(data.playlists, remote, known.playlists, { p -> p.id }, { p -> p.id }, ::mine) { p, i -> p.copy(savedAt = now - i * 1000L) }
+                            .map { p -> fresh[p.id]?.let { r -> p.copy(title = r.title, thumbnail = r.thumbnail ?: p.thumbnail, editable = r.editable) } ?: p }
+                    } ?: data.playlists,
                     // Uploads can't be changed from Convx, so the account's list is the list.
                     uploaded = uploaded ?: data.uploaded,
                 )

@@ -27,7 +27,9 @@ import kotlin.concurrent.withLock
 /**
  * Songs are downloaded to disk while they play, in ranged chunks (the phone uses the same
  * trick to avoid YouTube cutting long requests off). Playback reads the growing file, so it
- * starts after the first chunk, seeks anywhere, and a replay needs no network at all.
+ * starts after the first chunk, and a replay needs no network at all. A jump past what has
+ * arrived fetches from there at once and fills in the rest afterwards, so a jump near the end
+ * of an hour-long mix plays as soon as a jump in a short song does.
  */
 object AudioCache {
     private const val Tag = "AudioCache"
@@ -47,11 +49,22 @@ object AudioCache {
 
     private val active = ConcurrentHashMap<String, Download>()
 
+    /**
+     * What a download that stopped part way (a refusal, a lost connection, a skip) had saved, by
+     * file name, so the next try at the same file carries on instead of starting again.
+     */
+    private class Partial(val mimeType: String, val length: Long, val held: java.util.TreeMap<Long, Long>)
+
+    private val partials = ConcurrentHashMap<String, Partial>()
+
     /** How many of an HLS song's pieces are fetched at once. */
     private const val PiecesAhead = 4
 
-    /** How many times one download may swap to a fresh address before it gives up. */
+    /** How many times in a row one download may swap to a fresh address before it gives up. */
     private const val MaxRenewals = 3
+
+    /** An address that served this much before failing counts as having worked: the count starts again. */
+    private const val RenewalEarnedBytes = 8L * 1024L * 1024L
 
     /**
      * A fresh address for the same file when YouTube stops serving a download at a byte
@@ -155,7 +168,8 @@ object AudioCache {
 
     /** Cancels [videoId]'s download and drops any saved copy, so the next play fetches it afresh. */
     fun discard(videoId: String) {
-        cancel(videoId)
+        active.remove(videoId)?.cancel(keepSaved = false)
+        partials.keys.removeIf { it.startsWith("$videoId.") }
         dir.listFiles { f -> f.name.startsWith("$videoId.") && f.name.endsWith(".ok") }?.forEach { marker ->
             runCatching {
                 marker.delete()
@@ -215,8 +229,9 @@ object AudioCache {
             .distinct()
 
     fun clear() {
-        active.values.forEach { it.cancel() }
+        active.values.forEach { it.cancel(keepSaved = false) }
         active.clear()
+        partials.clear()
         dir.listFiles()?.forEach { it.delete() }
     }
 
@@ -269,6 +284,18 @@ object AudioCache {
         @Volatile var finished = false
             private set
 
+        /**
+         * What's on disk, as [start, end) byte ranges by start. A jump can leave gaps, which the
+         * download fills in once it reaches the end. [downloaded] is their total.
+         */
+        private val held = java.util.TreeMap<Long, Long>()
+
+        /** Where a reader wants bytes the download isn't about to reach, or -1. */
+        @Volatile private var jumpTo = -1L
+
+        /** The byte the download is fetching now. */
+        @Volatile private var fetching = 0L
+
         /** For an HLS song: how many seconds of it are on disk so far, by its playlist. */
         @Volatile var secondsSaved = 0.0
             private set
@@ -283,6 +310,49 @@ object AudioCache {
 
         val running: Boolean get() = !finished && !failed && !cancelled
 
+        /** Notes [from, to) as on disk, joining it to the ranges it touches. Under [lock]. */
+        private fun addHeld(from: Long, to: Long) {
+            if (to <= from) return
+            var start = from
+            var end = to
+            val before = held.floorEntry(start)
+            if (before != null && before.value >= start) {
+                start = before.key
+                end = maxOf(end, before.value)
+            }
+            val after = held.tailMap(start, true).entries.iterator()
+            while (after.hasNext()) {
+                val range = after.next()
+                if (range.key > end) break
+                end = maxOf(end, range.value)
+                after.remove()
+            }
+            held[start] = end
+            downloaded = held.entries.sumOf { it.value - it.key }
+        }
+
+        /** How many bytes from [position] on are on disk in one run. Under [lock]. */
+        private fun heldFrom(position: Long): Long {
+            val range = held.floorEntry(position) ?: return 0
+            return (range.value - position).coerceAtLeast(0)
+        }
+
+        /** The first byte at or after [from] that isn't on disk yet, or null when none is missing. Under [lock]. */
+        private fun firstGap(from: Long): Long? {
+            var position = from
+            while (true) {
+                val run = heldFrom(position)
+                if (run <= 0) return position.takeIf { it < totalBytes }
+                position += run
+            }
+        }
+
+        /** Where the next range on disk after [position] starts, if any. Under [lock]. */
+        private fun nextHeld(position: Long): Long? = held.higherKey(position)
+
+        /** Bytes readable from [position] now, without waiting. */
+        fun readableFrom(position: Long): Long = lock.withLock { heldFrom(position) }
+
         /** Whether [other] is this download's file: the same address, or the same format and length under a renewed one. */
         fun isSameFile(other: ResolvedStream): Boolean =
             other.url == url || (other.mimeType == stream.mimeType && other.contentLength > 0 && other.contentLength == stream.contentLength)
@@ -291,10 +361,14 @@ object AudioCache {
             thread(name = "convx-download-$videoId", isDaemon = true) { run() }
         }
 
-        fun cancel() {
+        /** Stops the download; with [keepSaved] what it saved is picked up by the next try at the file. */
+        fun cancel(keepSaved: Boolean = true) {
+            if (!keepSaved) this.keepSaved = false
             cancelled = true
             lock.withLock { progress.signalAll() }
         }
+
+        @Volatile private var keepSaved = true
 
         private fun run() {
             try {
@@ -305,15 +379,27 @@ object AudioCache {
                     out.setLength(0)
                     joinPieces(hls, out)
                 } else RandomAccessFile(file, "rw").use { out ->
-                    out.setLength(0)
+                    if (!adoptPartial()) out.setLength(0)
                     var position = 0L
                     val refused = mutableSetOf<String>()
                     var renewals = 0
+                    var sinceRenewal = 0L
                     while (!cancelled) {
                         val known = totalBytes > 0
-                        if (known && position >= totalBytes) break
+                        if (known) {
+                            // A reader jumped ahead: fetch from there, then come back for what was skipped.
+                            val jump = jumpTo
+                            if (jump >= 0) {
+                                jumpTo = -1
+                                position = jump
+                            }
+                            position = lock.withLock { firstGap(position) ?: firstGap(0) } ?: break
+                        }
                         if (position > MaxSongBytes) throw IOException("Stopped a download that went past ${MaxSongBytes / 1_048_576} MB")
-                        val end = if (known) minOf(position + ChunkBytes, totalBytes) - 1 else position + ChunkBytes - 1
+                        // Up to a chunk, stopping where bytes already on disk begin.
+                        val end = if (known) minOf(position + ChunkBytes, lock.withLock { nextHeld(position) } ?: totalBytes, totalBytes) - 1
+                        else position + ChunkBytes - 1
+                        fetching = position
                         var attempt = 0
                         var read = -1L
                         while (read < 0 && !cancelled) {
@@ -325,8 +411,11 @@ object AudioCache {
                                 read = fetch(request, out, position)
                             } catch (e: IOException) {
                                 // YouTube refusing an address part way through: carry on from here under a fresh one.
+                                // A long song can outlast several addresses; each one that served a good stretch earns another.
+                                if (sinceRenewal >= RenewalEarnedBytes) renewals = 0
                                 if (e is HttpStatusException && renewals < MaxRenewals && !cancelled) {
                                     renewals++
+                                    sinceRenewal = 0
                                     refused += stream.client
                                     val fresh = runCatching { renewUrl(stream, position, refused.toSet()) }
                                         .onFailure { Log.w(Tag, "Couldn't renew $videoId's address", it) }
@@ -341,12 +430,15 @@ object AudioCache {
                                 Thread.sleep(500L * attempt)
                             }
                         }
-                        if (read <= 0) break
-                        position += read
-                        lock.withLock {
-                            downloaded = position
-                            progress.signalAll()
+                        if (read <= 0) {
+                            if (known && jumpTo >= 0) continue
+                            if (known && !cancelled && lock.withLock { firstGap(0) } != null) {
+                                throw IOException("The server stopped at $position of $totalBytes bytes")
+                            }
+                            break
                         }
+                        position += read
+                        sinceRenewal += read
                         if (!known && read < ChunkBytes) {
                             totalBytes = position
                             break
@@ -354,8 +446,12 @@ object AudioCache {
                     }
                 }
                 // A replacement download may already own this file; leave it alone.
-                if (cancelled) return
+                if (cancelled) {
+                    keepPartial()
+                    return
+                }
                 if (totalBytes <= 0) totalBytes = downloaded
+                partials.remove(file.name)
                 marker.writeText(totalBytes.toString())
                 lock.withLock {
                     finished = true
@@ -370,6 +466,7 @@ object AudioCache {
                     else -> e as? IOException ?: IOException(e)
                 }
                 Log.w(Tag, "Download of $videoId via ${stream.client} failed at $downloaded/$totalBytes (${freeBytes()?.let { "${it / 1_048_576} MB free" } ?: "free space unknown"})", e)
+                keepPartial()
                 lock.withLock {
                     failed = true
                     error = failure
@@ -377,6 +474,28 @@ object AudioCache {
                 }
                 active.remove(videoId, this)
             }
+        }
+
+        /** Takes over what an earlier, stopped download of this same file saved. */
+        private fun adoptPartial(): Boolean {
+            val kept = partials.remove(file.name) ?: return false
+            val end = kept.held.lastEntry()?.value ?: return false
+            if (kept.mimeType != stream.mimeType || kept.length != totalBytes || totalBytes <= 0 || file.length() < end) return false
+            lock.withLock {
+                kept.held.forEach { (from, to) -> addHeld(from, to) }
+                progress.signalAll()
+            }
+            Log.i(Tag, "$videoId: carrying on with ${downloaded / 1024} KB already saved")
+            return true
+        }
+
+        /** Remembers what this download saved, unless another download owns the file now. */
+        private fun keepPartial() {
+            if (!keepSaved || stream.hls != null || totalBytes <= 0) return
+            val owner = active[videoId]
+            if (owner != null && owner !== this) return
+            val ranges = lock.withLock { java.util.TreeMap(held) }
+            if (ranges.isNotEmpty()) partials[file.name] = Partial(stream.mimeType, totalBytes, ranges)
         }
 
         /**
@@ -387,7 +506,7 @@ object AudioCache {
             out.write(media.header)
             var position = media.header.size.toLong()
             lock.withLock {
-                downloaded = position
+                addHeld(0, position)
                 progress.signalAll()
             }
             val fetcher = java.util.concurrent.Executors.newFixedThreadPool(PiecesAhead) { task ->
@@ -427,8 +546,8 @@ object AudioCache {
                             val first = written.firstSample?.takeIf { last == null || (it > last[1] && position > last[0]) }
                             if (first != null) pieceStarts += longArrayOf(position, first) else marksBroken = true
                         }
+                        addHeld(position, position + written.bytes)
                         position += written.bytes
-                        downloaded = position
                         secondsSaved = seconds
                         progress.signalAll()
                     }
@@ -482,14 +601,25 @@ object AudioCache {
                 val buffer = ByteArray(64 * 1024)
                 var written = 0L
                 out.seek(position)
-                while (!cancelled) {
-                    val n = body.read(buffer)
-                    if (n < 0) break
-                    out.write(buffer, 0, n)
-                    written += n
-                    // Let readers start before the whole chunk lands.
-                    if (written % (256 * 1024) < n) lock.withLock {
-                        downloaded = position + written
+                try {
+                    while (!cancelled) {
+                        val n = body.read(buffer)
+                        if (n < 0) break
+                        out.write(buffer, 0, n)
+                        written += n
+                        fetching = position + written
+                        // Let readers start before the whole chunk lands.
+                        if (written % (256 * 1024) < n) lock.withLock {
+                            addHeld(position, position + written)
+                            progress.signalAll()
+                        }
+                        // A reader jumped somewhere else: go there now rather than finish this chunk.
+                        val jump = jumpTo
+                        if (jump >= 0 && (jump < position || jump > position + written + ChunkBytes)) break
+                    }
+                } finally {
+                    lock.withLock {
+                        addHeld(position, position + written)
                         progress.signalAll()
                     }
                 }
@@ -527,18 +657,33 @@ object AudioCache {
             }
         }
 
-        /** Blocks until [position] is readable or the download ends. Returns bytes available from there. */
-        fun awaitAvailable(position: Long, timeoutMs: Long = 30_000): Long {
-            val deadline = System.currentTimeMillis() + timeoutMs
+        /**
+         * Blocks until [position] is readable or the download ends, and returns how many bytes are
+         * readable from there. A position the download isn't about to reach is fetched next. Gives
+         * up only when nothing arrives for [stallMs]: a big song far from its download edge just
+         * takes longer.
+         */
+        fun awaitAvailable(position: Long, stallMs: Long = 30_000): Long {
             lock.withLock {
+                var seen = downloaded
+                var deadline = System.currentTimeMillis() + stallMs
                 while (true) {
-                    if (downloaded > position) return downloaded - position
+                    val ahead = heldFrom(position)
+                    if (ahead > 0) return ahead
                     if (finished) return 0
                     error?.let { throw it }
                     if (cancelled) throw IOException("Download cancelled")
+                    if (stream.hls == null && totalBytes > 0 && position < totalBytes) {
+                        val edge = fetching
+                        if (position !in edge until edge + 2 * ChunkBytes) jumpTo = position
+                    }
+                    if (downloaded > seen) {
+                        seen = downloaded
+                        deadline = System.currentTimeMillis() + stallMs
+                    }
                     val left = deadline - System.currentTimeMillis()
                     if (left <= 0) throw IOException("Timed out waiting for audio data")
-                    progress.await(minOf(left, 500), java.util.concurrent.TimeUnit.MILLISECONDS)
+                    progress.await(minOf(left, 200), java.util.concurrent.TimeUnit.MILLISECONDS)
                 }
             }
         }
@@ -617,10 +762,7 @@ class GrowingFileInputStream(private val download: AudioCache.Download) : InputS
         return skipped
     }
 
-    override fun available(): Int {
-        val ahead = download.downloaded - position
-        return ahead.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
-    }
+    override fun available(): Int = download.readableFrom(position).coerceIn(0, Int.MAX_VALUE.toLong()).toInt()
 
     override fun markSupported() = true
     override fun mark(readlimit: Int) = Unit

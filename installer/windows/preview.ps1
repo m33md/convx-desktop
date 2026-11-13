@@ -198,6 +198,15 @@ Step 'Run again, then uninstall' {
     Finish $s
 }
 
+Step 'On 32-bit Windows: a plain message, nothing installed' {
+    $s = Start-Setup 'needs-64-bit.log' @('ConvxCheckAs32Bit=1')
+    Wait-For $s 'Needs 64-bit Windows' 30
+    Wait-For $s 'This PC runs 32-bit Windows*' 10
+    Shot $s '11-needs-64-bit'
+    Finish $s
+    if (Test-Path $exe) { throw 'Convx was installed anyway' }
+}
+
 Step 'A fresh install that fails (a drive that does not exist)' {
     $s = Start-Setup 'failure.log' @('InstallFolder=Q:\Nowhere\Convx')
     Wait-For $s 'Install Convx'

@@ -313,7 +313,7 @@ object Backup {
                 )
             } else {
                 // A YouTube Music playlist, saved or your own from the account: kept as a link to it.
-                savedPlaylists += SavedPlaylist(browseId, name, thumbnail = row.string("thumbnailUrl"), savedAt = row.long("bookmarkedAt") ?: created)
+                savedPlaylists += SavedPlaylist(browseId, name, thumbnail = row.string("thumbnailUrl"), savedAt = row.long("bookmarkedAt") ?: created, editable = row.bool("isEditable"))
             }
         }
 

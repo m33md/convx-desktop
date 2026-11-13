@@ -173,7 +173,7 @@ fun ControlsLayoutSettings() {
         RowDivider()
         SwitchRow(
             "Show shuffle button",
-            "A floating shuffle button at the bottom of Home. The phone's sound search beside it isn't on the PC",
+            "Shuffle and Recognize music buttons at the top of Home, beside the greeting",
             settings.showHomeShuffle,
             icon = "shuffle",
             tint = SystemColors.Teal,
