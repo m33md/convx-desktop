@@ -5,9 +5,6 @@
 
 package com.convx.desktop.ui.screens
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -135,11 +132,41 @@ fun HomeScreen() {
     }
 
     val listState = rememberLazyListState()
+    // The phone's Home shuffle: something at random from your feed, as a radio for a song, with
+    // Recognize Music's button beside it. The phone floats them over the feed; here they sit in
+    // the header, where they can't cover a shelf's arrows or cards.
+    val canShuffle = feed.quickPicks?.isNotEmpty() == true || feed.keepListening.isNotEmpty() || feed.homePage?.sections?.isNotEmpty() == true
     Box(Modifier.fillMaxSize()) {
         PageList(state = listState) {
             item(key = "greeting") {
                 Row(Modifier.fillMaxWidth().padding(horizontal = Gutter, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Text(greeting(), style = ConvxType.LargeTitle, modifier = Modifier.weight(1f))
+                    Text(
+                        greeting(),
+                        style = ConvxType.LargeTitle,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f),
+                    )
+                    if (settings.showHomeShuffle && selectedChip == null && canShuffle) {
+                        GlassCircleButton(onClick = { navigator.navigate(Screen.Recognition) }, size = 40.dp, tooltip = "Recognize music") {
+                            ConvxIcon("mic", tint = Color.White, size = 20.dp)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        GlassCircleButton(
+                            onClick = {
+                                when (val pick = HomeFeed.randomItem(feed)) {
+                                    is SongItem -> PlayerController.startRadio(pick.toSong())
+                                    null -> Unit
+                                    else -> ItemActions.play(pick)
+                                }
+                            },
+                            size = 40.dp,
+                            tooltip = "Shuffle",
+                        ) {
+                            ConvxIcon("shuffle", tint = Color.White, size = 20.dp)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                    }
                     // The phone's pull to refresh: new picks, a new order.
                     if (feed.loading) {
                         CircularProgressIndicator(color = Color.White.copy(alpha = 0.7f), strokeWidth = 2.dp, modifier = Modifier.padding(8.dp).size(20.dp))
@@ -246,36 +273,6 @@ fun HomeScreen() {
                 }
                 feed.loading -> item(key = "loading") { LoadingState() }
                 else -> Unit
-            }
-        }
-
-        // The phone's Home shuffle: something at random from your feed, as a radio for a song, with
-        // Recognize Music's button above it.
-        val canShuffle = feed.quickPicks?.isNotEmpty() == true || feed.keepListening.isNotEmpty() || feed.homePage?.sections?.isNotEmpty() == true
-        AnimatedVisibility(
-            visible = settings.showHomeShuffle && selectedChip == null && canShuffle && listState.isScrollingUp(),
-            enter = slideInVertically { it * 2 },
-            exit = slideOutVertically { it * 2 },
-            modifier = Modifier.align(Alignment.BottomEnd).padding(end = Gutter, bottom = LocalPageInsets.current.bottom + 16.dp),
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                GlassCircleButton(onClick = { navigator.navigate(Screen.Recognition) }, tooltip = "Recognize music") {
-                    ConvxIcon("mic", tint = Color.White, size = 20.dp)
-                }
-                Spacer(Modifier.height(12.dp))
-                GlassCircleButton(
-                    onClick = {
-                        when (val pick = HomeFeed.randomItem(feed)) {
-                            is SongItem -> PlayerController.startRadio(pick.toSong())
-                            null -> Unit
-                            else -> ItemActions.play(pick)
-                        }
-                    },
-                    size = 56.dp,
-                    tooltip = "Shuffle",
-                ) {
-                    ConvxIcon("shuffle", tint = Color.White, size = 24.dp)
-                }
             }
         }
     }

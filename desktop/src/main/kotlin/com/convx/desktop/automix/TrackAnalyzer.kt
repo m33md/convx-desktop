@@ -37,6 +37,12 @@ object TrackAnalyzer {
     /** Below this much of the stated length, the copy is short (still downloading or broken). */
     private const val MinDecodedFraction = 0.95
 
+    /**
+     * Longer songs (hour-long mixes) aren't measured: the whole song is held in memory while it
+     * is, which for a two-hour mix is several hundred MB. Their transitions are plain crossfades.
+     */
+    private const val MaxSeconds = 20 * 60
+
     private val json = Json {
         ignoreUnknownKeys = true
         encodeDefaults = false
@@ -46,6 +52,7 @@ object TrackAnalyzer {
     private val missing = ConcurrentHashMap.newKeySet<String>()
     private val running = ConcurrentHashMap.newKeySet<String>()
     private val retryAfter = ConcurrentHashMap<String, Long>()
+    private val tooLong = ConcurrentHashMap.newKeySet<String>()
     private val executor = Executors.newSingleThreadExecutor { runnable ->
         Thread(runnable, "convx-automix-analysis").apply {
             isDaemon = true
@@ -79,7 +86,11 @@ object TrackAnalyzer {
      * on every tick: a song already measured, being measured, or recently refused is skipped.
      */
     fun request(id: String, durationSeconds: Double) {
-        if (id.isBlank() || isAnalysed(id)) return
+        if (id.isBlank() || id in tooLong || isAnalysed(id)) return
+        if (durationSeconds > MaxSeconds) {
+            tooLong += id
+            return
+        }
         if (System.currentTimeMillis() < (retryAfter[id] ?: 0L)) return
         val file = sourceFile(id) ?: run {
             // Not on this PC yet: look again in a moment rather than on every tick.
@@ -106,8 +117,18 @@ object TrackAnalyzer {
     }
 
     private fun analyze(id: String, file: File, durationSeconds: Double) {
+        if (id in tooLong || durationSeconds > MaxSeconds) {
+            tooLong += id
+            return
+        }
         val started = System.currentTimeMillis()
-        val samples = decodeMono(file) ?: run {
+        val samples = try {
+            decodeMono(file, MaxSeconds)
+        } catch (e: TooLong) {
+            Log.i(Tag, "Not measuring $id: longer than ${MaxSeconds / 60} minutes")
+            tooLong += id
+            return
+        } ?: run {
             retryAfter[id] = System.currentTimeMillis() + RetryMs
             return
         }
@@ -131,8 +152,14 @@ object TrackAnalyzer {
         )
     }
 
-    /** The whole file as mono floats at the analyzer's rate; FFmpeg does the downmix and resampling. */
-    internal fun decodeMono(file: File): FloatArray? {
+    private class TooLong : Exception()
+
+    /**
+     * The whole file as mono floats at the analyzer's rate; FFmpeg does the downmix and resampling.
+     * Throws [TooLong] once it passes [maxSeconds].
+     */
+    internal fun decodeMono(file: File, maxSeconds: Int): FloatArray? {
+        val limit = maxSeconds.toLong() * AudioAnalysis.SampleRate.toLong()
         val grabber = FFmpegFrameGrabber(file.absolutePath)
         return try {
             grabber.sampleMode = FrameGrabber.SampleMode.FLOAT
@@ -146,11 +173,14 @@ object TrackAnalyzer {
                 val frame = grabber.grabSamples() ?: break
                 val buffer = frame.samples?.firstOrNull() as? FloatBuffer ?: continue
                 val count = buffer.limit() - buffer.position()
-                if (size + count > out.size) out = out.copyOf(maxOf(out.size * 2, size + count))
+                if (size + count > limit) throw TooLong()
+                if (size + count > out.size) out = out.copyOf(minOf(maxOf(out.size.toLong() * 2, (size + count).toLong()), limit).toInt())
                 buffer.get(out, size, count)
                 size += count
             }
             out.copyOf(size).takeIf { size > 0 }
+        } catch (e: TooLong) {
+            throw e
         } catch (e: Throwable) {
             Log.w(Tag, "Couldn't decode ${file.name} for measuring: ${e.message}")
             null
@@ -191,6 +221,7 @@ object TrackAnalyzer {
     fun clear() {
         results.clear()
         missing.clear()
+        tooLong.clear()
         dir.listFiles()?.forEach { it.delete() }
         _measured.value++
     }

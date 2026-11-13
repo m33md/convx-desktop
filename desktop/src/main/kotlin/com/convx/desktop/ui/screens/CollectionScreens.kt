@@ -516,6 +516,7 @@ fun PlaylistScreen(id: String) {
             val songs = remember(data) { data.songs.map { it.toSong() } }
             val playlist = data.playlist
             val saved = library.playlists.any { it.id == playlist.id }
+            LaunchedEffect(playlist.id, playlist.isEditable) { if (playlist.isEditable) Library.markPlaylistEditable(playlist.id) }
             val isThisPlaying = playback.isPlaying && songs.any { it.id == playback.currentId }
             val complete = data.songsContinuation == null
             PageList(

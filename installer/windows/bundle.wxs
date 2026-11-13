@@ -69,6 +69,12 @@
             <Payload Name="wordmark@3x.png" SourceFile="$(sys.SOURCEFILEDIR)theme\wordmark@3x.png" />
         </BootstrapperApplication>
 
+        <!-- Convx, its Java runtime, Skia and FFmpeg only come for 64-bit Windows. On 32-bit Windows
+             the setup says so instead of letting the MSI fail with 0x80070661. ConvxCheckAs32Bit=1
+             shows that message on any PC, for the setup's own test. -->
+        <bal:Condition Message="#(loc.Needs64BitMessage)" Condition="VersionNT64 AND NOT ConvxCheckAs32Bit" />
+        <Variable Name="ConvxCheckAs32Bit" Type="string" Value="" bal:Overridable="yes" />
+
         <!-- The version people know this Convx by, as in About. -->
         <Variable Name="ConvxVersion" Type="string" Value="$(var.DisplayVersion)" />
 

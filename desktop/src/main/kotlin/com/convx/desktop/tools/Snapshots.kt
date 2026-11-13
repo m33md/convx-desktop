@@ -631,8 +631,64 @@ fun main(args: Array<String>) {
             }
         }
     }.onFailure { Log.e("Snapshots", "Rendering failed", it) }
-
     scene.close()
+
+    // The main screens at the window sizes people have: the smallest window, a 1080p laptop at
+    // 150% and at 125% maximised, and 1080p and 1440p full screen. Nothing may overlap or run off.
+    runCatching {
+        for ((width, height) in listOf(940 to 600, 1280 to 688, 1536 to 824, 1920 to 1080, 2560 to 1440)) {
+            val sized = ImageComposeScene(width, height, Density(1f)) { AppShell(navigator) }
+            fun shot(name: String, seconds: Int = 3, setup: () -> Unit = {}) {
+                shotName = "size-$name"
+                shotDeadline = System.nanoTime() + (seconds + 60) * 1_000_000_000L
+                setup()
+                val end = System.nanoTime() + seconds * 1_000_000_000L
+                clock = maxOf(System.nanoTime(), clock + 1)
+                var image = sized.render(clock)
+                while (System.nanoTime() < end) {
+                    Snapshot.sendApplyNotifications()
+                    Thread.sleep(40)
+                    clock = maxOf(System.nanoTime(), clock + 1)
+                    image = sized.render(clock)
+                }
+                save("30-${width}x$height-$name", image)
+                shotDeadline = Long.MAX_VALUE
+            }
+            try {
+                UiState.fullPlayer = false
+                AppSettings.update { it.copy(rightPanel = null) }
+                shot("home", seconds = 6) { navigator.navigate(Screen.Home) }
+                shot("search-results", seconds = 4) { navigator.navigate(Screen.SearchResults("the weeknd")) }
+                album?.let { shot("album", seconds = 4) { navigator.navigate(Screen.Album(it.browseId)) } }
+                artist?.let { shot("artist", seconds = 4) { navigator.navigate(Screen.Artist(it.id)) } }
+                playlist?.let { shot("playlist", seconds = 4) { navigator.navigate(Screen.Playlist(it.id)) } }
+                shot("explore", seconds = 4) { navigator.navigate(Screen.Explore) }
+                shot("library", seconds = 3) { navigator.navigate(Screen.Library) }
+                shot("stats", seconds = 3) { navigator.navigate(Screen.Stats) }
+                shot("settings", seconds = 2) {
+                    navigator.navigate(Screen.Settings)
+                    SettingsNav.openHub(SettingsHubs.player.id)
+                }
+                if (songs.isNotEmpty()) {
+                    shot("now-playing-panel", seconds = 3) {
+                        navigator.navigate(Screen.Home)
+                        AppSettings.update { it.copy(rightPanel = "nowPlaying") }
+                    }
+                    AppSettings.update { it.copy(rightPanel = null) }
+                    shot("player", seconds = 3) {
+                        UiState.fullPlayerMode = FullPlayerMode.Artwork
+                        UiState.fullPlayer = true
+                    }
+                    shot("player-lyrics", seconds = 3) { UiState.fullPlayerMode = FullPlayerMode.Lyrics }
+                    shot("player-queue", seconds = 2) { UiState.fullPlayerMode = FullPlayerMode.Queue }
+                    UiState.fullPlayer = false
+                }
+            } finally {
+                sized.close()
+            }
+        }
+    }.onFailure { Log.e("Snapshots", "Rendering at other window sizes failed", it) }
+
     PlayerController.shutdown()
     exitProcess(0)
 }

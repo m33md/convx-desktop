@@ -111,7 +111,7 @@ jobs:
       - name: Screenshots
         id: snapshots
         continue-on-error: true
-        timeout-minutes: 18
+        timeout-minutes: 25
         run: |
           status=0
           ./gradlew --no-daemon snapshots || status=$?

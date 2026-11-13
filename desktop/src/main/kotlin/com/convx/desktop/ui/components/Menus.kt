@@ -5,6 +5,7 @@
 
 package com.convx.desktop.ui.components
 
+import com.convx.desktop.integrations.youtube.YouTubePlaylists
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -152,6 +153,10 @@ fun SongMenuContent(
                 dismiss()
             }
         }
+        YouTubePlaylistItems(library) { playlist ->
+            YouTubePlaylists.add(playlist, listOf(song))
+            dismiss()
+        }
         return
     }
 
@@ -223,6 +228,17 @@ fun SongMenuContent(
     }
 }
 
+/** Your own YouTube Music playlists, under the Convx ones, while signed in. */
+@Composable
+private fun YouTubePlaylistItems(library: com.convx.desktop.data.LibraryData, onPick: (com.convx.desktop.data.SavedPlaylist) -> Unit) {
+    val playlists = remember(library.playlists) { YouTubePlaylists.editable(library) }
+    if (playlists.isEmpty()) return
+    if (library.localPlaylists.isNotEmpty()) MenuDivider()
+    for (playlist in playlists) {
+        MenuItem(playlist.title, "cloud") { onPick(playlist) }
+    }
+}
+
 /** Menu for a whole collection: album, playlist, mix. */
 @Composable
 fun CollectionMenuContent(
@@ -253,6 +269,10 @@ fun CollectionMenuContent(
                 Overlays.toast("Added to ${playlist.name}")
                 dismiss()
             }
+        }
+        YouTubePlaylistItems(library) { playlist ->
+            YouTubePlaylists.add(playlist, songs())
+            dismiss()
         }
         return
     }

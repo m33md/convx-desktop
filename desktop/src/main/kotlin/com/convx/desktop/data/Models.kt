@@ -58,6 +58,8 @@ data class SavedPlaylist(
     val author: String? = null,
     val thumbnail: String? = null,
     val savedAt: Long = System.currentTimeMillis(),
+    /** One of your own on YouTube Music, so songs can be added to it. */
+    val editable: Boolean = false,
 )
 
 @Serializable
@@ -518,6 +520,7 @@ fun PlaylistItem.toSaved(): SavedPlaylist = SavedPlaylist(
     title = title,
     author = author?.name,
     thumbnail = thumbnail,
+    editable = isEditable,
 )
 
 fun ArtistItem.toSaved(): SavedArtist = SavedArtist(id = id, name = title, thumbnail = thumbnail)
