@@ -1,0 +1,57 @@
+[09C4:0510][2026-11-13T16:15:26]i001: Burn x86 v5.0.2+aa65968c419420d32e3e1b647aea0082f5ca5b78, Windows v10.0 x64 (Build 26100: Service Pack 0), path: D:\a\convx-desktop\convx-desktop\build\Convx-Setup.exe
+[09C4:0510][2026-11-13T16:15:26]i000: Initializing formatted variable 'LaunchTarget' to value '[InstallFolder]\Convx.exe'
+[09C4:0510][2026-11-13T16:15:26]i000: Initializing string variable 'ConvxCheckAs32Bit' to value ''
+[09C4:0510][2026-11-13T16:15:26]i000: Initializing string variable 'ConvxVersion' to value '1.1.21'
+[09C4:0510][2026-11-13T16:15:26]i000: Initializing formatted variable 'InstallFolder' to value '[LocalAppDataFolder]Convx'
+[09C4:0510][2026-11-13T16:15:26]i009: Command Line: '-log D:\a\convx-desktop\convx-desktop\build\preview\needs-64-bit.log ConvxCheckAs32Bit=1'
+[09C4:0510][2026-11-13T16:15:26]i000: Setting string variable 'WixBundleOriginalSource' to value 'D:\a\convx-desktop\convx-desktop\build\Convx-Setup.exe'
+[09C4:0510][2026-11-13T16:15:26]i000: Setting string variable 'WixBundleOriginalSourceFolder' to value 'D:\a\convx-desktop\convx-desktop\build\'
+[09C4:0510][2026-11-13T16:15:26]i000: Setting string variable 'WixBundleLog' to value 'D:\a\convx-desktop\convx-desktop\build\preview\needs-64-bit.log'
+[09C4:0510][2026-11-13T16:15:26]i000: Setting string variable 'WixBundleInProgressName' to value ''
+[09C4:0510][2026-11-13T16:15:26]i000: Setting string variable 'WixBundleName' to value 'Convx'
+[09C4:0510][2026-11-13T16:15:26]i000: Setting string variable 'WixBundleManufacturer' to value 'Convx'
+[09C4:1E54][2026-11-13T16:15:26]i000: Setting string variable 'ConvxCheckAs32Bit' to value '1'
+[09C4:1E54][2026-11-13T16:15:26]i000: Setting version variable 'WixBundleFileVersion' to value '5.0.2.0'
+[09C4:1E54][2026-11-13T16:15:26]i000: Setting numeric variable 'WixStdBASuppressOptionsUI' to value 1
+[09C4:1E54][2026-11-13T16:15:26]i000: Setting numeric variable 'WixStdBALanguageId' to value 1033
+[09C4:0510][2026-11-13T16:15:26]i100: Detect begin, 1 packages
+[09C4:0510][2026-11-13T16:15:26]i000: Product or related product not found: {6F1D1A6E-6A52-4F6B-9B0E-3C1F2D7A9C41}
+[09C4:0510][2026-11-13T16:15:26]i000: Setting version variable 'ConvxInstalledVersion' to value '0.0.0.0'
+[09C4:0510][2026-11-13T16:15:26]i101: Detected package: ConvxMsi, state: Absent, cached: No, install registration state: Absent, cache registration state: Absent
+[09C4:1E54][2026-11-13T16:15:26]i052: Condition 'VersionNT64 AND NOT ConvxCheckAs32Bit' evaluates to false.
+[09C4:1E54][2026-11-13T16:15:26]e000: Error 0x81f40001: This PC runs 32-bit Windows. Convx runs on 64-bit Windows 10 and 11.
+[09C4:0510][2026-11-13T16:15:26]i199: Detect complete, result: 0x0, registration state: None, cached: No, eligible for cleanup: No
+[09C4:1E54][2026-11-13T16:15:26]i052: Condition 'WixBundleAction = 3 OR WixBundleAction = 4' evaluates to false.
+[09C4:1E54][2026-11-13T16:15:26]i052: Condition 'NOT VersionNT64 OR ConvxCheckAs32Bit' evaluates to true.
+[09C4:1E54][2026-11-13T16:15:26]i052: Condition 'WixStdBARestartRequired' evaluates to false.
+[09C4:1E54][2026-11-13T16:15:26]i052: Condition 'NOT WixStdBARestartRequired' evaluates to true.
+[09C4:0510][2026-11-13T16:15:27]i500: Shutting down, exit code: 0x81f40001
+[09C4:0510][2026-11-13T16:15:27]i502: Cleanup begin.
+[09C4:0510][2026-11-13T16:15:27]i599: Cleanup complete, result: 0x0
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: ConvxCheckAs32Bit = 1
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: ConvxInstalledVersion = 0.0.0.0
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: ConvxVersion = 1.1.21
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: InstallFolder = C:\Users\runneradmin\AppData\Local\Convx
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: LaunchTarget = C:\Users\runneradmin\AppData\Local\Convx\Convx.exe
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: LocalAppDataFolder = C:\Users\runneradmin\AppData\Local\
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: RebootPending = 0
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: VersionNT64 = 10.0.0.0
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleAction = 0
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleCommandLineAction = 6
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleElevated = 1
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleFileVersion = 5.0.2.0
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleInProgressName = 
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleInstalled = 0
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleLog = D:\a\convx-desktop\convx-desktop\build\preview\needs-64-bit.log
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleManufacturer = Convx
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleName = Convx
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleOriginalSource = D:\a\convx-desktop\convx-desktop\build\Convx-Setup.exe
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleOriginalSourceFolder = D:\a\convx-desktop\convx-desktop\build\
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleProviderKey = {7AEF0591-4906-41F9-B30D-7363ABD72AA8}
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleTag = 
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleUILevel = 4
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixBundleVersion = 1.1.21
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixCanRestart = 1
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixStdBALanguageId = 1033
+[09C4:0510][2026-11-13T16:15:27]i410: Variable: WixStdBASuppressOptionsUI = 1
+[09C4:0510][2026-11-13T16:15:27]i007: Exit code: 0x81f40001, restarting: No
