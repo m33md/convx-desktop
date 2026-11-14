@@ -83,7 +83,6 @@ import com.convx.desktop.ui.components.MenuDivider
 import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.components.MosaicArt
 import com.convx.desktop.ui.components.Overlays
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.onSecondaryClick
 import com.convx.desktop.ui.components.openAtProvider
 import com.convx.desktop.ui.components.rememberListReorder
@@ -415,7 +414,7 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
                     items(libraryItems, key = { "nav:${it.key}" }) { NavRow(it, collapsed) }
                 }
                 item(key = "heading:playlists") {
-                    Heading("Playlists", collapsed) { HeadingButton("add", "New playlist") { create() } }
+                    Heading("Playlists", collapsed) { HeadingButton("add") { create() } }
                 }
                 item(key = "nav:all-playlists") { NavRow(allPlaylists, collapsed) }
                 items(rows, key = { it.key }) { entry ->
@@ -482,22 +481,20 @@ private fun Heading(title: String, collapsed: Boolean, action: (@Composable () -
 }
 
 @Composable
-private fun HeadingButton(icon: String, tooltip: String, onClick: () -> Unit) {
+private fun HeadingButton(icon: String, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Tooltip(tooltip) {
-        Box(
-            Modifier
-                .size(26.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            ConvxIcon(icon, tint = Color.White.copy(alpha = if (hovered) 0.9f else 0.6f), size = 16.dp)
-        }
+    Box(
+        Modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon(icon, tint = Color.White.copy(alpha = if (hovered) 0.9f else 0.6f), size = 16.dp)
     }
 }
 
@@ -514,40 +511,37 @@ private fun NavRow(item: NavItem, collapsed: Boolean) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val bounce = rememberSymbolBounce().onSelected(item.selected)
-    val row = @Composable {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(if (collapsed) RailRowHeight else RowHeight)
-                .clip(RowShape)
-                .background(rowWash(item.selected, hovered))
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interactionSource = interaction, indication = null, onClick = item.onClick)
-                .padding(horizontal = if (collapsed) 0.dp else 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
-        ) {
-            ConvxIcon(
-                item.icon,
-                tint = if (item.selected) accent else Color.White.copy(alpha = 0.78f),
-                size = if (collapsed) 22.dp else 19.dp,
-                contentDescription = item.label,
-                modifier = bounce.modifier,
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(if (collapsed) RailRowHeight else RowHeight)
+            .clip(RowShape)
+            .background(rowWash(item.selected, hovered))
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interactionSource = interaction, indication = null, onClick = item.onClick)
+            .padding(horizontal = if (collapsed) 0.dp else 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+    ) {
+        ConvxIcon(
+            item.icon,
+            tint = if (item.selected) accent else Color.White.copy(alpha = 0.78f),
+            size = if (collapsed) 22.dp else 19.dp,
+            contentDescription = item.label,
+            modifier = bounce.modifier,
+        )
+        if (!collapsed) {
+            Spacer(Modifier.width(12.dp))
+            Text(
+                item.label,
+                style = rowText(if (item.selected) FontWeight.SemiBold else FontWeight.Medium),
+                color = if (item.selected) Color.White else Color.White.copy(alpha = 0.9f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (!collapsed) {
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    item.label,
-                    style = rowText(if (item.selected) FontWeight.SemiBold else FontWeight.Medium),
-                    color = if (item.selected) Color.White else Color.White.copy(alpha = 0.9f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
-    if (collapsed) Tooltip(item.label) { row() } else row()
 }
 
 @Composable
@@ -564,43 +558,40 @@ private fun PlaylistRow(
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val menu = rememberMenuAnchor()
-    val row = @Composable {
-        Box(Modifier.onSecondaryClick(menu.openAtProvider())) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (collapsed) RailRowHeight else RowHeight)
-                    .clip(RowShape)
-                    .background(rowWash(selected, hovered))
-                    .hoverable(interaction)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-                    .padding(horizontal = if (collapsed) 0.dp else 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
-            ) {
-                EntryArt(entry, if (collapsed) RailArtSize else ArtSize)
-                if (!collapsed) {
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        entry.title,
-                        style = rowText(if (selected) FontWeight.SemiBold else FontWeight.Medium),
-                        color = if (playing) accent else if (selected) Color.White else Color.White.copy(alpha = 0.9f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    when {
-                        playing -> ConvxIcon(if (isPlaying) "volume_up" else "volume_mute", tint = accent, size = 15.dp)
-                        entry.kind.spotify -> ConvxIcon("spotify", tint = SpotifyGreen, size = 12.dp)
-                        pinned -> ConvxIcon("ic_push_pin", tint = Color.White.copy(alpha = 0.4f), size = 12.dp, modifier = Modifier.graphicsLayer { rotationZ = 45f })
-                    }
+    Box(Modifier.onSecondaryClick(menu.openAtProvider())) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(if (collapsed) RailRowHeight else RowHeight)
+                .clip(RowShape)
+                .background(rowWash(selected, hovered))
+                .hoverable(interaction)
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+                .padding(horizontal = if (collapsed) 0.dp else 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+        ) {
+            EntryArt(entry, if (collapsed) RailArtSize else ArtSize)
+            if (!collapsed) {
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    entry.title,
+                    style = rowText(if (selected) FontWeight.SemiBold else FontWeight.Medium),
+                    color = if (playing) accent else if (selected) Color.White else Color.White.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                when {
+                    playing -> ConvxIcon(if (isPlaying) "volume_up" else "volume_mute", tint = accent, size = 15.dp)
+                    entry.kind.spotify -> ConvxIcon("spotify", tint = SpotifyGreen, size = 12.dp)
+                    pinned -> ConvxIcon("ic_push_pin", tint = Color.White.copy(alpha = 0.4f), size = 12.dp, modifier = Modifier.graphicsLayer { rotationZ = 45f })
                 }
             }
-            AppMenu(menu) { EntryMenu(entry, pinned) { menu.expanded = false } }
         }
+        AppMenu(menu) { EntryMenu(entry, pinned) { menu.expanded = false } }
     }
-    if (collapsed) Tooltip(entry.title) { row() } else row()
 }
 
 /** You at the foot of the side bar, as Apple Music's account: your profile, and Settings beside it. */
@@ -631,38 +622,35 @@ private fun AccountRow(collapsed: Boolean) {
             NavRow(NavItem("settings", "Settings", "settings", screen == Screen.Settings) { navigator.navigate(Screen.Settings) }, collapsed = true)
         }
         Box {
-            val row = @Composable {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(if (collapsed) RailRowHeight + 4.dp else 52.dp)
-                        .clip(RowShape)
-                        .background(rowWash(screen == Screen.Profile, hovered))
-                        .hoverable(interaction)
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable(interactionSource = interaction, indication = null) { open() }
-                        .padding(horizontal = if (collapsed) 0.dp else 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
-                ) {
-                    Avatar(identity.picture, 32.dp)
-                    if (!collapsed) {
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(title, style = rowText(FontWeight.SemiBold), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                identity.source?.let { "Signed in with $it" } ?: "Accounts and settings",
-                                style = TextStyle(fontFamily = ConvxType.family, fontSize = 12.sp, lineHeight = 16.sp),
-                                color = Color.White.copy(alpha = 0.55f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        SettingsButton(screen == Screen.Settings, accent) { navigator.navigate(Screen.Settings) }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (collapsed) RailRowHeight + 4.dp else 52.dp)
+                    .clip(RowShape)
+                    .background(rowWash(screen == Screen.Profile, hovered))
+                    .hoverable(interaction)
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable(interactionSource = interaction, indication = null) { open() }
+                    .padding(horizontal = if (collapsed) 0.dp else 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+            ) {
+                Avatar(identity.picture, 32.dp)
+                if (!collapsed) {
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, style = rowText(FontWeight.SemiBold), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            identity.source?.let { "Signed in with $it" } ?: "Accounts and settings",
+                            style = TextStyle(fontFamily = ConvxType.family, fontSize = 12.sp, lineHeight = 16.sp),
+                            color = Color.White.copy(alpha = 0.55f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
+                    SettingsButton(screen == Screen.Settings, accent) { navigator.navigate(Screen.Settings) }
                 }
             }
-            if (collapsed) Tooltip(title) { row() } else row()
             AppMenu(popup) { SettingsPopup { popup.expanded = false } }
         }
     }
@@ -683,19 +671,17 @@ private fun Avatar(picture: String?, size: Dp) {
 private fun SettingsButton(lit: Boolean, accent: Color, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Tooltip("Settings") {
-        Box(
-            Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            ConvxIcon("settings", tint = if (lit) accent else Color.White.copy(alpha = if (hovered) 0.9f else 0.65f), size = 18.dp)
-        }
+    Box(
+        Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon("settings", tint = if (lit) accent else Color.White.copy(alpha = if (hovered) 0.9f else 0.65f), size = 18.dp)
     }
 }
 

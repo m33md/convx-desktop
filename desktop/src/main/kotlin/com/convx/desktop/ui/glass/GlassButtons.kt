@@ -29,7 +29,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.LocalContentColor
-import com.convx.desktop.ui.components.Tooltip
 import com.kyant.backdrop.Backdrop
 
 /** A true circle: the phone keeps square glass round rather than giving it G2 corners. */
@@ -54,7 +53,6 @@ fun GlassCircleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
-    tooltip: String? = null,
     enabled: Boolean = true,
     // Photos (the account picture) must not be added onto the glass: Plus would wash them out.
     applyAdditiveChrome: Boolean = true,
@@ -62,26 +60,23 @@ fun GlassCircleButton(
 ) {
     val glow = rememberInteractiveHighlight()
     val interaction = remember { MutableInteractionSource() }
-    val button = @Composable {
-        Box(
-            modifier
-                .graphicsLayer(elasticStretch(glow))
-                .size(size)
-                .chromeShadow(GlassCircleShape)
-                .clip(GlassCircleShape)
-                .liquidGlass(GlassCircleShape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
-                .then(glow.modifier)
-                .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
-                .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-                .then(if (enabled) glow.gestureModifier else Modifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            CompositionLocalProvider(LocalContentColor provides GlassTokens.Title) {
-                Box(Modifier.additiveChrome(applyAdditiveChrome), contentAlignment = Alignment.Center) { content() }
-            }
+    Box(
+        modifier
+            .graphicsLayer(elasticStretch(glow))
+            .size(size)
+            .chromeShadow(GlassCircleShape)
+            .clip(GlassCircleShape)
+            .liquidGlass(GlassCircleShape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
+            .then(glow.modifier)
+            .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+            .then(if (enabled) glow.gestureModifier else Modifier),
+        contentAlignment = Alignment.Center,
+    ) {
+        CompositionLocalProvider(LocalContentColor provides GlassTokens.Title) {
+            Box(Modifier.additiveChrome(applyAdditiveChrome), contentAlignment = Alignment.Center) { content() }
         }
     }
-    if (tooltip != null) Tooltip(tooltip) { button() } else button()
 }
 
 /**

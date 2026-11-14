@@ -560,20 +560,20 @@ private fun EditorTopBar() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        IconButton("arrow_back", DiscEditor::close, tooltip = "Back to Disc Studio (Esc)")
+        IconButton("arrow_back", DiscEditor::close)
         Spacer(Modifier.width(4.dp))
         NameField(Modifier.widthIn(min = 120.dp, max = 320.dp))
         if (DiscEditor.dirty) {
             Text("Not saved", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel)
         }
         Spacer(Modifier.weight(1f))
-        IconButton("replay", DiscEditor::undo, enabled = DiscEditor.canUndo, tooltip = "Undo (Ctrl+Z)")
-        IconButton("redo", DiscEditor::redo, enabled = DiscEditor.canRedo, tooltip = "Redo (Ctrl+Y)")
+        IconButton("replay", DiscEditor::undo, enabled = DiscEditor.canUndo)
+        IconButton("redo", DiscEditor::redo, enabled = DiscEditor.canRedo)
         Spacer(Modifier.width(6.dp))
-        IconButton("refresh", { DiscEditor.spinning = !DiscEditor.spinning }, active = DiscEditor.spinning, activeTint = accent, tooltip = "Spin it (Space)")
-        IconButton("disc_case", { DiscEditor.asCover = !DiscEditor.asCover }, active = DiscEditor.asCover, activeTint = accent, tooltip = "See it as the playlist cover")
-        IconButton("image", { DiscEditor.exportImage() }, tooltip = "Save as picture")
-        IconButton("ios_share", { DiscEditor.export() }, tooltip = "Share as a .convxdisc file")
+        IconButton("refresh", { DiscEditor.spinning = !DiscEditor.spinning }, active = DiscEditor.spinning, activeTint = accent)
+        IconButton("disc_case", { DiscEditor.asCover = !DiscEditor.asCover }, active = DiscEditor.asCover, activeTint = accent)
+        IconButton("image", { DiscEditor.exportImage() })
+        IconButton("ios_share", { DiscEditor.export() })
         Spacer(Modifier.width(6.dp))
         Box {
             val target = DiscEditor.playlistId?.let { id -> library.localPlaylists.firstOrNull { it.id == id } }
@@ -595,7 +595,7 @@ private fun EditorTopBar() {
             }
         }
         if (DiscEditor.playlistId != null) {
-            IconButton("more_horiz", { playlistMenu.expanded = true }, tooltip = "Use on another playlist")
+            IconButton("more_horiz", { playlistMenu.expanded = true })
         }
         PillButton(if (DiscEditor.saving) "Saving…" else "Save", { DiscEditor.save() }, accent = accent, icon = "check")
     }

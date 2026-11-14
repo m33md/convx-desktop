@@ -508,22 +508,18 @@ private fun DetailPane(sidebar: Boolean) {
         val page = state.substringAfter('/', "").split('/').lastOrNull { it.isNotEmpty() }?.let { SettingsPage.valueOf(it) }
         val listState = rememberLazyListState()
         if (sidebar) TrackTopBar(listState, Color.Black)
-        val backLabel = when {
-            page != null -> SettingsNav.pages.getOrNull(SettingsNav.pages.size - 2)?.title ?: hub.title
-            !sidebar -> "Settings"
-            else -> null
-        }
+        val showBack = page != null || !sidebar
         SettingsList(listState, horizontal = if (sidebar) 28.dp else 16.dp) {
             item("header") {
                 Column(Modifier.widthIn(max = 760.dp)) {
-                    if (backLabel != null && (page != null || !sidebar)) {
-                        BackButton(backLabel) { SettingsNav.back() }
+                    if (showBack) {
+                        BackButton { SettingsNav.back() }
                     }
                     Text(
                         page?.title ?: hub.title,
                         style = ConvxType.LargeTitle,
                         color = ConvxColors.Label,
-                        modifier = Modifier.padding(start = 4.dp, top = if (backLabel != null && (page != null || !sidebar)) 14.dp else 4.dp, bottom = 20.dp),
+                        modifier = Modifier.padding(start = 4.dp, top = if (showBack) 14.dp else 4.dp, bottom = 20.dp),
                     )
                 }
             }
@@ -544,10 +540,10 @@ private fun pop(): ContentTransform =
     (slideInHorizontally(tween(320)) { -it / 4 } + fadeIn(tween(200))) togetherWith
         (slideOutHorizontally(tween(320)) { it } + fadeOut(tween(160)))
 
-/** The phone's back button: a drop of glass with a chevron, naming where it goes on hover. */
+/** The phone's back button: a drop of glass with a chevron. */
 @Composable
-private fun BackButton(label: String, onClick: () -> Unit) {
-    GlassCircleButton(onClick, Modifier.padding(start = 2.dp, top = 4.dp), size = 40.dp, tooltip = label) {
+private fun BackButton(onClick: () -> Unit) {
+    GlassCircleButton(onClick, Modifier.padding(start = 2.dp, top = 4.dp), size = 40.dp) {
         ConvxIcon("chevron_leftpx", size = 20.dp)
     }
 }

@@ -138,7 +138,7 @@ private fun Replies(thread: CommentThreadRenderer, onBack: () -> Unit) {
     }
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.padding(start = 4.dp, top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            IconButton("arrow_back", onBack, size = 36.dp, iconSize = 20.dp, tooltip = "Back to comments")
+            IconButton("arrow_back", onBack, size = 36.dp, iconSize = 20.dp)
             Spacer(Modifier.width(6.dp))
             Text("${main.replyCount ?: 0} Replies", style = ConvxType.Title3, color = Color.White)
         }

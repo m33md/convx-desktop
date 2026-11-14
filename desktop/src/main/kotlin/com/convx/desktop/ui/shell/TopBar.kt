@@ -55,11 +55,9 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
-import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.Library
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.ConvxWordmark
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.glass.GlassCircleButton
 import com.convx.desktop.ui.glass.GlassTokens
 import com.convx.desktop.ui.glass.additiveChrome
@@ -85,7 +83,6 @@ private val NavButtonSize: Dp = 40.dp
 fun TopBar(modifier: Modifier = Modifier) {
     val navigator = LocalNavigator.current
     val screen = navigator.current.screen
-    val settings by AppSettings.state.collectAsState()
 
     BoxWithConstraints(
         modifier
@@ -106,7 +103,6 @@ fun TopBar(modifier: Modifier = Modifier) {
             GlassCircleButton(
                 onClick = { UiState.toggleSideBar() },
                 size = NavButtonSize,
-                tooltip = if (settings.sidebarCollapsed) "Show the side bar" else "Fold the side bar",
             ) {
                 ConvxIcon("sidebar", tint = GlassTokens.Icon.copy(alpha = GlassTokens.IconDimOpacity), size = 20.dp)
             }
@@ -114,9 +110,9 @@ fun TopBar(modifier: Modifier = Modifier) {
             // The Convx wordmark, in its own grey.
             ConvxWordmark(WordmarkHeight, Modifier.padding(top = 2.dp))
             Spacer(Modifier.width(18.dp))
-            NavArrow("chevron_leftpx", "Go back", navigator.canGoBack) { navigator.back() }
+            NavArrow("chevron_leftpx", navigator.canGoBack) { navigator.back() }
             Spacer(Modifier.width(8.dp))
-            NavArrow("chevron_right_px", "Go forward", navigator.canGoForward) { navigator.forward() }
+            NavArrow("chevron_right_px", navigator.canGoForward) { navigator.forward() }
         }
 
         SearchField(width = fieldWidth, modifier = Modifier.align(Alignment.Center))
@@ -130,7 +126,6 @@ fun TopBar(modifier: Modifier = Modifier) {
             GlassCircleButton(
                 onClick = { navigator.navigate(Screen.Party) },
                 size = NavButtonSize,
-                tooltip = party?.let { "Party ${it.code}: ${it.members.size} listening" } ?: "Listen together",
             ) {
                 ConvxIcon("group", tint = if (party != null || screen == Screen.Party) LocalAccent.current else GlassTokens.Icon, size = 22.dp)
             }
@@ -142,8 +137,8 @@ private val WordmarkHeight: Dp = 19.dp
 private const val WordmarkAspect = 796f / 152f
 
 @Composable
-private fun NavArrow(icon: String, tooltip: String, enabled: Boolean, onClick: () -> Unit) {
-    GlassCircleButton(onClick = onClick, size = NavButtonSize, tooltip = tooltip, enabled = enabled) {
+private fun NavArrow(icon: String, enabled: Boolean, onClick: () -> Unit) {
+    GlassCircleButton(onClick = onClick, size = NavButtonSize, enabled = enabled) {
         ConvxIcon(icon, tint = GlassTokens.Icon.copy(alpha = if (enabled) GlassTokens.IconDimOpacity else 0.3f), size = 20.dp)
     }
 }
@@ -253,7 +248,7 @@ private fun SearchField(width: Dp, modifier: Modifier = Modifier) {
             )
         }
         if (query.isNotEmpty()) {
-            FieldButton("close", "Clear", GlassTokens.Icon) {
+            FieldButton("close", GlassTokens.Icon) {
                 navigator.searchQuery = ""
                 if (navigator.current.screen is Screen.SearchResults) navigator.navigate(Screen.Search)
                 runCatching { UiState.searchFocus.requestFocus() }
@@ -262,7 +257,7 @@ private fun SearchField(width: Dp, modifier: Modifier = Modifier) {
         // The phone opens Recognize Music from a long press on Search; here it's the field's mic.
         if (query.isEmpty()) {
             val listening = screen == Screen.Recognition || screen == Screen.RecognitionHistory
-            FieldButton("mic", "Recognize music", if (listening) LocalAccent.current else GlassTokens.Icon) {
+            FieldButton("mic", if (listening) LocalAccent.current else GlassTokens.Icon) {
                 navigator.navigate(Screen.Recognition)
             }
         }
@@ -273,7 +268,6 @@ private fun SearchField(width: Dp, modifier: Modifier = Modifier) {
 @Composable
 private fun FieldButton(
     icon: String,
-    tooltip: String,
     tint: Color,
     modifier: Modifier = Modifier,
     iconModifier: Modifier = Modifier,
@@ -281,18 +275,16 @@ private fun FieldButton(
 ) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Tooltip(tooltip) {
-        Box(
-            modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered) 0.10f else 0f))
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            ConvxIcon(icon, tint = tint, size = 21.dp, modifier = iconModifier.additiveChrome())
-        }
+    Box(
+        modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (hovered) 0.10f else 0f))
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon(icon, tint = tint, size = 21.dp, modifier = iconModifier.additiveChrome())
     }
 }

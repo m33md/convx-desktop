@@ -148,7 +148,7 @@ fun HomeScreen() {
                         modifier = Modifier.weight(1f),
                     )
                     if (settings.showHomeShuffle && selectedChip == null && canShuffle) {
-                        GlassCircleButton(onClick = { navigator.navigate(Screen.Recognition) }, size = 40.dp, tooltip = "Recognize music") {
+                        GlassCircleButton(onClick = { navigator.navigate(Screen.Recognition) }, size = 40.dp) {
                             ConvxIcon("mic", tint = Color.White, size = 20.dp)
                         }
                         Spacer(Modifier.width(8.dp))
@@ -161,7 +161,6 @@ fun HomeScreen() {
                                 }
                             },
                             size = 40.dp,
-                            tooltip = "Shuffle",
                         ) {
                             ConvxIcon("shuffle", tint = Color.White, size = 20.dp)
                         }
