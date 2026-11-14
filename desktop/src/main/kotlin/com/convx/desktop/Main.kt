@@ -61,7 +61,9 @@ import com.convx.desktop.ui.shell.UiState
 import com.convx.desktop.ui.shell.FullPlayerMode
 import com.convx.desktop.ui.shell.WindowTitleBar
 import com.sun.jna.Library as JnaLibrary
+import com.sun.jna.Memory
 import com.sun.jna.Native
+import com.sun.jna.NativeLibrary
 import com.sun.jna.Pointer
 import com.sun.jna.platform.win32.WinDef
 import com.sun.jna.ptr.IntByReference
@@ -154,6 +156,9 @@ fun main() {
             state = windowState,
             title = "Convx",
             icon = icon,
+            // On a Mac the window is made by macOS (see MacWindow): transparent here, titled there.
+            undecorated = com.convx.desktop.integrations.MacWindow.isMac,
+            transparent = com.convx.desktop.integrations.MacWindow.isMac,
             onPreviewKeyEvent = { shortcut(it, navigator) },
             onKeyEvent = { event ->
                 // A text field takes the typed space but lets the key press through, so check.
@@ -168,7 +173,7 @@ fun main() {
             LaunchedEffect(Unit) {
                 com.convx.desktop.core.SingleInstance.window = window
                 window.minimumSize = minimumWindowSize()
-                window.background = java.awt.Color.BLACK
+                if (!com.convx.desktop.integrations.MacWindow.isMac) window.background = java.awt.Color.BLACK
                 // Every size of the icon, so the title bar and taskbar get a sharp one (the small
                 // ones drop the sound bars, which blur away) instead of the big one shrunk.
                 runCatching {
@@ -179,6 +184,11 @@ fun main() {
                     if (sizes.isNotEmpty()) window.iconImages = sizes
                 }
                 WindowsChrome.darken(window)
+                MacChrome.style(window)
+                if (com.convx.desktop.integrations.MacWindow.isMac) {
+                    delay(300)
+                    com.convx.desktop.integrations.MacWindow.install("Convx", window.width, window.height)
+                }
                 // Spotify's window: the top bar is the title bar. Falls back to the dark Windows one.
                 WindowTitleBar.install(window, TopBarHeight)
                 window.addComponentListener(object : ComponentAdapter() {
@@ -368,6 +378,44 @@ private fun shortcut(event: KeyEvent, navigator: Navigator): Boolean {
     }
 }
 
+/** macOS: a dark title bar, and the screen kept on while ambient mode is. */
+private object MacChrome {
+    private val mac = System.getProperty("os.name").lowercase().contains("mac")
+
+    fun style(window: java.awt.Window) {
+        if (!mac) return
+        runCatching {
+            (window as? javax.swing.RootPaneContainer)?.rootPane?.apply {
+                putClientProperty("apple.awt.windowAppearance", "NSAppearanceNameDarkAqua")
+            }
+        }.onFailure { Log.w("Window", "Couldn't darken the title bar", it) }
+    }
+
+    private var assertion: Int = 0
+
+    /** IOPMAssertion: the display stays on and the Mac stays awake while [on]. */
+    fun keepAwake(on: Boolean) {
+        if (!mac) return
+        runCatching {
+            val iokit = NativeLibrary.getInstance("IOKit")
+            val cf = NativeLibrary.getInstance("CoreFoundation")
+            if (on && assertion == 0) {
+                val text = "Convx ambient mode".toByteArray()
+                val buffer = Memory(text.size + 1L).apply { write(0, text, 0, text.size); setByte(text.size.toLong(), 0) }
+                val name = cf.getFunction("CFStringCreateWithCString").invokePointer(arrayOf(null, buffer, 0x08000100))
+                val type = cf.getFunction("CFStringCreateWithCString").invokePointer(arrayOf(null, Memory(32).apply { setString(0, "PreventUserIdleDisplaySleep") }, 0x08000100))
+                val id = IntByReference()
+                // kIOPMAssertionLevelOn = 255
+                val rc = iokit.getFunction("IOPMAssertionCreateWithName").invokeInt(arrayOf(type, 255, name, id))
+                if (rc == 0) assertion = id.value
+            } else if (!on && assertion != 0) {
+                iokit.getFunction("IOPMAssertionRelease").invokeInt(arrayOf(assertion))
+                assertion = 0
+            }
+        }.onFailure { Log.w("Window", "Couldn't keep the screen on", it) }
+    }
+}
+
 /** Windows 10/11: a dark title bar that matches the app instead of a white strip. */
 private object WindowsChrome {
     private const val DWMWA_USE_IMMERSIVE_DARK_MODE = 20
@@ -410,6 +458,7 @@ private object WindowsChrome {
      * that made it, so it's made on the window's event thread, which lasts as long as the app.
      */
     fun keepAwake(on: Boolean) {
+        MacChrome.keepAwake(on)
         val api = kernel32 ?: return
         java.awt.EventQueue.invokeLater {
             runCatching { api.SetThreadExecutionState(if (on) ES_CONTINUOUS or ES_SYSTEM_REQUIRED or ES_DISPLAY_REQUIRED else ES_CONTINUOUS) }

@@ -11,6 +11,10 @@ import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.VerticalScrollbar
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import com.convx.desktop.integrations.MacSidebar.Item as MacItem
+import com.convx.desktop.integrations.MacSidebar.Kind as MacKind
+import androidx.compose.ui.graphics.asSkiaBitmap
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -114,6 +118,9 @@ val SideBarCollapsedWidth: Dp = 68.dp
 
 /** Gap between the window edge and the side bar; on the phone it is 30dp of a tablet's width. */
 val SideBarMargin: Dp = 12.dp
+
+/** Room above the side panel rows for the macOS window buttons. */
+val MacTrafficLightsHeight: Dp = 40.dp
 
 /** Where rows start beside the side bar; lists still run under it. */
 val SideBarContentInset: Dp = SideBarMargin + SideBarWidth + 8.dp
@@ -394,16 +401,77 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
     val rows = reorder.arrange(shown) { it.key }
     LaunchedEffect(shown) { reorder.settled(shown.map { it.key }) }
 
+    // macOS: the expanded panel is AppKit's (MacSidebar); this hands it the rows and what a click does.
+    val macNative = com.convx.desktop.ui.glass.IsMac && !collapsed
+    if (com.convx.desktop.ui.glass.IsMac) {
+        val identity = com.convx.desktop.ui.screens.rememberProfileIdentity()
+        fun row(i: NavItem) = MacItem("nav:${i.key}", MacKind.Row, i.label, macSymbol(i.icon), i.selected, null, i.onClick)
+        val native = buildList {
+            fun group(title: String) = add(MacItem("group:$title", MacKind.Group, title, "", false, null) {})
+            places.filter { it.key == "search" || it.key == "home" }.forEach { add(row(it)) }
+            val discover = places.filterNot { it.key == "search" || it.key == "home" }
+            if (discover.isNotEmpty()) {
+                group("Discover")
+                discover.forEach { add(row(it)) }
+            }
+            if (libraryItems.isNotEmpty()) {
+                group("Collection")
+                libraryItems.forEach { add(row(it)) }
+            }
+            group("Playlists")
+            add(MacItem("new", MacKind.Row, "New Playlist", "plus.circle", false, null) { create() })
+            add(row(allPlaylists))
+            shown.forEach { e ->
+                add(MacItem(e.key, MacKind.Row, e.title, "music.note.list", screen == e.screen, e.thumbnail ?: e.mosaic.firstOrNull()) { navigator.navigate(e.screen) })
+            }
+        }
+        // Settings and the profile stay at the bottom of the panel while the list above scrolls.
+        val footer = listOf(
+            row(NavItem("settings", "Settings", "settings", screen == Screen.Settings) { navigator.navigate(Screen.Settings) }),
+            MacItem("profile", MacKind.Row, if (identity.source != null) identity.name else "Your profile", "person.crop.circle", screen == Screen.Profile, null) { navigator.navigate(Screen.Profile) },
+        )
+        // Read here, in the composition, so opening the full player hides the panel at once.
+        val playerOpen = UiState.fullPlayer
+        SideEffect { com.convx.desktop.integrations.MacSidebar.update(native, footer, visible = !collapsed && !playerOpen) }
+        // The wordmark is drawn here and handed to AppKit as a picture, white, for the panel's header.
+        val wordmark = androidx.compose.ui.graphics.vector.rememberVectorPainter(com.convx.desktop.ui.components.VectorIcons.get("convx_wordmark"))
+        LaunchedEffect(wordmark) {
+            val vector = com.convx.desktop.ui.components.VectorIcons.get("convx_wordmark")
+            val aspect = vector.viewportWidth / vector.viewportHeight
+            val h = 68
+            val w = (h * aspect).toInt().coerceAtLeast(1)
+            val bitmap = androidx.compose.ui.graphics.ImageBitmap(w, h)
+            val canvas = androidx.compose.ui.graphics.Canvas(bitmap)
+            androidx.compose.ui.graphics.drawscope.CanvasDrawScope().draw(
+                androidx.compose.ui.unit.Density(1f), androidx.compose.ui.unit.LayoutDirection.Ltr, canvas,
+                androidx.compose.ui.geometry.Size(w.toFloat(), h.toFloat()),
+            ) {
+                with(wordmark) { draw(size, colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(Color.White.copy(alpha = 0.92f))) }
+            }
+            val png = org.jetbrains.skia.Image.makeFromBitmap(bitmap.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes
+            if (png != null) com.convx.desktop.integrations.MacSidebar.setLogo(png, aspect.toDouble())
+        }
+    }
+
     Column(
         modifier
             .width(panelWidth)
             .fillMaxHeight()
             .clip(shape)
-            .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
-            .then(glow.modifier)
-            .then(glow.gestureModifier),
+            .then(
+                if (com.convx.desktop.ui.glass.IsMac) {
+                    // macOS: the system's material is the window itself (MacWindow), so the rows sit right on it.
+                    Modifier
+                } else {
+                    Modifier
+                        .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
+                        .then(glow.modifier)
+                        .then(glow.gestureModifier)
+                },
+            ),
     ) {
-        Box(Modifier.weight(1f).fillMaxWidth()) {
+        if (macNative) Spacer(Modifier.weight(1f))
+        if (!macNative) Box(Modifier.weight(1f).fillMaxWidth()) {
             LazyColumn(
                 state = listState,
                 modifier = Modifier.fillMaxSize().fadingEdge(12.dp).reorderGestures(reorder),
@@ -454,7 +522,7 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
                 )
             }
         }
-        AccountRow(collapsed)
+        if (!macNative) AccountRow(collapsed)
     }
 }
 
@@ -825,3 +893,24 @@ fun Modifier.fadingEdge(edge: Dp): Modifier = this
             blendMode = BlendMode.DstIn,
         )
     }
+
+
+/** Convx's icon names as SF Symbols, for the native side panel. */
+private fun macSymbol(icon: String): String = when (icon) {
+    "search" -> "magnifyingglass"
+    "sf_house_fill" -> "house.fill"
+    "disc_studio" -> "opticaldisc"
+    "sf_square_grid_fill" -> "square.grid.2x2.fill"
+    "sf_dot_radiowaves" -> "dot.radiowaves.left.and.right"
+    "sf_music_note_square_stack" -> "music.note.square.stack.fill"
+    "history" -> "clock"
+    "artist" -> "music.mic"
+    "album" -> "square.stack"
+    "favorite" -> "heart.fill"
+    "download" -> "arrow.down.circle"
+    "storage" -> "folder"
+    "stats" -> "chart.bar.fill"
+    "grid_view" -> "square.grid.2x2"
+    "settings" -> "gearshape.fill"
+    else -> "music.note"
+}

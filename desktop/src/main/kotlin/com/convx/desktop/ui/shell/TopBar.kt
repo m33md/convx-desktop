@@ -103,7 +103,9 @@ fun TopBar(modifier: Modifier = Modifier) {
             Modifier.align(Alignment.CenterStart).padding(start = sides + WindowTitleBar.leftInset),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            GlassCircleButton(
+            if (com.convx.desktop.ui.glass.IsMac) {
+                com.convx.desktop.ui.glass.NativeGlassButton("sidebar", "sidebar.left", NavButtonSize, { UiState.toggleSideBar() })
+            } else GlassCircleButton(
                 onClick = { UiState.toggleSideBar() },
                 size = NavButtonSize,
                 tooltip = if (settings.sidebarCollapsed) "Show the side bar" else "Fold the side bar",
@@ -112,8 +114,10 @@ fun TopBar(modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(14.dp))
             // The Convx wordmark, in its own grey.
-            ConvxWordmark(WordmarkHeight, Modifier.padding(top = 2.dp))
-            Spacer(Modifier.width(18.dp))
+            if (!com.convx.desktop.ui.glass.IsMac) {
+                ConvxWordmark(WordmarkHeight, Modifier.padding(top = 2.dp))
+                Spacer(Modifier.width(18.dp))
+            }
             NavArrow("chevron_leftpx", "Go back", navigator.canGoBack) { navigator.back() }
             Spacer(Modifier.width(8.dp))
             NavArrow("chevron_right_px", "Go forward", navigator.canGoForward) { navigator.forward() }
@@ -127,7 +131,12 @@ fun TopBar(modifier: Modifier = Modifier) {
         ) {
             // The phone's "Listen Together in top bar": the party, lit while you're in one.
             val party by com.convx.desktop.integrations.party.Party.session.collectAsState()
-            GlassCircleButton(
+            if (com.convx.desktop.ui.glass.IsMac) {
+                com.convx.desktop.ui.glass.NativeGlassButton(
+                    "party", "person.2.fill", NavButtonSize, { navigator.navigate(Screen.Party) },
+                    accent = party != null || screen == Screen.Party,
+                )
+            } else GlassCircleButton(
                 onClick = { navigator.navigate(Screen.Party) },
                 size = NavButtonSize,
                 tooltip = party?.let { "Party ${it.code}: ${it.members.size} listening" } ?: "Listen together",
@@ -143,6 +152,12 @@ private const val WordmarkAspect = 796f / 152f
 
 @Composable
 private fun NavArrow(icon: String, tooltip: String, enabled: Boolean, onClick: () -> Unit) {
+    if (com.convx.desktop.ui.glass.IsMac) {
+        com.convx.desktop.ui.glass.NativeGlassButton(
+            "nav:$icon", if (icon.contains("left")) "chevron.left" else "chevron.right", NavButtonSize, onClick, enabled = enabled,
+        )
+        return
+    }
     GlassCircleButton(onClick = onClick, size = NavButtonSize, tooltip = tooltip, enabled = enabled) {
         ConvxIcon(icon, tint = GlassTokens.Icon.copy(alpha = if (enabled) GlassTokens.IconDimOpacity else 0.3f), size = 20.dp)
     }

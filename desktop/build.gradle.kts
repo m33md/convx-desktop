@@ -137,7 +137,7 @@ compose.desktop {
         System.getenv("CONVX_JBR")?.takeIf { it.isNotBlank() }?.let { javaHome = it }
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe)
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Dmg)
             packageName = "Convx"
             // The installer's own number, which only goes up (CI's CONVX_PACKAGE_VERSION).
             packageVersion = System.getenv("CONVX_PACKAGE_VERSION")?.takeIf { it.isNotBlank() } ?: appVersion
@@ -147,6 +147,13 @@ compose.desktop {
             licenseFile.set(project.file("../LICENSE"))
             // NewPipe's Rhino, FFmpeg's loader and TLS all reach for odd JDK modules; ship them all.
             includeAllModules = true
+
+            macOS {
+                bundleID = "com.convx.desktop"
+                dockName = "Convx"
+                iconFile.set(project.file("src/main/resources/convx.icns"))
+                minimumSystemVersion = "12.0"
+            }
 
             windows {
                 iconFile.set(project.file("src/main/resources/convx.ico"))

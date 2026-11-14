@@ -132,6 +132,9 @@ data class GlassConfig(
     }
 }
 
+/** The refraction shader renders wrongly on macOS, so glass there is the flat tint and rim. */
+internal val IsMac: Boolean = System.getProperty("os.name").lowercase().contains("mac")
+
 /** The glass the user tuned in Settings → Appearance → Liquid Glass; every glass surface reads it. */
 val LocalGlassConfig = androidx.compose.runtime.compositionLocalOf { GlassConfig.Default }
 
@@ -198,6 +201,8 @@ object GlassMotion {
 
     /** A wheel or touchpad step of [notches] over the pages. */
     fun onScroll(notches: Float) {
+        // On a Mac the glass stays glass while the pages scroll under it.
+        if (IsMac) return
         val now = System.nanoTime()
         rate = rateAt(now) + notches / WindowSeconds
         lastNanos = now

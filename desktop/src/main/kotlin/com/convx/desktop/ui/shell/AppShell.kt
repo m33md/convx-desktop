@@ -35,6 +35,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -45,6 +46,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.glass.of
 import com.convx.desktop.ui.glass.LocalGlassConfig
@@ -161,7 +163,7 @@ fun AppShell(navigator: Navigator) {
             LocalGlassConfig provides glass,
             LocalCardWidth provides settings.cardWidth(),
         ) {
-            BoxWithConstraints(Modifier.fillMaxSize().background(Color.Black)) {
+            BoxWithConstraints(Modifier.fillMaxSize().then(if (IsMacShell) Modifier else Modifier.background(Color.Black))) {
                 val collapsed = settings.sidebarCollapsed || maxWidth < AutoCollapseWidth
                 // A spring overshoots past its target; an inset below zero would be negative padding.
                 val startInsetRaw by animateDpAsState(
@@ -187,6 +189,23 @@ fun AppShell(navigator: Navigator) {
                     bottom = if (showPill) BottomChromeInset else 0.dp,
                     end = endInset,
                 )
+
+                // macOS: the window is see-through and the side panel is the system's material, so only
+                // the pages get black behind them; the glass controls over them still refract the recorded pages.
+                if (IsMacShell) {
+                    val playerOpen = UiState.fullPlayer
+                    SideEffect {
+                        com.convx.desktop.integrations.MacGlass.setWindowHeight(maxHeight.value.toDouble())
+                        com.convx.desktop.integrations.MacGlass.setHidden(playerOpen)
+                    }
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            // Flush against the side panel and the window's edges, as a Mac app's content is.
+                            .padding(start = (startInset - 8.dp).coerceAtLeast(0.dp))
+                            .background(Color.Black),
+                    )
+                }
 
                 // The pages, recorded as the backdrop every glass surface samples.
                 Box(
@@ -216,7 +235,11 @@ fun AppShell(navigator: Navigator) {
                         collapsed = collapsed,
                         modifier = Modifier
                             .align(Alignment.TopStart)
-                            .padding(start = SideBarMargin, top = TopBarHeight, bottom = SideBarMargin),
+                            .padding(
+                                start = SideBarMargin,
+                                top = if (com.convx.desktop.ui.glass.IsMac && !collapsed) SideBarMargin else TopBarHeight,
+                                bottom = SideBarMargin,
+                            ),
                     )
 
                     AnimatedVisibility(
@@ -230,7 +253,12 @@ fun AppShell(navigator: Navigator) {
                         RightPanel(shownPanel)
                     }
 
-                    TopBar(Modifier.align(Alignment.TopCenter))
+                    TopBar(
+                        Modifier
+                            .align(Alignment.TopCenter)
+                            // On a Mac the window buttons and the side panel take the left; the bar sits beside them.
+                            .padding(start = if (com.convx.desktop.ui.glass.IsMac) maxOf(startInset, 84.dp) else 0.dp),
+                    )
 
                     // Centred in the content between the side panels, not in the window.
                     BoxWithConstraints(Modifier.fillMaxSize().padding(start = startInset, end = endInset)) {
@@ -275,6 +303,8 @@ fun AppShell(navigator: Navigator) {
         }
     }
 }
+
+private val IsMacShell = com.convx.desktop.integrations.MacWindow.isMac
 
 @Composable
 private fun Pages(navigator: Navigator) {

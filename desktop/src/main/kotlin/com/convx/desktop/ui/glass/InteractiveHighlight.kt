@@ -52,7 +52,7 @@ class InteractiveHighlight(
     private val radiusScale: Float = 1.5f,
     private val sheenAlpha: Float = 0.08f,
     private val spotAlpha: Float = 0.15f,
-    private val hoverStrength: Float = 0.5f,
+    private val hoverStrength: Float = 0f,
 ) {
     private val progressSpec = spring(0.5f, 300f, 0.001f)
     private val positionSpec = spring(0.5f, 300f, Offset.VisibilityThreshold)

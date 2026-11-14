@@ -56,7 +56,11 @@ fun YouTubeAccountSettings() {
                 if (browser == null) "Not logged in. Install a browser such as Chrome, Edge, Firefox or Opera to log in, or use a token below."
                 else "Not logged in. You sign in on Google's own page in ${browser.name}; Convx never sees your password."
             YouTubeAccount.State.WaitingForBrowser ->
-                "Log in to Google in the ${browser?.name ?: "browser"} window that opened. When YouTube Music shows your account, close that window (or press Done) and Convx finishes logging in."
+                if (browser?.engine == com.convx.desktop.integrations.youtube.BrowserSignIn.Engine.Safari) {
+                    "Log in to Google in the Safari window that opened. When YouTube Music shows your account, come back here and press Done."
+                } else {
+                    "Log in to Google in the ${browser?.name ?: "browser"} window that opened. When YouTube Music shows your account, close that window (or press Done) and Convx finishes logging in."
+                }
             YouTubeAccount.State.Checking -> "Checking your account with YouTube Music…"
             is YouTubeAccount.State.ChoosingChannel -> "Choose which channel Convx uses."
             is YouTubeAccount.State.SignedIn -> listOfNotNull(s.profile.email, s.profile.handle).joinToString(" · ").ifEmpty { "Logged in" }

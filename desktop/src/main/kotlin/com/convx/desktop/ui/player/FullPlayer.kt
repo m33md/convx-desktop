@@ -224,6 +224,8 @@ fun PlayerStage(
         Column(Modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 20.dp)) {
             // Top row
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                // The Mac's window buttons sit in this corner.
+                if (com.convx.desktop.ui.glass.IsMac && !preview) Spacer(Modifier.width(56.dp))
                 IconButton("expand_more", { UiState.fullPlayer = false }, size = 40.dp, iconSize = 28.dp, filled = true, tooltip = "Close (Esc)")
                 Spacer(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {

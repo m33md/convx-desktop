@@ -94,8 +94,11 @@ internal object WinProcess {
 
     /** Running processes whose command line contains [needle], ignoring case. */
     fun withCommandLine(needle: String): List<ProcessHandle> {
-        if (!isWindows) return emptyList()
         val wanted = needle.lowercase()
+        // Off Windows the JVM can read other processes' command lines itself.
+        if (!isWindows) {
+            return ProcessHandle.allProcesses().filter { it.info().commandLine().orElse("").lowercase().contains(wanted) }.toList()
+        }
         return ProcessHandle.allProcesses().filter { process ->
             commandLine(process.pid())?.lowercase()?.contains(wanted) == true
         }.toList()
