@@ -62,12 +62,31 @@ object MediaControls {
 
     /** What reached the player from Windows, for the CI check and the log. */
     @Volatile var lastCommand: String? = null
-        private set
+        internal set
 
     @Volatile private var installed = false
 
     /** Hooks the window up. Call once the window is on screen. */
     fun install(window: AwtWindow) {
+        if (!isWindows && System.getProperty("os.name").lowercase().contains("mac") && !installed) {
+            installed = true
+            if (MacMediaControls.start()) {
+                AppScope.launch {
+                    PlayerController.state
+                        .map { s -> Snapshot(s.current, s.isPlaying, s.isLoading, s.queue.isNotEmpty()) }
+                        .distinctUntilChanged()
+                        .collect { snap -> MacMediaControls.show(snap) }
+                }
+                AppScope.launch { PlayerController.changes.collect { MacMediaControls.timeline() } }
+                AppScope.launch {
+                    while (true) {
+                        delay(5_000)
+                        if (PlayerController.state.value.isPlaying) MacMediaControls.timeline()
+                    }
+                }
+            }
+            return
+        }
         if (!isWindows || installed) return
         installed = true
         val hwnd = runCatching { WinDef.HWND(Native.getWindowPointer(window)) }.getOrElse {
@@ -100,6 +119,7 @@ object MediaControls {
 
     fun shutdown() {
         if (!installed) return
+        if (!isWindows) return
         // The window's procedure goes back first, so no message reaches Kotlin while the app closes.
         WindowHook.uninstall()
         Smtc.close()
@@ -112,6 +132,7 @@ object MediaControls {
 
     internal fun run(command: Command, from: String) {
         lastCommand = "$command from $from"
+        Log.i(Tag, "$command from $from")
         when (command) {
             Command.PLAY -> PlayerController.play()
             Command.PAUSE -> PlayerController.pause()
