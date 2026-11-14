@@ -517,7 +517,8 @@ fun TopPickCard(item: YTItem, modifier: Modifier = Modifier, onClick: (() -> Uni
         if (bitmap != null) {
             // The reflection: the cover flipped, blurred and dimmed, filling the caption strip.
             // Reduce live blur leaves the strip a flat colour.
-            if (!settings.reduceLiveBlur) Image(
+            // On a Mac the strip is always blurred: it is a still picture, not a moving one.
+            if (!settings.reduceLiveBlur || com.convx.desktop.ui.glass.IsMac) Image(
                 bitmap,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,

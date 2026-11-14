@@ -10,11 +10,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.size
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,4 +122,38 @@ fun Modifier.glassControl(
         .then(surface)
         .then(glow.modifier)
         .then(if (enabled) glow.gestureModifier else Modifier)
+}
+
+
+/**
+ * macOS: the button is AppKit's own Liquid Glass ([com.convx.desktop.integrations.MacGlass]) drawn over
+ * this empty space, which Compose keeps in the layout and reports the place of.
+ */
+@androidx.compose.runtime.Composable
+fun NativeGlassButton(
+    id: String,
+    symbol: String,
+    size: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    enabled: Boolean = true,
+    accent: Boolean = false,
+) {
+    val density = androidx.compose.ui.platform.LocalDensity.current.density
+    var bounds by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf<androidx.compose.ui.geometry.Rect?>(null) }
+    androidx.compose.foundation.layout.Box(
+        modifier.size(size).onGloballyPositioned { bounds = it.boundsInWindow() },
+    )
+    val latest = androidx.compose.runtime.rememberUpdatedState(onClick)
+    // Read here, in the composition, so the effect below runs again once the position is known.
+    val placed = bounds
+    androidx.compose.runtime.SideEffect {
+        placed?.let { r ->
+            com.convx.desktop.integrations.MacGlass.place(
+                id, symbol, (r.left / density).toDouble(), (r.top / density).toDouble(),
+                (r.width / density).toDouble(), (r.height / density).toDouble(), enabled, accent,
+            ) { latest.value() }
+        }
+    }
+    androidx.compose.runtime.DisposableEffect(id) { onDispose { com.convx.desktop.integrations.MacGlass.remove(id) } }
 }
