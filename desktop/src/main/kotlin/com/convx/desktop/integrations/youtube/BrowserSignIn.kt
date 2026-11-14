@@ -85,7 +85,7 @@ object BrowserSignIn {
     data class Session(val cookie: String, val visitorData: String?, val dataSyncId: String?)
 
     /** How a browser keeps its cookies, which decides how Convx reads them. */
-    enum class Engine { Chromium, Firefox }
+    enum class Engine { Chromium, Firefox, Safari }
 
     /** A browser on this PC the sign-in can open. */
     data class Browser(val name: String, val path: String, val engine: Engine, val isDefault: Boolean = false)
@@ -97,9 +97,55 @@ object BrowserSignIn {
     @Volatile private var window: Window? = null
 
     private val isWindows = System.getProperty("os.name").lowercase().contains("win")
+    private val isMac = System.getProperty("os.name").lowercase().contains("mac")
 
-    /** The browsers on this PC Convx can sign in with, Windows' default first. */
+    /** Browsers a Mac sign-in can use: name, app folder, program inside it, and the bundle id the system names it by. */
+    private data class MacApp(val name: String, val app: String, val program: String, val bundleId: String, val engine: Engine)
+
+    private val MacApps = listOf(
+        MacApp("Google Chrome", "Google Chrome.app", "Google Chrome", "com.google.chrome", Engine.Chromium),
+        MacApp("Microsoft Edge", "Microsoft Edge.app", "Microsoft Edge", "com.microsoft.edgemac", Engine.Chromium),
+        MacApp("Brave", "Brave Browser.app", "Brave Browser", "com.brave.browser", Engine.Chromium),
+        MacApp("Opera", "Opera.app", "Opera", "com.operasoftware.opera", Engine.Chromium),
+        MacApp("Vivaldi", "Vivaldi.app", "Vivaldi", "com.vivaldi.vivaldi", Engine.Chromium),
+        MacApp("Chromium", "Chromium.app", "Chromium", "org.chromium.chromium", Engine.Chromium),
+        MacApp("Arc", "Arc.app", "Arc", "company.thebrowser.browser", Engine.Chromium),
+        MacApp("Firefox", "Firefox.app", "firefox", "org.mozilla.firefox", Engine.Firefox),
+        MacApp("Zen", "Zen.app", "zen", "app.zen-browser.zen", Engine.Firefox),
+        MacApp("LibreWolf", "LibreWolf.app", "librewolf", "org.mozilla.librewolf", Engine.Firefox),
+        MacApp("Floorp", "Floorp.app", "floorp", "one.ablaze.floorp", Engine.Firefox),
+        MacApp("Waterfox", "Waterfox.app", "waterfox", "net.waterfox.waterfox", Engine.Firefox),
+    )
+
+    /** The https handler macOS has chosen, as a bundle id (lower case), from LaunchServices' own record. */
+    private fun macDefaultBundleId(): String? = runCatching {
+        val plist = File(System.getProperty("user.home"), "Library/Preferences/com.apple.LaunchServices/com.apple.launchservices.secure.plist")
+        if (!plist.isFile) return null
+        val process = ProcessBuilder("plutil", "-convert", "json", "-o", "-", plist.path).redirectErrorStream(true).start()
+        val text = process.inputStream.bufferedReader().readText()
+        process.waitFor()
+        val handlers = Json.parseToJsonElement(text).jsonObject["LSHandlers"]?.jsonArray ?: return null
+        handlers.map { it.jsonObject }
+            .firstOrNull { it["LSHandlerURLScheme"]?.jsonPrimitive?.contentOrNull == "https" }
+            ?.get("LSHandlerRoleAll")?.jsonPrimitive?.contentOrNull?.lowercase()
+    }.getOrNull()
+
+    private fun macBrowsers(): List<Browser> {
+        val roots = listOf(File("/Applications"), File(System.getProperty("user.home"), "Applications"))
+        val default = macDefaultBundleId()
+        val safari = listOf(File("/Applications/Safari.app"), File("/System/Applications/Safari.app")).firstOrNull { it.isDirectory }
+            ?.let { Browser("Safari", it.absolutePath, Engine.Safari, isDefault = default == "com.apple.safari") }
+        val others = MacApps.flatMap { app ->
+            roots.map { File(it, "${app.app}/Contents/MacOS/${app.program}") }
+                .filter { it.isFile }
+                .map { Browser(app.name, it.absolutePath, app.engine, isDefault = app.bundleId == default) }
+        }
+        return (listOfNotNull(safari) + others).sortedByDescending { it.isDefault }
+    }
+
+    /** The browsers on this PC Convx can sign in with, the system's default first. */
     fun browsers(): List<Browser> {
+        if (isMac) return macBrowsers()
         if (!isWindows) return emptyList()
         val found = LinkedHashMap<String, Browser>()
         for ((name, exe) in registered() + knownPaths()) {
@@ -203,6 +249,7 @@ object BrowserSignIn {
      * and [closeAfterMs], to run every step but the Google account itself.
      */
     internal suspend fun signIn(browser: Browser, startUrl: String, requireAccount: Boolean, closeAfterMs: Long? = null): Session = withContext(Dispatchers.IO) {
+        if (browser.engine == Engine.Safari) return@withContext signInSafari(startUrl, requireAccount, closeAfterMs)
         val profile = File(AppDirs.cache, "sign-in-browser")
         stopAll(profile)
         profile.deleteRecursively()
@@ -232,6 +279,7 @@ object BrowserSignIn {
                     readChromiumDatabase(profile, requireAccount)
                 }
                 Engine.Firefox -> readFirefoxProfile(profile, requireAccount)
+                Engine.Safari -> error("Safari signs in on its own path")
             }
         } finally {
             withContext(NonCancellable) {
@@ -252,6 +300,72 @@ object BrowserSignIn {
      */
     fun finish() {
         window?.close()
+        safariDone?.complete(Unit)
+    }
+
+    /** Waiting for "Done" while the user signs in in Safari, which Convx can't watch the way it watches its own window. */
+    @Volatile private var safariDone: kotlinx.coroutines.CompletableDeferred<Unit>? = null
+
+    /**
+     * Safari has no debugging port and no profile of ours, so it's the user's own Safari: the page opens
+     * there, they sign in, press Done, and Convx reads the Google cookies Safari saved.
+     */
+    private suspend fun signInSafari(startUrl: String, requireAccount: Boolean, closeAfterMs: Long?): Session {
+        val done = kotlinx.coroutines.CompletableDeferred<Unit>()
+        safariDone = done
+        try {
+            Log.i(Tag, "Opening Safari for Google sign-in")
+            ProcessBuilder("open", "-a", "Safari", startUrl).start().waitFor()
+            val finished = withTimeoutOrNull(TimeoutMs) {
+                if (closeAfterMs != null) delay(closeAfterMs) else done.await()
+                true
+            }
+            if (finished == null) throw IOException("Sign-in timed out after fifteen minutes. Try again.")
+        } finally {
+            safariDone = null
+        }
+        val cookies = readSafariCookies()
+        val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
+        return session(cookies, if (cookies.isEmpty()) null else readConfigOverHttp(cookie), requireAccount)
+    }
+
+    /** Safari's cookie file (Cookies.binarycookies): big-endian page list, little-endian pages, strings ending in a zero byte. */
+    private fun readSafariCookies(): List<Pair<String, String>> {
+        val home = File(System.getProperty("user.home"))
+        val file = listOf(
+            "Library/Containers/com.apple.Safari/Data/Library/Cookies/Cookies.binarycookies",
+            "Library/Cookies/Cookies.binarycookies",
+        ).map { File(home, it) }.firstOrNull { it.exists() } ?: throw ClosedException()
+        val data = try {
+            file.readBytes()
+        } catch (e: IOException) {
+            throw IOException("Convx isn't allowed to read Safari's cookies. In System Settings, Privacy & Security, Full Disk Access, turn Convx on, then log in again.")
+        }
+        if (data.size < 8 || String(data, 0, 4, Charsets.US_ASCII) != "cook") throw IOException("Safari's cookie file isn't in a form Convx can read")
+        val head = java.nio.ByteBuffer.wrap(data).order(java.nio.ByteOrder.BIG_ENDIAN)
+        val pages = head.getInt(4)
+        var offset = 8 + 4 * pages
+        val out = ArrayList<Pair<String, String>>()
+        for (index in 0 until pages) {
+            val size = head.getInt(8 + 4 * index)
+            val page = java.nio.ByteBuffer.wrap(data.copyOfRange(offset, offset + size)).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            offset += size
+            fun text(at: Int): String {
+                var end = at
+                while (end < page.limit() && page.get(end) != 0.toByte()) end++
+                return String(page.array(), at, end - at, Charsets.UTF_8)
+            }
+            val count = page.getInt(4)
+            for (i in 0 until count) {
+                val start = page.getInt(8 + 4 * i)
+                val domain = text(start + page.getInt(start + 16))
+                val name = text(start + page.getInt(start + 20))
+                val path = text(start + page.getInt(start + 24))
+                val value = text(start + page.getInt(start + 28))
+                if (sentToMusic(domain, path)) out.add(name to value)
+            }
+        }
+        return out
     }
 
     /** The sign-in browser: the process Convx started and whatever runs on the same profile. */
@@ -295,6 +409,11 @@ object BrowserSignIn {
 
     /** Asks every window of process [pid] to close, as its close button does. */
     private fun closeWindows(pid: Long) {
+        if (!isWindows) {
+            // A polite quit: the browser saves its cookies on the way out, as it does when its window is closed.
+            ProcessHandle.of(pid).ifPresent { it.destroy() }
+            return
+        }
         runCatching {
             val user32 = com.sun.jna.platform.win32.User32.INSTANCE
             user32.EnumWindows({ hwnd, _ ->
@@ -327,6 +446,7 @@ object BrowserSignIn {
                 // For a browser without a headless mode: a real window, parked off the screen.
                 listOf("--remote-debugging-port=0", "--mute-audio", "--window-position=-32000,-32000", "--window-size=400,300")
             }
+            Engine.Safari -> emptyList()
             Engine.Firefox -> {
                 writeFirefoxPrefs(profile)
                 listOf("-no-remote", "-new-instance", "-profile", profile.path, "-width", "520", "-height", "780")
