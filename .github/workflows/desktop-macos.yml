@@ -1,0 +1,110 @@
+name: Desktop build (macOS)
+
+# The Mac app, as a .dmg for each kind of Mac: Intel (x86_64) and Apple Silicon (arm64). Each is built
+# on a runner of its own kind, because the app bundles FFmpeg and the Java runtime for the machine
+# it is packaged on (desktop/build.gradle.kts picks the macosx-x86_64 or macosx-arm64 natives).
+on:
+  push:
+    paths:
+      - "desktop/**"
+      - "innertube/**"
+      - "lyrics/**"
+      - "canvas/**"
+      - "integrations/**"
+      - "spine/**"
+      - ".github/workflows/desktop-macos.yml"
+  pull_request:
+    paths:
+      - "desktop/**"
+      - "innertube/**"
+      - "lyrics/**"
+      - "canvas/**"
+      - "integrations/**"
+      - "spine/**"
+      - ".github/workflows/desktop-macos.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: desktop-macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  macos:
+    name: macOS ${{ matrix.arch }}
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: intel
+            runner: macos-15-intel
+          - arch: arm64
+            runner: macos-15
+    defaults:
+      run:
+        working-directory: desktop
+    env:
+      # jpackage wants MAJOR.MINOR.PATCH with a MAJOR above 0; this only goes up, as the Windows one does.
+      CONVX_PACKAGE_VERSION: 1.1.${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          # The whole history: the version number is counted from it.
+          fetch-depth: 0
+
+      # The same number desktop.yml gives the Windows build.
+      - name: Version
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          base=aa77a0e80c547908dc77cefd6e507bb9b153604d
+          if git merge-base --is-ancestor "$base" HEAD; then
+            count=$(git rev-list --count --first-parent "$base..HEAD" -- installer desktop innertube lyrics canvas integrations spine .github/workflows/desktop.yml)
+            version="1.1.$((19 + count))"
+          else
+            version=$CONVX_PACKAGE_VERSION
+          fi
+          echo "Convx $version"
+          echo "CONVX_VERSION=$version" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: false
+
+      - name: Compile
+        run: ./gradlew --no-daemon compileKotlin
+
+      - name: Package the app and the disk image
+        run: ./gradlew --no-daemon createDistributable packageDmg
+
+      - name: Check the build is for this Mac
+        run: |
+          app=build/compose/binaries/main/app/Convx.app
+          binary="$app/Contents/MacOS/Convx"
+          echo "Built on $(uname -m); the app is: $(lipo -archs "$binary")"
+          case "${{ matrix.arch }}" in
+            intel) lipo -archs "$binary" | grep -q x86_64 ;;
+            arm64) lipo -archs "$binary" | grep -q arm64 ;;
+          esac
+
+      - name: Zip the app
+        run: |
+          cd build/compose/binaries/main/app
+          ditto -c -k --sequesterRsrc --keepParent Convx.app "$GITHUB_WORKSPACE/desktop/build/Convx-macos-${{ matrix.arch }}.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Convx-macos-${{ matrix.arch }}-dmg
+          path: desktop/build/compose/binaries/main/dmg/*.dmg
+          if-no-files-found: error
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Convx-macos-${{ matrix.arch }}-app
+          path: desktop/build/Convx-macos-${{ matrix.arch }}.zip
+          if-no-files-found: error

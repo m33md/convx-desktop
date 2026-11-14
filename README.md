@@ -51,7 +51,11 @@ You need JDK 21.
 cd desktop
 ./gradlew run                 # start the app
 ./gradlew packageMsi          # Windows installer in build/compose/binaries/main/msi
+./gradlew packageDmg          # macOS disk image in build/compose/binaries/main/dmg
 ```
+
+On a Mac, `packageDmg` builds for the kind of Mac it runs on (Intel or Apple Silicon), so build
+on each. `.github/workflows/desktop-macos.yml` does both on every push.
 
 Every push to `main` is built on GitHub Actions (`.github/workflows/desktop.yml`), and the
 finished installers replace the ones on the
