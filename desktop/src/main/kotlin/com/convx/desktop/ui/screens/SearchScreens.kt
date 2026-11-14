@@ -192,7 +192,7 @@ private fun SuggestionRow(text: String, onClick: () -> Unit, onFill: () -> Unit)
         ConvxIcon("cosmos_search", tint = ConvxColors.SecondaryLabel, size = 20.dp)
         Spacer(Modifier.width(14.dp))
         Text(text, style = ConvxType.Body, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        IconButton("arrow_top_left", onFill, size = 30.dp, iconSize = 18.dp, tint = ConvxColors.SecondaryLabel, tooltip = "Fill in search")
+        IconButton("arrow_top_left", onFill, size = 30.dp, iconSize = 18.dp, tint = ConvxColors.SecondaryLabel)
     }
 }
 

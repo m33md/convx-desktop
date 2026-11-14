@@ -88,7 +88,6 @@ import com.convx.desktop.ui.components.SongTableHeader
 import com.convx.desktop.ui.components.ListReorder
 import com.convx.desktop.ui.components.rememberListReorder
 import com.convx.desktop.ui.components.reorderGestures
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.onSecondaryClick
 import com.convx.desktop.ui.components.openAtProvider
 import com.convx.desktop.ui.components.pressable
@@ -188,14 +187,14 @@ fun LazyListScope.collectionHeader(
                     }
                     Spacer(Modifier.height(17.dp))
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                        HeaderCircle("shuffle", "Shuffle", onShuffle, enabled)
+                        HeaderCircle("shuffle", onShuffle, enabled)
                         PlayPill(playing, enabled, onPlay)
                         if (download != null) {
                             // The phone's album page: its right button downloads, and "more" sits up top.
                             DownloadCircle(download)
                         } else if (menu != null) {
                             Box {
-                                HeaderCircle("more_horiz", "More options", { buttonMenu.expanded = true })
+                                HeaderCircle("more_horiz", { buttonMenu.expanded = true })
                                 AppMenu(buttonMenu) { menu { buttonMenu.expanded = false } }
                             }
                         } else {
@@ -210,7 +209,7 @@ fun LazyListScope.collectionHeader(
             }
             if (download != null && menu != null) {
                 Box(Modifier.align(Alignment.TopEnd).padding(top = LocalPageInsets.current.top + 16.dp, end = Gutter)) {
-                    HeaderCircle("more_horiz", "More options", { buttonMenu.expanded = true }, size = 40.dp)
+                    HeaderCircle("more_horiz", { buttonMenu.expanded = true }, size = 40.dp)
                     AppMenu(buttonMenu) { menu { buttonMenu.expanded = false } }
                 }
             }
@@ -230,7 +229,7 @@ private fun DownloadCircle(songs: List<Song>) {
     val wanted = remember(songs) { songs.filter(Downloads::canDownload) }
     val ids = remember(wanted) { wanted.map { it.id } }
     when (val state = Downloads.collective(wanted, done, active)) {
-        Downloads.Collective.Done -> HeaderCircle("check", "Downloaded", {
+        Downloads.Collective.Done -> HeaderCircle("check", {
             Overlays.confirm(
                 "Remove download?",
                 "${ids.size} downloaded ${if (ids.size == 1) "song" else "songs"} will be removed from this PC. They stay in your library.",
@@ -255,12 +254,11 @@ private fun DownloadCircle(songs: List<Song>) {
                     )
                 },
             ) {
-                HeaderCircle("download", "Downloading ${state.done} of ${state.total}. Click to stop", { Downloads.cancel(ids) })
+                HeaderCircle("download", { Downloads.cancel(ids) })
             }
         }
         Downloads.Collective.None -> HeaderCircle(
             "download",
-            if (wanted.isEmpty()) "Nothing here can be downloaded" else "Download",
             {
                 val queued = Downloads.download(wanted)
                 if (queued > 1) Overlays.toast("Downloading $queued songs", "download")
@@ -282,21 +280,19 @@ private fun HeaderText(text: String, style: TextStyle, onClick: (() -> Unit)? = 
 
 /** The phone's 54dp side buttons: the page's foreground at 16%. */
 @Composable
-private fun HeaderCircle(icon: String, tooltip: String, onClick: () -> Unit, enabled: Boolean = true, size: Dp = 54.dp) {
+private fun HeaderCircle(icon: String, onClick: () -> Unit, enabled: Boolean = true, size: Dp = 54.dp) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Tooltip(tooltip) {
-        Box(
-            Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered && enabled) 0.24f else 0.16f))
-                .hoverable(interaction)
-                .pressable(onClick, enabled = enabled, interaction = interaction, pressScale = 0.92f),
-            contentAlignment = Alignment.Center,
-        ) {
-            ConvxIcon(icon, tint = Color.White.copy(alpha = if (enabled) 1f else 0.4f), size = size * 0.48f)
-        }
+    Box(
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (hovered && enabled) 0.24f else 0.16f))
+            .hoverable(interaction)
+            .pressable(onClick, enabled = enabled, interaction = interaction, pressScale = 0.92f),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon(icon, tint = Color.White.copy(alpha = if (enabled) 1f else 0.4f), size = size * 0.48f)
     }
 }
 

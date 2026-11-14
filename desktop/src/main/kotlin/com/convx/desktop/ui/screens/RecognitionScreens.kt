@@ -459,6 +459,6 @@ private fun HistoryRow(item: Recognition, onClick: () -> Unit, onDelete: () -> U
                 color = ConvxColors.SecondaryLabel.copy(alpha = 0.7f),
             )
         }
-        IconButton("delete", onDelete, size = 36.dp, iconSize = 19.dp, tint = ConvxColors.SecondaryLabel, tooltip = "Delete from history")
+        IconButton("delete", onDelete, size = 36.dp, iconSize = 19.dp, tint = ConvxColors.SecondaryLabel)
     }
 }

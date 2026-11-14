@@ -85,8 +85,8 @@ private fun Adjuster(
 ) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
         ConvxIcon(icon, tint = Color.White, size = 28.dp)
-        IconButton("remove", onLower, size = 40.dp, iconSize = 20.dp, enabled = canLower, tooltip = "Lower")
+        IconButton("remove", onLower, size = 40.dp, iconSize = 20.dp, enabled = canLower)
         Text(label, style = ConvxType.Title3, color = Color.White, textAlign = TextAlign.Center, modifier = Modifier.width(80.dp))
-        IconButton("add", onRaise, size = 40.dp, iconSize = 20.dp, enabled = canRaise, tooltip = "Raise")
+        IconButton("add", onRaise, size = 40.dp, iconSize = 20.dp, enabled = canRaise)
     }
 }

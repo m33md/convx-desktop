@@ -168,7 +168,7 @@ private fun SlotRow(slot: PlayerIconSlot, icon: PlayerIconOverride?) {
                 Spacer(Modifier.width(8.dp))
                 GlassSwitch(icon.tint, { PlayerIcons.setTint(slot, it) })
                 Spacer(Modifier.width(6.dp))
-                IconButton("delete", { PlayerIcons.clear(slot) }, size = 32.dp, iconSize = 18.dp, tint = SystemColors.Red, tooltip = "Use the built-in icon")
+                IconButton("delete", { PlayerIcons.clear(slot) }, size = 32.dp, iconSize = 18.dp, tint = SystemColors.Red)
             }
         }
     }

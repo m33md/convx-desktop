@@ -278,13 +278,13 @@ private fun ColorRow(label: String, colors: List<Long>, min: Int = 1, max: Int =
                 }
             }
             if (colors.size < max) {
-                SmallRound("add", "Add a colour") {
+                SmallRound("add") {
                     DiscEditor.keepUndo()
                     onChange(colors + (colors.lastOrNull() ?: 0xFFFFFFFF))
                 }
             }
             if (colors.size > min) {
-                SmallRound("remove", "Take the last colour off") {
+                SmallRound("remove") {
                     DiscEditor.keepUndo()
                     onChange(colors.dropLast(1))
                 }
@@ -294,13 +294,11 @@ private fun ColorRow(label: String, colors: List<Long>, min: Int = 1, max: Int =
 }
 
 @Composable
-private fun SmallRound(icon: String, tip: String, onClick: () -> Unit) {
-    Tooltip(tip) {
-        Box(
-            Modifier.size(30.dp).clip(CircleShape).background(FieldBg).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) { ConvxIcon(icon, tint = Color.White, size = 16.dp) }
-    }
+private fun SmallRound(icon: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(30.dp).clip(CircleShape).background(FieldBg).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { ConvxIcon(icon, tint = Color.White, size = 16.dp) }
 }
 
 /**
@@ -440,11 +438,9 @@ internal fun ToolsPanel(modifier: Modifier) {
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             DiscPresets.ordered.forEach { preset ->
-                Tooltip(preset.title) {
-                    Box(Modifier.clip(SmallShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.usePreset(preset) }) {
-                        // The same picture the Disc Studio page shows, so each preset is drawn and kept once.
-                        DiscThumb("${DiscThumbs.presetKey(preset)}@${DiscThumbs.CardPixels}", 70.dp) { DiscPresets.start(preset) }
-                    }
+                Box(Modifier.clip(SmallShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.usePreset(preset) }) {
+                    // The same picture the Disc Studio page shows, so each preset is drawn and kept once.
+                    DiscThumb("${DiscThumbs.presetKey(preset)}@${DiscThumbs.CardPixels}", 70.dp) { DiscPresets.start(preset) }
                 }
             }
         }
@@ -581,10 +577,8 @@ private fun ShapePicker() {
                         rotation = if (kind == ShapeKind.TAPE) -18f else 0f,
                     )
                 }
-                Tooltip(kind.label) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(newShape(kind)) }) {
-                        LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
-                    }
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(newShape(kind)) }) {
+                    LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
                 }
             }
         }
@@ -632,10 +626,8 @@ private fun PatternPicker(onPick: (PatternKind) -> Unit) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PatternKind.entries.forEach { pattern ->
                 val sample = remember(pattern) { newPattern(pattern).copy(seed = 3) }
-                Tooltip(pattern.label) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(pattern) }) {
-                        LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
-                    }
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(pattern) }) {
+                    LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
                 }
             }
         }
@@ -648,10 +640,8 @@ private fun StickerPicker(onPick: (String) -> Unit) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             DiscSticker.entries.forEach { sticker ->
                 val sample = remember(sticker) { newSticker(sticker.id).copy(x = 0f, y = 0f, scale = 0.62f, shadow = false) }
-                Tooltip(sticker.label) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(sticker.id) }) {
-                        LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
-                    }
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(sticker.id) }) {
+                    LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
                 }
             }
         }
@@ -721,30 +711,28 @@ private fun LibraryTile(sticker: StickerLibrary.Sticker, onClick: () -> Unit) {
             if (sticker.source.tinted) StickerLibrary.path(sticker) != null else StickerLibrary.picture(sticker) != null
         }
     }.value
-    Tooltip(sticker.label) {
-        Canvas(
-            Modifier
-                .size(40.dp)
-                .clip(SmallShape)
-                .background(if (hovered) Color.White.copy(alpha = 0.14f) else Color.Transparent)
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interaction, null, onClick = onClick),
-        ) {
-            if (!ready) return@Canvas
-            val half = size.minDimension * 0.36f
-            drawIntoCanvas { canvas ->
-                val native = canvas.nativeCanvas
-                native.save()
-                native.translate(size.width / 2f, size.height / 2f)
-                native.scale(half, half)
-                if (sticker.source.tinted) {
-                    StickerLibrary.path(sticker)?.let { native.drawPath(it, org.jetbrains.skia.Paint().apply { isAntiAlias = true; color = org.jetbrains.skia.Color.WHITE }) }
-                } else {
-                    StickerLibrary.picture(sticker)?.let { native.drawPicture(it, null, null) }
-                }
-                native.restore()
+    Canvas(
+        Modifier
+            .size(40.dp)
+            .clip(SmallShape)
+            .background(if (hovered) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interaction, null, onClick = onClick),
+    ) {
+        if (!ready) return@Canvas
+        val half = size.minDimension * 0.36f
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            native.save()
+            native.translate(size.width / 2f, size.height / 2f)
+            native.scale(half, half)
+            if (sticker.source.tinted) {
+                StickerLibrary.path(sticker)?.let { native.drawPath(it, org.jetbrains.skia.Paint().apply { isAntiAlias = true; color = org.jetbrains.skia.Color.WHITE }) }
+            } else {
+                StickerLibrary.picture(sticker)?.let { native.drawPicture(it, null, null) }
             }
+            native.restore()
         }
     }
 }
@@ -976,10 +964,8 @@ private fun FillPicker() {
         )
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             fills.forEach { fill ->
-                Tooltip(fill.name) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(fill.copy(id = com.convx.desktop.data.newLayerId())) }) {
-                        LayerPreview(fill, 46.dp)
-                    }
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(fill.copy(id = com.convx.desktop.data.newLayerId())) }) {
+                    LayerPreview(fill, 46.dp)
                 }
             }
         }
@@ -1106,10 +1092,10 @@ private fun LayersList() {
     val selected = DiscEditor.selected
     if (selected != null) {
         Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            IconButton("expand_less", { DiscEditor.move(selected.id, 1) }, size = 32.dp, iconSize = 18.dp, tooltip = "Bring forward")
-            IconButton("expand_more", { DiscEditor.move(selected.id, -1) }, size = 32.dp, iconSize = 18.dp, tooltip = "Send backward")
-            IconButton("content_copy", { DiscEditor.duplicate() }, size = 32.dp, iconSize = 17.dp, tooltip = "Duplicate (Ctrl+D)")
-            IconButton("delete", { DiscEditor.delete() }, size = 32.dp, iconSize = 17.dp, tint = Color(0xFFFF453A), tooltip = "Delete (Del)")
+            IconButton("expand_less", { DiscEditor.move(selected.id, 1) }, size = 32.dp, iconSize = 18.dp)
+            IconButton("expand_more", { DiscEditor.move(selected.id, -1) }, size = 32.dp, iconSize = 18.dp)
+            IconButton("content_copy", { DiscEditor.duplicate() }, size = 32.dp, iconSize = 17.dp)
+            IconButton("delete", { DiscEditor.delete() }, size = 32.dp, iconSize = 17.dp, tint = Color(0xFFFF453A))
         }
     }
 }
@@ -1152,27 +1138,23 @@ private fun LayerRow(layer: DiscLayer?, selected: Boolean) {
             modifier = Modifier.weight(1f),
         )
         if (layer.effects.isNotEmpty()) {
-            Tooltip(layer.effects.joinToString(", ") { it.kind.label }) {
-                ConvxIcon("sparks", tint = Color.White.copy(alpha = 0.45f), size = 14.dp, modifier = Modifier.padding(horizontal = 4.dp))
-            }
+            ConvxIcon("sparks", tint = Color.White.copy(alpha = 0.45f), size = 14.dp, modifier = Modifier.padding(horizontal = 4.dp))
         }
         if (hovered || layer.locked) {
-            RowIcon("lock", if (layer.locked) "Unlock" else "Lock", if (layer.locked) 0.9f else 0.4f) {
+            RowIcon("lock", if (layer.locked) 0.9f else 0.4f) {
                 DiscEditor.commitLayer(layer.id) { it.copy(locked = !it.locked) }
             }
         }
-        RowIcon(if (layer.visible) "eye" else "hide_image", if (layer.visible) "Hide" else "Show") {
+        RowIcon(if (layer.visible) "eye" else "hide_image") {
             DiscEditor.commitLayer(layer.id) { it.copy(visible = !it.visible) }
         }
     }
 }
 
 @Composable
-private fun RowIcon(icon: String, tip: String, alpha: Float = 0.75f, onClick: () -> Unit) {
-    Tooltip(tip) {
-        Box(Modifier.size(28.dp).clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-            ConvxIcon(icon, tint = Color.White.copy(alpha = alpha), size = 15.dp)
-        }
+private fun RowIcon(icon: String, alpha: Float = 0.75f, onClick: () -> Unit) {
+    Box(Modifier.size(28.dp).clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        ConvxIcon(icon, tint = Color.White.copy(alpha = alpha), size = 15.dp)
     }
 }
 
@@ -1391,14 +1373,14 @@ private fun EffectsSection(layer: DiscLayer) {
                     Text(effect.kind.tip, style = ConvxType.Caption, color = ConvxColors.TertiaryLabel, maxLines = 2)
                 }
                 if (index > 0) {
-                    SmallRound("expand_less", "Apply earlier") {
+                    SmallRound("expand_less") {
                         DiscEditor.commitLayer(id) { l ->
                             l.copy(effects = l.effects.toMutableList().also { it.add(index - 1, it.removeAt(index)) })
                         }
                     }
                     Spacer(Modifier.width(4.dp))
                 }
-                SmallRound("close", "Remove") {
+                SmallRound("close") {
                     DiscEditor.commitLayer(id) { l -> l.copy(effects = l.effects.filterIndexed { i, _ -> i != index }) }
                 }
             }

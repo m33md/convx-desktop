@@ -158,7 +158,7 @@ private fun AmbientScreen() {
             }
         }
         AnimatedVisibility(!idle, enter = fadeIn(), exit = fadeOut(), modifier = Modifier.align(Alignment.TopStart).padding(16.dp)) {
-            IconButton("arrow_back", { Ambient.on = false }, size = 44.dp, iconSize = 22.dp, filled = true, tooltip = "Exit ambient mode (Esc)")
+            IconButton("arrow_back", { Ambient.on = false }, size = 44.dp, iconSize = 22.dp, filled = true)
         }
     }
 }

@@ -76,7 +76,6 @@ import com.convx.desktop.data.PlayerDesign
 import com.convx.desktop.data.RepeatMode
 import com.convx.desktop.data.Settings
 import com.convx.desktop.player.PlayerState
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.ArtistLinks
 import com.convx.desktop.ui.components.Artwork
@@ -224,7 +223,7 @@ fun PlayerStage(
         Column(Modifier.fillMaxSize().padding(horizontal = 40.dp, vertical = 20.dp)) {
             // Top row
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                IconButton("expand_more", { UiState.fullPlayer = false }, size = 40.dp, iconSize = 28.dp, filled = true, tooltip = "Close (Esc)")
+                IconButton("expand_more", { UiState.fullPlayer = false }, size = 40.dp, iconSize = 28.dp, filled = true)
                 Spacer(Modifier.weight(1f))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     state.queueTitle?.let {
@@ -253,7 +252,6 @@ fun PlayerStage(
                         size = 40.dp,
                         iconSize = 18.dp,
                         filled = fullscreen,
-                        tooltip = if (fullscreen) "Exit full-screen lyrics" else "Full-screen lyrics",
                     )
                     Spacer(Modifier.width(8.dp))
                     LyricsMenuButton(song)
@@ -265,7 +263,6 @@ fun PlayerStage(
                     size = 40.dp,
                     iconSize = 22.dp,
                     filled = mode == FullPlayerMode.Lyrics,
-                    tooltip = "Lyrics",
                     slot = if (v2) PlayerIconSlot.V2_LYRICS else null,
                 )
                 Spacer(Modifier.width(8.dp))
@@ -277,7 +274,6 @@ fun PlayerStage(
                         size = 40.dp,
                         iconSize = 20.dp,
                         filled = mode == FullPlayerMode.Comments,
-                        tooltip = "Comments",
                     )
                     Spacer(Modifier.width(8.dp))
                 }
@@ -287,7 +283,6 @@ fun PlayerStage(
                     size = 40.dp,
                     iconSize = 22.dp,
                     filled = mode == FullPlayerMode.Queue,
-                    tooltip = "Queue",
                     slot = if (v2) PlayerIconSlot.V2_QUEUE else null,
                 )
                 // Windows' minimise, maximise and close sit over this corner of the window; keep clear of them.
@@ -364,12 +359,11 @@ fun PlayerStage(
                                             size = actionSize,
                                             iconSize = actionIcon,
                                             filled = !v2,
-                                            tooltip = if (liked) "Remove from Liked Songs" else "Add to Liked Songs",
                                             slot = likeSlot,
                                         )
                                         Spacer(Modifier.width(if (v2) 4.dp else 8.dp))
                                         Box {
-                                            IconButton(moreSlot.fallback, { menu.expanded = true }, size = actionSize, iconSize = actionIcon, filled = !v2, tooltip = "More options", slot = moreSlot)
+                                            IconButton(moreSlot.fallback, { menu.expanded = true }, size = actionSize, iconSize = actionIcon, filled = !v2, slot = moreSlot)
                                             AppMenu(menu) {
                                                 SongMenuContent(song, { menu.expanded = false }) { dismiss ->
                                                     // The phone's player menu opens the party from here.
@@ -643,48 +637,38 @@ private fun UpNextRow(title: String, onClick: () -> Unit) {
 @Composable
 private fun QueueModes(state: PlayerState, settings: Settings) {
     Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 10.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        QueueModeButton(if (state.shuffle) "shuffle_on" else "shuffle", "Shuffle", state.shuffle, Modifier.weight(1f)) { PlayerController.toggleShuffle() }
+        QueueModeButton(if (state.shuffle) "shuffle_on" else "shuffle", state.shuffle, Modifier.weight(1f)) { PlayerController.toggleShuffle() }
         QueueModeButton(
             when (state.repeat) {
                 RepeatMode.ONE -> "repeat_one_on"
                 RepeatMode.ALL -> "repeat_on"
                 RepeatMode.OFF -> "repeat"
             },
-            when (state.repeat) {
-                RepeatMode.ONE -> "Repeat one"
-                else -> "Repeat"
-            },
             state.repeat != RepeatMode.OFF,
             Modifier.weight(1f),
         ) { PlayerController.cycleRepeat() }
-        QueueModeButton("ic_queue_infinity", "Autoplay", settings.autoRadio, Modifier.weight(1f)) {
+        QueueModeButton("ic_queue_infinity", settings.autoRadio, Modifier.weight(1f)) {
             AppSettings.update { it.copy(autoRadio = !it.autoRadio) }
         }
-        QueueModeButton("ic_queue_crossfade", "Crossfade", settings.crossfade, Modifier.weight(1f)) {
+        QueueModeButton("ic_queue_crossfade", settings.crossfade, Modifier.weight(1f)) {
             AppSettings.update { it.copy(crossfade = !it.crossfade) }
         }
     }
 }
 
 @Composable
-private fun QueueModeButton(icon: String, label: String, active: Boolean, modifier: Modifier, onClick: () -> Unit) {
+private fun QueueModeButton(icon: String, active: Boolean, modifier: Modifier, onClick: () -> Unit) {
     val fill by animateColorAsState(if (active) Color.White.copy(alpha = 0.9f) else Color.White.copy(alpha = 0.14f), tween(180))
     val tint = if (active) Color.Black else Color.White
-    // The row's weight goes on this outer box; the tooltip wraps whatever it is given.
-    Box(modifier) {
-        Tooltip(label) {
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(36.dp)
-                    .clip(RoundedCornerShape(18.dp))
-                    .background(fill)
-                    .clickable(onClick = onClick),
-                contentAlignment = Alignment.Center,
-            ) {
-                ConvxIcon(icon, tint = tint, size = 20.dp)
-            }
-        }
+    Box(
+        modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(fill)
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon(icon, tint = tint, size = 20.dp)
     }
 }
 
