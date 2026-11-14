@@ -1,0 +1,9 @@
+Idle check: release-1.1.22 (D:\a\_temp\release\Convx\Convx.exe)
+Measured process 6232 (Convx), started by 8652
+CPU while idle: 0.1% of all 4 threads (0.3% of one)
+Memory: working set 447 MB, private working set 367 MB (Task Manager's column), private bytes 523 MB
+Threads: 64
+Graphics memory: Dedicated Usage 0 MB, Shared Usage 126 MB
+11:47:26.730 I/Perf: Last 30 s: CPU 0.9% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 446 MB in use, 522 MB private; Java heap 55 of 68 MB, other Java 105 MB, covers 8 MB
+11:47:56.732 I/Perf: Last 30 s: CPU 0.2% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 447 MB in use, 523 MB private; Java heap 41 of 68 MB, other Java 106 MB, covers 8 MB
+11:48:26.735 I/Perf: Last 30 s: CPU 1.0% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 457 MB in use, 548 MB private; Java heap 34 of 64 MB, other Java 110 MB, covers 8 MB

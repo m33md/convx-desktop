@@ -1,0 +1,35 @@
+﻿2 running samples, 1201 in native code
+
+Threads by CPU (share of one core, average):
+    5.87%  C2 CompilerThread1
+    0.71%  AWT-EventQueue-0
+    0.41%  C2 CompilerThread0
+    0.31%  JFR Periodic Tasks
+    0.30%  C1 CompilerThread0
+    0.17%  main
+    0.07%  DefaultDispatcher-worker-4
+    0.05%  Attach Listener
+    0.04%  JFR Recorder Thread
+    0.03%  AWT-Windows
+    0.03%  kotlinx.coroutines.DefaultExecutor
+    0.03%  DefaultDispatcher-worker-2
+    0.02%  convx-taskbar
+    0.02%  DefaultDispatcher-worker-3
+    0.02%  DefaultDispatcher-worker-1
+
+Running samples by thread:
+      2  kotlinx.coroutines.DefaultExecutor
+
+Top frames:
+      1  kotlinx/coroutines/internal/DispatchedContinuationKt.safeDispatch
+      1  java/util/concurrent/atomic/AtomicReferenceFieldUpdater$AtomicReferenceFieldUpdaterImpl.accessCheck
+
+First Convx frame:
+
+First Compose/Skia frame:
+
+Native samples, top frame (threads waiting in native code show here too):
+    872  sun/nio/ch/Net.poll
+    110  sun/nio/ch/Net.accept
+    110  sun/awt/windows/WToolkit.eventLoop
+    109  com/sun/jna/Native.invokeInt

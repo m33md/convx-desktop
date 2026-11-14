@@ -1,0 +1,242 @@
+PASS dsp +6 dB at 1 kHz, on 1 kHz = 1.995 (want 1.85..2.15)
+PASS dsp +6 dB at 1 kHz, on 100 Hz = 1.004 (want 0.95..1.08)
+PASS dsp +6 dB low shelf, on 30 Hz = 1.985 (want 1.8..2.15)
+PASS dsp +6 dB low shelf, on 5 kHz = 1.000 (want 0.95..1.06)
+PASS dsp Bass Boost with its preamp, on 31 Hz = 1.224 (want 1.1..1.35)
+PASS dsp spatial audio, on a centred tone = 0.706 (want 0.65..0.78)
+PASS dsp vocal reduction, on a centred tone = 0.000 (want 0.0..0.3)
+PASS dsp vocal reduction, on a tone on one side = 0.981 (want 0.85..1.15)
+PASS dsp skip silence, seconds kept of 3 = 2.040 (want 2.0..2.1)
+PASS dsp skip silence, frames accounted for = 3.000 (want 2.999..3.001)
+PASS dsp soft clip of 2.0 = 1.000 (want 0.95..1.0)
+PASS dsp ParametricEQ filters read = 2.000 (want 2.0..2.0)
+PASS dsp ParametricEQ preamp = -6.200 (want -6.21..-6.19)
+Info: avformat_open_input rejected some options:	Option: pixel_format, value: bgr24
+PASS library local file title: Convx Test Tone
+PASS library local file artists: [Convx, Second Artist]
+PASS library local file album and track: Checks #3
+PASS library local file length: 2000 ms
+PASS library local file codec: flac
+PASS library Apple Music export: Road Trip, 1 tracks, 1 skipped
+PASS library proxy addresses: HTTP @ 127.0.0.1/<unresolved>:8080, SOCKS @ proxy.example.com/<unresolved>:1080
+PASS party position while playing: 12500
+PASS party position while paused: 10000
+PASS party resume anchored ahead: 300 ms
+PASS party clock offset: 5000 ms
+PASS party invite link: Invite(code=AB12CD, server=https://example.com)
+PASS party typed code: Invite(code=AB12CD, server=null)
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+PASS backup liked songs: [Get Lucky, Bohemian Rhapsody]
+PASS backup artists in order: [ArtistRef(id=UCdaftpunk, name=Daft Punk), ArtistRef(id=null, name=Pharrell Williams)]
+PASS backup album and length: AlbumRef(id=MPREb_queen, name=A Night at the Opera) 355s
+PASS backup playlist: Road trip: [Bohemian Rhapsody, Get Lucky]
+PASS backup saved playlist: [SavedPlaylist(id=PLchill, title=Chill mix, author=null, thumbnail=null, savedAt=1656000000000, editable=false)]
+PASS backup saved album: [SavedAlbum(browseId=MPREb_queen, playlistId=OLAK5uy_queen, title=A Night at the Opera, artists=[ArtistRef(id=UCiMhD4jzUqG-IgPzUmmytRQ, name=Queen)], year=1975, thumbnail=null, savedAt=1695000000000)]
+PASS backup followed artist: [Queen]
+PASS backup history: [(Get Lucky, 1700000500000), (Bohemian Rhapsody, 1700000100000)]
+PASS backup phone-only files: 2 left out
+PASS playlist file m3u name: Road trip
+PASS playlist file m3u songs: [FileTrack(title=Bohemian Rhapsody, artists=[Queen], durationMs=354000, videoId=null, spotifyId=null), FileTrack(title=Get Lucky, artists=[Daft Punk, Pharrell Williams], durationMs=0, videoId=5NV6Rdv1a3I, spotifyId=null), FileTrack(title=Creep, artists=[Radiohead], durationMs=0, videoId=null, spotifyId=null), FileTrack(title=Hello, artists=[Adele], durationMs=200000, videoId=null, spotifyId=null)]
+PASS playlist file csv columns: CsvPreview(rows=[[Track URI, Track Name, Artist Name(s), Album Name, Duration (ms)], [spotify:track:1, Bohemian Rhapsody, Queen, A Night at the Opera, 354320], [spotify:track:2, Get Lucky, Daft Punk,Pharrell Williams, Random Access Memories, 369626], [spotify:track:3, Say "Hello", again, Someone; Other, X, 215000]], columns=5, hasHeader=true, artistColumn=2, titleColumn=1, urlColumn=-1, durationColumn=4, spotifyColumn=0)
+PASS playlist file csv songs: [FileTrack(title=Bohemian Rhapsody, artists=[Queen], durationMs=354320, videoId=null, spotifyId=null), FileTrack(title=Get Lucky, artists=[Daft Punk, Pharrell Williams], durationMs=369626, videoId=null, spotifyId=null), FileTrack(title=Say "Hello", again, artists=[Someone, Other], durationMs=215000, videoId=null, spotifyId=null)]
+PASS playlist file exportify zip: [Parsed(title=late night drive, tracks=[FileTrack(title=Never Gonna Give You Up, artists=[Rick Astley], durationMs=213573, videoId=null, spotifyId=4uLU6hMCjMI75M1A2tKUQC), FileTrack(title=Song, artists=[Dream, Ivory, Someone], durationMs=200000, videoId=null, spotifyId=0000000000000000000000)]), Parsed(title=liked songs, tracks=[FileTrack(title=Shape of You, artists=[Ed Sheeran], durationMs=0, videoId=null, spotifyId=7qiZfU4dY1lWllzX7mPBI3)])]
+PASS playlist file csv without header: [FileTrack(title=Bohemian Rhapsody, artists=[Queen], durationMs=0, videoId=null, spotifyId=null), FileTrack(title=Hello, artists=[Adele], durationMs=0, videoId=null, spotifyId=null)]
+PASS playlist file itunes text export: CsvPreview(rows=[[Name, Artist, Album, Time], [Hello, Adele, 25, 295]], columns=4, hasHeader=true, artistColumn=1, titleColumn=0, urlColumn=-1, durationColumn=3, spotifyColumn=-1) -> [FileTrack(title=Hello, artists=[Adele], durationMs=295000, videoId=null, spotifyId=null)]
+PASS playlist file ansi m3u: #EXTINF:120,Beyonc� - Halo
+
+PASS playlist file youtube links: ok
+PASS downloads names: AC_DC - Back In Black_
+PASS downloads lrc time: [01:23.45]
+PASS downloads files aren't downloads: 
+PASS downloads plays from disk: Downloaded cHk-dl-chk0.m4a
+PASS downloads not downloaded: 
+PASS downloads album buttons: Done Running(done=1, total=2) None None
+PASS downloads remove: file gone
+PASS lyrics menu word timing kept: 12340 Hello there [12340, 12900], 15000 Again [15000]
+PASS lyrics menu plain text stays plain: First line, Second line
+PASS lyrics menu partial translation: [Hola, Dijo "ya"]
+PASS lyrics menu translation skips gaps: [Uno, null, Dos]
+PASS lyrics menu Claude stream: [Uno, Dos] after 2 pieces, end_turn
+PASS lyrics menu Claude refusal: Claude declined to translate these lyrics
+PASS home order default: [hero, quick_picks, speed_dial, from_the_community, forgotten_favorites, mood_and_genres, top_songs]
+PASS home order arranged: [speed_dial, forgotten_favorites, quick_picks, top_songs, from_the_community, mood_and_genres]
+PASS home order card off: [quick_picks, speed_dial, from_the_community, forgotten_favorites, mood_and_genres, top_songs]
+PASS home order shuffled keeps the card on top: [hero, quick_picks, speed_dial, from_the_community, forgotten_favorites, top_songs, mood_and_genres]
+PASS stats by time: [long 1x 240000ms, short 3x 105000ms]
+PASS stats time kept: [Ranked(value=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), song=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=1, playedMs=240000), Ranked(value=Song(id=short, title=Short, artists=[], album=null, duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), song=Song(id=short, title=Short, artists=[], album=null, duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=3, playedMs=105000)]
+PASS stats artists and albums: [Ranked(value=ArtistRef(id=UCstats, name=Artist), song=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=1, playedMs=240000)] [Ranked(value=AlbumRef(id=MPREstats, name=Album), song=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=1, playedMs=240000)]
+PASS stats all time: [long, short, old]
+PASS sonic tempo 1.5x: 63002 frames of 64000.0, 440.4 Hz
+PASS sonic pitch +12: 94612 frames of 96000, 880.2 Hz
+PASS sonic natural: 96000 frames passed through
+Info: avformat_open_input rejected some options:	Option: pixel_format, value: bgr24	Option: sample_rate, value: 11025	Option: channels, value: 1
+11:27:51.175 I/AutoMix: Measured check-automix-a in 282ms: 120.0 BPM (0.82), A minor, intro ends 16.7s, outro 76.7s
+Info: avformat_open_input rejected some options:	Option: pixel_format, value: bgr24	Option: sample_rate, value: 11025	Option: channels, value: 1
+11:27:51.355 I/AutoMix: Measured check-automix-b in 177ms: 124.0 BPM (0.77), D minor, intro ends 16.2s, outro 78.1s
+PASS automix measured: ready / ready
+PASS automix tempo 120: 120.00 BPM, confidence 0.82
+PASS automix tempo 124: 124.00 BPM, confidence 0.77
+PASS automix outro found: outro at 76.7s, content ends 90.0s
+INFO automix keys: A minor (0.21), D minor (0.06)
+PASS automix plan: before-smart-duration DJ_BLEND, 74.0s to 86.0s, cue 8.5s, rate 0.968, []
+PASS creative delay echo at 250 ms: 0.242 at the beat, 0.0000 before it
+PASS creative delay dies away: 0.00004 in the last second
+PASS creative reverb tail: 49.8 dB below the sound just after it, 110.7 dB at 7 s
+PASS creative tape stop: 0.354 before, 0.0000 after it stops
+PASS creative style sequence: [REVERB_BLOOM, DELAY_BLEND, ECHO_FREEZE, REVERB_BLOOM, DELAY_BLEND, TAPE_STOP], off TRANSPARENT, after a bloom DELAY_BLEND
+PASS recognition resampler: 16000 samples, 1 kHz at 0.00 dB, 12 kHz at -50.4 dB
+PASS recognition signature: 476 bytes
+INFO recognition Shazam answered: No match found
+11:27:53.997 W/AudioCache: Download of ci-refused via CI failed at 0/-1 (27602 MB free)
+Error on InputStream.read(): com.convx.desktop.player.AudioCache$HttpStatusException: HTTP 403
+Error on InputStream.read(): com.convx.desktop.player.AudioCache$HttpStatusException: HTTP 403
+PASS stream failure refused: HttpStatusException: HTTP 403 -> "YouTube won't send this song right now. Try again in a minute, or pick another one."
+11:27:54.019 W/AudioCache: ci-renew: HTTP 403 at 1048576/3145851 via CI; carrying on via CI fresh
+PASS stream failure renewed: finished=true, failed=null, via CI fresh, file 3145851 of 3145851 bytes, exact=true
+PASS stream failure range ignored: finished=true, file 3145851 of 3145851 bytes
+PASS stream failure disk full: "There isn't enough free space on this PC to play songs. Free up some space and try again."
+PASS modules engine loads: {"settings":{"quality":{"type":"select","label":"Quality","options":[{"label":"CD","value":"LOSSLESS"}],"defaultValue":"LOSSLESS"}},"noStreamCache":false}
+PASS modules search: {"tracks":[{"id":"t1","title":"Song","artist":"Convx","duration":200,"audioQuality":"LOSSLESS"}],"total":1}
+PASS modules stream: {"streamUrl":"https://example.com/t1.flac","track":{"id":"t1","audioQuality":"LOSSLESS","format":"FLAC","bitDepth":24}}
+PASS modules module without exports refused: Module must export searchTracks and getTrackStreamUrl
+PASS modules timer before an answer: 203 ms 
+PASS modules background timers don't hold the answer: 1 ms 
+PASS modules addon dash: dash
+PASS modules addon urls: https://a.example/t0k/search?q=a%20b
+Info: avio_open2 rejected some options:	Option: movflags, value: frag_keyframe+empty_moov+default_base_moof	Option: frag_duration, value: 2000000
+PASS modules hls playlist: 5 pieces, FlacInfo(sampleRate=44100, channels=2, bitDepth=16, totalSamples=0, blockSize=4608)
+Info: avformat_open_input rejected some options:	Option: pixel_format, value: bgr24	Option: sample_rate, value: 44100	Option: channels, value: 2
+PASS modules hls plays sample for sample: 396900 of 396900 frames
+PASS modules hls kept as FLAC: ci-hls.flac
+Info: avformat_open_input rejected some options:	Option: pixel_format, value: bgr24	Option: sample_rate, value: 44100	Option: channels, value: 2
+PASS modules hls jump to 7.0 s while it downloads: landed at 7000 ms after 1070 ms
+PASS modules hls jump to 1.5 s while it downloads: landed at 1567 ms after 14 ms
+PASS modules hls jump to 5.25 s while it downloads: landed at 5328 ms after 33 ms
+PASS modules hls jump to 0.2 s while it downloads: landed at 208 ms after 2 ms
+PASS modules hls encrypted refused: the pieces are encrypted (AES-128)
+PASS modules hls live refused: it's a live playlist
+PASS party server create: code S53ZNV, host=true
+PASS party server join: 2 members, guest host=false
+PASS party server clock: pong with serverMs 1794655677971
+PASS party server sync: the guest got the host's song in a state frame
+11:27:59.164 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:27:59.245 I/StreamResolver: 4NRXx6U8ABQ: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you�re not a bot)
+11:27:59.352 I/StreamResolver: 4NRXx6U8ABQ: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:27:59.456 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:27:59.555 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:27:59.749 I/StreamResolver: 4NRXx6U8ABQ: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+11:27:59.862 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:27:59.962 I/StreamResolver: 4NRXx6U8ABQ: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:27:59.963 W/StreamResolver: 4NRXx6U8ABQ: no client gave a stream (last: Sign in to confirm you�re not a bot)
+11:27:59.963 E/PlaybackCheck: Failed 4NRXx6U8ABQ
+FAIL 4NRXx6U8ABQ IllegalStateException: Sign in to confirm you�re not a bot
+11:27:59.994 I/StreamResolver: fHI8X4OXluQ: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+11:28:00.133 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:00.227 I/StreamResolver: fHI8X4OXluQ: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you�re not a bot)
+11:28:00.360 I/StreamResolver: fHI8X4OXluQ: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:00.480 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:00.592 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:00.705 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:00.824 I/StreamResolver: fHI8X4OXluQ: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:00.825 W/StreamResolver: fHI8X4OXluQ: no client gave a stream (last: Sign in to confirm you�re not a bot)
+11:28:00.825 E/PlaybackCheck: Failed fHI8X4OXluQ
+FAIL fHI8X4OXluQ IllegalStateException: Sign in to confirm you�re not a bot
+11:28:00.853 I/StreamResolver: kJQP7kiw5Fk: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+11:28:00.975 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:01.045 I/StreamResolver: kJQP7kiw5Fk: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you�re not a bot)
+11:28:01.182 I/StreamResolver: kJQP7kiw5Fk: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:01.283 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:01.376 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:01.479 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:01.591 I/StreamResolver: kJQP7kiw5Fk: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you�re not a bot)
+11:28:01.593 W/StreamResolver: kJQP7kiw5Fk: no client gave a stream (last: Sign in to confirm you�re not a bot)
+11:28:01.593 E/PlaybackCheck: Failed kJQP7kiw5Fk
+FAIL kJQP7kiw5Fk IllegalStateException: Sign in to confirm you�re not a bot
+0 of 3 songs played
+Sign-in browsers found: Microsoft Edge (msedge.exe, Chromium, default), Opera GX Stable (opera.exe, Chromium), Mozilla Firefox (firefox.exe, Firefox), Google Chrome (chrome.exe, Chromium)
+Sign-in would open: Microsoft Edge
+11:28:01.789 I/BrowserSignIn: Opening Microsoft Edge (msedge.exe, Chromium) for Google sign-in
+11:28:25.116 I/BrowserSignIn: Read 6 cookies, visitor data found, data sync id found
+PASS sign-in with Microsoft Edge: 6 cookies (VISITOR_INFO1_LIVE VISITOR_PRIVACY_METADATA __Secure-YNID __Secure-ROLLOUT_TOKEN _gcl_au YSC), visitor data found, 24s
+11:28:25.915 I/BrowserSignIn: Opening Opera GX Stable (opera.exe, Chromium) for Google sign-in
+11:28:54.482 I/BrowserSignIn: Read 6 cookies, visitor data found, data sync id found
+PASS sign-in with Opera GX Stable: 6 cookies (YSC VISITOR_INFO1_LIVE VISITOR_PRIVACY_METADATA _gcl_au __Secure-YNID __Secure-ROLLOUT_TOKEN), visitor data found, 31s
+11:28:57.894 I/BrowserSignIn: Opening Mozilla Firefox (firefox.exe, Firefox) for Google sign-in
+11:29:20.354 I/BrowserSignIn: Read 4 cookies, visitor data found, data sync id found
+PASS sign-in with Mozilla Firefox: 4 cookies (VISITOR_INFO1_LIVE VISITOR_PRIVACY_METADATA _gcl_au __Secure-YNID), visitor data found, 23s
+11:29:21.571 I/BrowserSignIn: Opening Google Chrome (chrome.exe, Chromium) for Google sign-in
+11:29:44.871 I/BrowserSignIn: Read 6 cookies, visitor data found, data sync id found
+PASS sign-in with Google Chrome: 6 cookies (VISITOR_INFO1_LIVE VISITOR_PRIVACY_METADATA __Secure-YNID __Secure-ROLLOUT_TOKEN _gcl_au YSC), visitor data found, 24s
+11:29:48.010 I/MediaControls: Windows media controls on
+11:29:48.112 I/MediaControls: Taskbar buttons on, 3 of 3 pictures, dark glyphs for a light taskbar
+11:29:49.522 I/MediaControls: NEXT from media key
+11:29:49.524 I/MediaControls: TOGGLE from taskbar
+11:29:49.530 I/MediaControls: NEXT from media key
+Media controls: System media controls: on
+Media controls: Taskbar buttons: on
+Media controls: Media key message: NEXT from media key
+Media controls: Taskbar button message: TOGGLE from taskbar
+Media controls: Next-track key press: NEXT from media key
+Output #0, flac, to 'C:\Users\RUNNER~1\AppData\Local\Temp\convx-local11377380088831782334\tone.flac':
+  Metadata:
+    artist          : Convx; Second Artist
+    album           : Checks
+    title           : Convx Test Tone
+    TRACKNUMBER     : 3/12
+    encoder         : Lavf61.7.100
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16, 64 kb/s
+Input #0, flac, from 'C:\Users\RUNNER~1\AppData\Local\Temp\convx-local11377380088831782334\tone.flac':
+  Metadata:
+    artist          : Convx; Second Artist
+    album           : Checks
+    title           : Convx Test Tone
+    track           : 3/12
+    encoder         : Lavf61.7.100
+  Duration: 00:00:02.00, start: 0.000000, bitrate: 133 kb/s
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16
+Output #0, flac, to 'C:\Users\RUNNER~1\AppData\Local\Temp\convx-automix9610120492030651977\song.flac':
+  Metadata:
+    encoder         : Lavf61.7.100
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16, 64 kb/s
+Output #0, flac, to 'C:\Users\RUNNER~1\AppData\Local\Temp\convx-automix9095431735472447166\song.flac':
+  Metadata:
+    encoder         : Lavf61.7.100
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16, 64 kb/s
+Input #0, flac, from 'C:\Users\RUNNER~1\AppData\Local\Temp\convx-automix9610120492030651977\song.flac':
+  Metadata:
+    encoder         : Lavf61.7.100
+  Duration: 00:01:30.00, start: 0.000000, bitrate: 170 kb/s
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16
+Input #0, flac, from 'C:\Users\RUNNER~1\AppData\Local\Temp\convx-automix9095431735472447166\song.flac':
+  Metadata:
+    encoder         : Lavf61.7.100
+  Duration: 00:01:30.00, start: 0.000000, bitrate: 167 kb/s
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16
+[matroska,webm @ 000002ad640b4d00] Read error at pos. 0 (0x0)
+[matroska,webm @ 000002ad640b4d00] EBML header parsing failed
+Output #0, mp4, to 'C:\Users\RUNNER~1\AppData\Local\Temp\convx-hls6716254221971516318\song.mp4':
+  Metadata:
+    encoder         : Lavf61.7.100
+  Stream #0:0: Audio: flac (fLaC / 0x43614C66), 44100 Hz, stereo, s16, 64 kb/s
+Input #0, flac, from 'com.convx.desktop.player.GrowingFileInputStream@41dd05a':
+  Duration: N/A, start: 0.000000, bitrate: N/A
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16
+Input #0, flac, from 'com.convx.desktop.player.GrowingFileInputStream@1b765a2c':
+  Duration: N/A, start: 0.000000, bitrate: N/A
+  Stream #0:0: Audio: flac, 44100 Hz, stereo, s16
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':playbackCheck'.
+> Process 'command 'C:\hostedtoolcache\windows\Java_Temurin-Hotspot_jdk\21.0.13-9.0\x64\bin\java.exe'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 2m 13s

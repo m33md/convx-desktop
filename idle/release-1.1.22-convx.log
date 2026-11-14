@@ -1,0 +1,21 @@
+11:46:48.737 I/Startup: Convx 1.1.22 on Windows Server 2025 amd64, Java 21.0.11, 216 GB free
+11:46:49.259 I/LocalMusic: Scanned 1 folders: 0 songs, 0 new, 0 gone, 0 read
+11:46:52.146 I/TitleBar: Custom title bar on, buttons take 141.0px
+11:46:52.222 I/Lyrics: Spicy Lyrics: nothing after 22 ms
+11:46:52.224 I/Lyrics: PaxSenix: Musixmatch: nothing after 27 ms
+11:46:52.224 I/Lyrics: PaxSenix: Spotify: nothing after 28 ms
+11:46:52.400 I/Lyrics: BetterLyrics Portato: words after 204 ms
+11:46:52.416 I/Lyrics: YouTube Subtitle: nothing after 221 ms
+11:46:52.554 I/Lyrics: Genius: nothing after 360 ms
+11:46:52.565 I/Lyrics: LRCLIB: lines after 368 ms
+11:46:52.572 I/Lyrics: Megalobiz: nothing after 375 ms
+11:46:52.601 I/Lyrics: Unison: nothing after 405 ms
+11:46:52.656 I/Lyrics: Better Lyrics: words after 461 ms
+11:46:52.680 I/Lyrics: Musixmatch: nothing after 485 ms
+11:46:52.739 I/Lyrics: LyricsPlus: words after 543 ms
+11:46:52.751 I/Lyrics: lrc.red: words after 555 ms
+11:46:56.831 I/MediaControls: Windows media controls on
+11:46:56.933 I/MediaControls: Taskbar buttons on, 3 of 3 pictures, dark glyphs for a light taskbar
+11:47:26.730 I/Perf: Last 30 s: CPU 0.9% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 446 MB in use, 522 MB private; Java heap 55 of 68 MB, other Java 105 MB, covers 8 MB
+11:47:56.732 I/Perf: Last 30 s: CPU 0.2% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 447 MB in use, 523 MB private; Java heap 41 of 68 MB, other Java 106 MB, covers 8 MB
+11:48:26.735 I/Perf: Last 30 s: CPU 1.0% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 457 MB in use, 548 MB private; Java heap 34 of 64 MB, other Java 110 MB, covers 8 MB
