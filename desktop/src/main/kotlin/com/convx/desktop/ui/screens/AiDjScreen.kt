@@ -234,7 +234,7 @@ private fun AiDjForm(seed: Song?, startInConcert: Boolean, state: AiDj.State) {
             IconButton("remove", {
                 if (byDuration) minutes = (minutes - MinutesStep).coerceAtLeast(MinMinutes)
                 else songCount = (songCount - 1).coerceAtLeast(MinSongs)
-            }, filled = true, tooltip = "Fewer")
+            }, filled = true)
             Text(
                 if (byDuration) "$minutes min" else "$songCount",
                 style = ConvxType.Headline,
@@ -244,7 +244,7 @@ private fun AiDjForm(seed: Song?, startInConcert: Boolean, state: AiDj.State) {
             IconButton("add", {
                 if (byDuration) minutes = (minutes + MinutesStep).coerceAtMost(MaxMinutes)
                 else songCount = (songCount + 1).coerceAtMost(MaxSongs)
-            }, filled = true, tooltip = "More")
+            }, filled = true)
         }
         val canGenerate = prompt.isNotBlank() || seed != null
         if (!canGenerate) {

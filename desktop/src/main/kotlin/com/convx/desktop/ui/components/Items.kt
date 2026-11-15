@@ -254,7 +254,6 @@ fun SongRow(
                         size = 30.dp,
                         iconSize = 17.dp,
                         tint = if (liked) accent else ConvxColors.SecondaryLabel,
-                        tooltip = if (liked) "Remove from Liked Songs" else "Add to Liked Songs",
                     )
                 }
             }
@@ -267,7 +266,7 @@ fun SongRow(
             )
             Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
                 if (hovered || buttonMenu.expanded) {
-                    IconButton("more_horiz", { buttonMenu.expanded = true }, size = 30.dp, iconSize = 18.dp, tooltip = "More options")
+                    IconButton("more_horiz", { buttonMenu.expanded = true }, size = 30.dp, iconSize = 18.dp)
                 }
                 AppMenu(buttonMenu) {
                     SongMenuContent(song, { buttonMenu.expanded = false }, menuExtra)

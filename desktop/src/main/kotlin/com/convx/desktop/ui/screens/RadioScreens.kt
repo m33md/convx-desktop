@@ -298,7 +298,7 @@ private fun RadioStationHeader(seed: Song, title: String, onPlay: () -> Unit) {
             Text(title, style = ConvxType.Headline, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(seed.artistText, style = ConvxType.Body, color = ConvxColors.SecondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        GlassCircleButton(onClick = onPlay, size = 44.dp, tooltip = "Play station") {
+        GlassCircleButton(onClick = onPlay, size = 44.dp) {
             ConvxIcon("play_applemusic", tint = Color.White, size = 19.dp)
         }
         Spacer(Modifier.width(2.dp))

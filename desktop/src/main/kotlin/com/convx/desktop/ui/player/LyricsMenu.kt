@@ -87,7 +87,7 @@ import com.convx.desktop.ui.components.ScrollbarColumn
 fun LyricsMenuButton(song: Song?, size: Dp = 40.dp, iconSize: Dp = 22.dp, filled: Boolean = true) {
     val menu = rememberMenuAnchor()
     Box {
-        IconButton("more_horiz", { if (song != null) menu.expanded = true }, size = size, iconSize = iconSize, filled = filled, enabled = song != null, tooltip = "Lyrics options")
+        IconButton("more_horiz", { if (song != null) menu.expanded = true }, size = size, iconSize = iconSize, filled = filled, enabled = song != null)
         if (song != null) {
             AppMenu(menu) { LyricsMenuContent(song) { menu.expanded = false } }
         }
@@ -268,7 +268,7 @@ private fun SourceList(song: Song, current: Lyrics?, back: () -> Unit) {
     val scope = rememberCoroutineScope()
     var failed by remember { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(start = 6.dp, end = 14.dp, top = 4.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-        IconButton("arrow_back_ios", back, size = 34.dp, iconSize = 16.dp, tooltip = "Back")
+        IconButton("arrow_back_ios", back, size = 34.dp, iconSize = 16.dp)
         Spacer(Modifier.width(6.dp))
         Column(Modifier.weight(1f)) {
             Text("Choose lyrics provider", style = ConvxType.Headline, color = Color.White)
@@ -489,12 +489,12 @@ internal fun editOffset(song: Song) {
                 }
                 if (offset != 0) {
                     Spacer(Modifier.width(8.dp))
-                    IconButton("restore", { set(0) }, size = 40.dp, iconSize = 20.dp, tooltip = "Reset")
+                    IconButton("restore", { set(0) }, size = 40.dp, iconSize = 20.dp)
                 }
             }
             Spacer(Modifier.height(16.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                IconButton("remove", { set((offset - 50).coerceIn(-3000, 3000)) }, size = 36.dp, iconSize = 20.dp, tooltip = "50 ms later")
+                IconButton("remove", { set((offset - 50).coerceIn(-3000, 3000)) }, size = 36.dp, iconSize = 20.dp)
                 Spacer(Modifier.width(8.dp))
                 GlassSlider(
                     offset.coerceIn(-3000, 3000).toFloat(),
@@ -503,7 +503,7 @@ internal fun editOffset(song: Song) {
                     valueRange = -3000f..3000f,
                 )
                 Spacer(Modifier.width(8.dp))
-                IconButton("add", { set((offset + 50).coerceIn(-3000, 3000)) }, size = 36.dp, iconSize = 20.dp, tooltip = "50 ms sooner")
+                IconButton("add", { set((offset + 50).coerceIn(-3000, 3000)) }, size = 36.dp, iconSize = 20.dp)
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 44.dp)) {
                 Text("-3000ms", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel, modifier = Modifier.weight(1f))

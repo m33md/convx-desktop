@@ -209,14 +209,13 @@ fun StatsScreen() {
                     if (songs.isNotEmpty()) {
                         GlassCircleButton(
                             onClick = { PlayerController.playSongs(songs.map { it.value }.shuffled(), 0, "Most played songs") },
-                            tooltip = "Shuffle",
                         ) {
                             ConvxIcon("shuffle", tint = Color.White, size = 22.dp)
                         }
                         Spacer(Modifier.width(8.dp))
                     }
                     // The phone's sparks button, which opens Replay.
-                    GlassCircleButton(onClick = Replay::show, tooltip = "Replay ’${java.time.Year.now().value % 100}") {
+                    GlassCircleButton(onClick = Replay::show) {
                         ConvxIcon("sparks", tint = Color.White, size = 22.dp)
                     }
                 }

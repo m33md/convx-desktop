@@ -316,7 +316,6 @@ private fun DesignCard(design: DiscDesign, wornBy: List<LocalPlaylist>, playlist
                     size = 32.dp,
                     iconSize = 18.dp,
                     filled = true,
-                    tooltip = "More",
                 )
                 PillButton(
                     "Edit",

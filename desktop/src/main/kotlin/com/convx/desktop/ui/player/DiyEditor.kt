@@ -403,22 +403,20 @@ private fun Pill(content: @Composable () -> Unit) {
 }
 
 @Composable
-private fun PillIcon(icon: String, tooltip: String, enabled: Boolean = true, tint: Color = Color.White, onClick: () -> Unit) {
+private fun PillIcon(icon: String, enabled: Boolean = true, tint: Color = Color.White, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    com.convx.desktop.ui.components.Tooltip(tooltip) {
-        Box(
-            Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(if (hovered && enabled) Color.White.copy(alpha = 0.1f) else Color.Transparent)
-                .hoverable(interaction)
-                .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
-                .clickable(interaction, null, enabled = enabled, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            ConvxIcon(icon, tint = if (enabled) tint else tint.copy(alpha = 0.35f), size = 20.dp)
-        }
+    Box(
+        Modifier
+            .size(40.dp)
+            .clip(CircleShape)
+            .background(if (hovered && enabled) Color.White.copy(alpha = 0.1f) else Color.Transparent)
+            .hoverable(interaction)
+            .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
+            .clickable(interaction, null, enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon(icon, tint = if (enabled) tint else tint.copy(alpha = 0.35f), size = 20.dp)
     }
 }
 
@@ -459,12 +457,12 @@ private fun TopControls(modifier: Modifier) {
         modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Pill { PillIcon("arrow_back", "Leave without saving (Esc)", onClick = DiyEditor::close) }
+        Pill { PillIcon("arrow_back", onClick = DiyEditor::close) }
         Spacer(Modifier.weight(1f))
         Pill {
-            PillIcon("replay", "Undo (Ctrl+Z)", enabled = DiyEditor.canUndo, onClick = DiyEditor::undo)
-            PillIcon("fast_forward", "Redo (Ctrl+Y)", enabled = DiyEditor.canRedo, onClick = DiyEditor::redo)
-            PillIcon("check", "Save (Ctrl+S)", onClick = DiyEditor::save)
+            PillIcon("replay", enabled = DiyEditor.canUndo, onClick = DiyEditor::undo)
+            PillIcon("fast_forward", enabled = DiyEditor.canRedo, onClick = DiyEditor::redo)
+            PillIcon("check", onClick = DiyEditor::save)
         }
     }
 }
@@ -498,7 +496,7 @@ private fun BottomControls(modifier: Modifier) {
                         DiyEditor.editOpen = !DiyEditor.editOpen
                         DiyEditor.emojiOpen = false
                     }
-                    PillIcon("delete", "Delete (Del)", tint = Color(0xFFFF453A), onClick = DiyEditor::delete)
+                    PillIcon("delete", tint = Color(0xFFFF453A), onClick = DiyEditor::delete)
                 }
             }
         }

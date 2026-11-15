@@ -97,6 +97,7 @@ fun Modifier.onSecondaryClick(onClick: (Offset) -> Unit): Modifier = pointerInpu
     }
 }
 
+/** Hover text that explains a word label (the audio quality badge, Disc Studio's effect chips). Icons show none. */
 @Composable
 fun Tooltip(text: String, content: @Composable () -> Unit) {
     TooltipArea(
@@ -175,7 +176,6 @@ fun IconButton(
     enabled: Boolean = true,
     active: Boolean = false,
     activeTint: Color = tint,
-    tooltip: String? = null,
     /** A player control draws the image picked for it in Player icons, if any. */
     slot: PlayerIconSlot? = null,
 ) {
@@ -194,43 +194,40 @@ fun IconButton(
         hovered -> tint
         else -> tint.copy(alpha = if (filled) 1f else 0.86f)
     }
-    val button = @Composable {
-        Box(
-            modifier
-                .size(size)
-                // The filled disc is a drop of the glass, with its light and swell; the plain glyph keeps the quiet wash.
-                .then(
-                    if (filled) {
-                        Modifier
-                            // No rims: these discs sit in rows of plain glyphs (the player's top row), where a ringed one looked out of place.
-                            .glassControl(GlassShapes.Capsule, enabled = enabled, rims = false)
-                            .hoverable(interaction)
-                            .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
-                            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-                    } else {
-                        Modifier
-                            .clip(CircleShape)
-                            .background(bg)
-                            .hoverable(interaction)
-                            .pressable(onClick, enabled, interaction, pressScale = 0.9f)
-                    },
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (slot != null) PlayerGlyph(slot, icon, color, iconSize) else ConvxIcon(icon, tint = color, size = iconSize)
-            if (active) {
-                Box(
+    Box(
+        modifier
+            .size(size)
+            // The filled disc is a drop of the glass, with its light and swell; the plain glyph keeps the quiet wash.
+            .then(
+                if (filled) {
                     Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 2.dp)
-                        .size(4.dp)
+                        // No rims: these discs sit in rows of plain glyphs (the player's top row), where a ringed one looked out of place.
+                        .glassControl(GlassShapes.Capsule, enabled = enabled, rims = false)
+                        .hoverable(interaction)
+                        .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
+                        .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+                } else {
+                    Modifier
                         .clip(CircleShape)
-                        .background(activeTint),
-                )
-            }
+                        .background(bg)
+                        .hoverable(interaction)
+                        .pressable(onClick, enabled, interaction, pressScale = 0.9f)
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (slot != null) PlayerGlyph(slot, icon, color, iconSize) else ConvxIcon(icon, tint = color, size = iconSize)
+        if (active) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp)
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(activeTint),
+            )
         }
     }
-    if (tooltip != null) Tooltip(tooltip) { button() } else button()
 }
 
 /** The big white disc with a black glyph: artist/album play buttons and the player bar. */

@@ -73,7 +73,6 @@ import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.components.MessageState
 import com.convx.desktop.ui.components.Overlays
 import com.convx.desktop.ui.components.SongShelf
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.artworkUrl
 import com.convx.desktop.ui.components.link
 import com.convx.desktop.ui.components.onSecondaryClick
@@ -342,34 +341,32 @@ private fun ArtistActionRow(
         horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onInfo, "About") {
+        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onInfo) {
             ConvxIcon("info", tint = Color.White, size = 22.dp)
         }
-        ControlCircle(73.dp, Color.White, onPlay, if (isPlaying) "Pause" else "Play") {
+        ControlCircle(73.dp, Color.White, onPlay) {
             ConvxIcon(if (isPlaying) "pause_applemusic" else "play_applemusic", tint = lerp(pageColor, Color.Black, 0.3f), size = 36.dp)
         }
-        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onFollow, if (followed) "Unfollow" else "Follow") {
+        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onFollow) {
             ConvxIcon(if (followed) "star_fill" else "star", tint = Color.White, size = 24.dp)
         }
     }
 }
 
 @Composable
-private fun ControlCircle(size: Dp, fill: Color, onClick: () -> Unit, tooltip: String, content: @Composable () -> Unit) {
+private fun ControlCircle(size: Dp, fill: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Tooltip(tooltip) {
-        Box(
-            Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(fill)
-                .background(if (hovered) Color.White.copy(alpha = 0.08f) else Color.Transparent)
-                .hoverable(interaction)
-                .pressable(onClick, interaction = interaction, pressScale = 0.92f),
-            contentAlignment = Alignment.Center,
-        ) { content() }
-    }
+    Box(
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(fill)
+            .background(if (hovered) Color.White.copy(alpha = 0.08f) else Color.Transparent)
+            .hoverable(interaction)
+            .pressable(onClick, interaction = interaction, pressScale = 0.92f),
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 /**

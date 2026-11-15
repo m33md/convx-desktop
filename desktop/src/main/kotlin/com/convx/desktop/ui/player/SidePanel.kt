@@ -155,7 +155,7 @@ fun RightPanel(panel: SidePanel, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(6.dp))
             if (panel == SidePanel.Lyrics) LyricsMenuButton(state.current, size = 32.dp, iconSize = 18.dp, filled = false)
-            IconButton("close", { UiState.closeSidePanel() }, size = 32.dp, iconSize = 18.dp, tooltip = "Close")
+            IconButton("close", { UiState.closeSidePanel() }, size = 32.dp, iconSize = 18.dp)
         }
         Crossfade(panel, modifier = Modifier.weight(1f)) { p ->
             when (p) {
@@ -211,11 +211,10 @@ private fun NowPlayingPanel(state: PlayerState) {
                 if (liked) "favorite" else "favorite_border",
                 { Library.toggleLike(song) },
                 tint = if (liked) LocalAccent.current else Color.White,
-                tooltip = if (liked) "Remove from Liked Songs" else "Add to Liked Songs",
                 slot = if (liked) com.convx.desktop.ui.components.PlayerIconSlot.LIKED else com.convx.desktop.ui.components.PlayerIconSlot.LIKE,
             )
             Box {
-                IconButton("more_horiz", { menu.expanded = true }, tooltip = "More options")
+                IconButton("more_horiz", { menu.expanded = true })
                 AppMenu(menu) { SongMenuContent(song, { menu.expanded = false }) }
             }
         }
@@ -284,7 +283,6 @@ private fun LyricsCard(song: Song) {
                 },
                 size = 32.dp,
                 iconSize = 15.dp,
-                tooltip = "Open lyrics",
             )
         }
         Box(Modifier.fillMaxWidth().height(LyricsCardHeight).clipToBounds()) {
@@ -423,7 +421,7 @@ fun QueueRow(
                 Text(song.artistText, style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (hovered && removable) {
-                IconButton("remove", { PlayerController.removeFromQueue(position) }, size = 30.dp, iconSize = 18.dp, tooltip = "Remove from queue")
+                IconButton("remove", { PlayerController.removeFromQueue(position) }, size = 30.dp, iconSize = 18.dp)
             } else {
                 Text(formatSeconds(song.duration), style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel)
             }

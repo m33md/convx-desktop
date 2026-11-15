@@ -51,7 +51,6 @@ import com.convx.desktop.ui.components.AnimatedPlayGlyph
 import com.convx.desktop.ui.components.PlayerGlyph
 import com.convx.desktop.ui.components.PlayerIconSlot
 import com.convx.desktop.ui.components.SongMenuContent
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.core.formatDuration
 import com.convx.desktop.ui.components.onSecondaryClick
 import com.convx.desktop.ui.components.openAtProvider
@@ -118,24 +117,18 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
         ) {
             GlassGlyph(
                 "shuffle",
-                if (state.shuffle) "Disable shuffle" else "Enable shuffle",
                 controlSize,
                 iconSize,
                 TransportTint.copy(alpha = if (state.shuffle) TransportTint.alpha else 0.4f),
             ) { PlayerController.toggleShuffle() }
-            GlassGlyph("apple_skip_previous", "Previous", controlSize, iconSize, TransportTint) { PlayerController.previous() }
+            GlassGlyph("apple_skip_previous", controlSize, iconSize, TransportTint) { PlayerController.previous() }
             PlayPauseGlyph(state, controlSize, playIconSize)
             // With autoplay on, Next at the end of the queue fetches more songs, so it stays live
             // while a radio's songs are still arriving.
             val autoRadio = AppSettings.state.collectAsState().value.autoRadio
-            GlassGlyph("apple_skip_next", "Next", controlSize, playIconSize, TransportTint, enabled = state.hasNext || autoRadio) { PlayerController.next() }
+            GlassGlyph("apple_skip_next", controlSize, playIconSize, TransportTint, enabled = state.hasNext || autoRadio) { PlayerController.next() }
             GlassGlyph(
                 if (state.repeat == RepeatMode.ONE) "repeat_one" else "repeat",
-                when (state.repeat) {
-                    RepeatMode.OFF -> "Enable repeat"
-                    RepeatMode.ALL -> "Enable repeat one"
-                    RepeatMode.ONE -> "Disable repeat"
-                },
                 controlSize,
                 iconSize,
                 TransportTint.copy(alpha = if (state.repeat != RepeatMode.OFF) TransportTint.alpha else 0.4f),
@@ -184,19 +177,18 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
             val liked = Library.state.collectAsState().value.liked.any { it.song.id == song.id }
             GlassGlyph(
                 if (liked) "favorite" else "favorite_border",
-                if (liked) "Remove from Liked Songs" else "Add to Liked Songs",
                 controlSize,
                 iconSize,
                 if (liked) LocalAccent.current else TransportTint,
                 bounce = true,
                 slot = if (liked) PlayerIconSlot.LIKED else PlayerIconSlot.LIKE,
             ) { Library.toggleLike(song) }
-            GlassGlyph("flamingo_lyrics", "Lyrics", controlSize, iconSize * 1.18f, TransportTint, bounce = true) {
+            GlassGlyph("flamingo_lyrics", controlSize, iconSize * 1.18f, TransportTint, bounce = true) {
                 UiState.fullPlayerMode = FullPlayerMode.Lyrics
                 UiState.lyricsFullscreen = AppSettings.value.oneTapFullscreenLyrics
                 UiState.fullPlayer = true
             }
-            GlassGlyph("flamingo_queue", "Queue", controlSize, iconSize, TransportTint, bounce = true) {
+            GlassGlyph("flamingo_queue", controlSize, iconSize, TransportTint, bounce = true) {
                 UiState.fullPlayerMode = FullPlayerMode.Queue
                 UiState.fullPlayer = true
             }
@@ -205,7 +197,6 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
             val panelShown = panelOpen && UiState.rightPanelFits
             GlassGlyph(
                 "right_panel",
-                if (panelShown) "Hide Now Playing view" else "Show Now Playing view",
                 controlSize,
                 iconSize,
                 TransportTint.copy(alpha = if (panelShown) TransportTint.alpha else 0.4f),
@@ -237,27 +228,25 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
 private fun PlayPauseGlyph(state: PlayerState, size: Dp, iconSize: Dp) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Tooltip(if (state.isPlaying) "Pause" else "Play") {
-        Box(
-            Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered) 0.10f else 0f))
-                .hoverable(interaction)
-                .pressable({ PlayerController.togglePlay() }, interaction = interaction, pressScale = 0.86f),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (state.isLoading) {
-                CircularProgressIndicator(color = PlayTint, strokeWidth = 2.dp, modifier = Modifier.size(iconSize * 0.8f))
-            } else {
-                // The phone's mini player: replay once the queue has run out.
-                val slot = when {
-                    state.ended -> PlayerIconSlot.REPLAY
-                    state.isPlaying -> PlayerIconSlot.PAUSE
-                    else -> PlayerIconSlot.PLAY
-                }
-                AnimatedPlayGlyph(slot, PlayTint, iconSize)
+    Box(
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (hovered) 0.10f else 0f))
+            .hoverable(interaction)
+            .pressable({ PlayerController.togglePlay() }, interaction = interaction, pressScale = 0.86f),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (state.isLoading) {
+            CircularProgressIndicator(color = PlayTint, strokeWidth = 2.dp, modifier = Modifier.size(iconSize * 0.8f))
+        } else {
+            // The phone's mini player: replay once the queue has run out.
+            val slot = when {
+                state.ended -> PlayerIconSlot.REPLAY
+                state.isPlaying -> PlayerIconSlot.PAUSE
+                else -> PlayerIconSlot.PLAY
             }
+            AnimatedPlayGlyph(slot, PlayTint, iconSize)
         }
     }
 }
@@ -266,7 +255,6 @@ private fun PlayPauseGlyph(state: PlayerState, size: Dp, iconSize: Dp) {
 @Composable
 fun GlassGlyph(
     icon: String,
-    tooltip: String,
     size: Dp,
     iconSize: Dp,
     tint: Color,
@@ -278,27 +266,25 @@ fun GlassGlyph(
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val symbolBounce = rememberSymbolBounce()
-    Tooltip(tooltip) {
-        Box(
-            Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered && enabled) 0.10f else 0f))
-                .hoverable(interaction)
-                .pressable({
-                    if (bounce) symbolBounce.play()
-                    onClick()
-                }, enabled = enabled, interaction = interaction, pressScale = 0.86f),
-            contentAlignment = Alignment.Center,
-        ) {
-            PlayerGlyph(
-                slot,
-                icon,
-                if (enabled) tint else tint.copy(alpha = tint.alpha * 0.45f),
-                iconSize,
-                symbolBounce.modifier.additiveChrome(),
-            )
-        }
+    Box(
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(Color.White.copy(alpha = if (hovered && enabled) 0.10f else 0f))
+            .hoverable(interaction)
+            .pressable({
+                if (bounce) symbolBounce.play()
+                onClick()
+            }, enabled = enabled, interaction = interaction, pressScale = 0.86f),
+        contentAlignment = Alignment.Center,
+    ) {
+        PlayerGlyph(
+            slot,
+            icon,
+            if (enabled) tint else tint.copy(alpha = tint.alpha * 0.45f),
+            iconSize,
+            symbolBounce.modifier.additiveChrome(),
+        )
     }
 }
 
@@ -351,7 +337,6 @@ private fun PillVolume(state: PlayerState, size: Dp, iconSize: Dp, slider: Boole
                 level < 0.5f -> "volume_down"
                 else -> "volume_up"
             },
-            if (state.muted) "Unmute" else "Mute",
             size,
             iconSize,
             TransportTint,

@@ -102,10 +102,9 @@ fun TransportControls(
             tint = tint.copy(alpha = 0.75f),
             active = state.shuffle,
             activeTint = accent,
-            tooltip = if (state.shuffle) "Disable shuffle" else "Enable shuffle",
         )
         val previous = if (v2) PlayerIconSlot.V2_PREVIOUS else PlayerIconSlot.PREVIOUS
-        IconButton(previous.fallback, { PlayerController.previous() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, tooltip = "Previous", slot = previous)
+        IconButton(previous.fallback, { PlayerController.previous() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, slot = previous)
         if (compact || !v2) {
             PlayButton(
                 isPlaying = state.isPlaying,
@@ -136,7 +135,7 @@ fun TransportControls(
             }
         }
         val next = if (v2) PlayerIconSlot.V2_NEXT else PlayerIconSlot.NEXT
-        IconButton(next.fallback, { PlayerController.next() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, tooltip = "Next", slot = next)
+        IconButton(next.fallback, { PlayerController.next() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, slot = next)
         if (!v2) IconButton(
             when (state.repeat) {
                 RepeatMode.ONE -> "repeat_one_on"
@@ -149,11 +148,6 @@ fun TransportControls(
             tint = tint.copy(alpha = 0.75f),
             active = state.repeat != RepeatMode.OFF,
             activeTint = accent,
-            tooltip = when (state.repeat) {
-                RepeatMode.OFF -> "Enable repeat"
-                RepeatMode.ALL -> "Enable repeat one"
-                RepeatMode.ONE -> "Disable repeat"
-            },
         )
     }
 }
@@ -257,7 +251,6 @@ fun VolumeControl(
             size = 34.dp,
             iconSize = 19.dp,
             tint = tint,
-            tooltip = if (state.muted) "Unmute" else "Mute",
             slot = slot,
         )
         ValueSlider(
