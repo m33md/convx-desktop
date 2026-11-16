@@ -408,7 +408,7 @@ private fun TopResult(title: String, item: YTItem, songs: List<SongItem>) {
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = if (hovered) 0.12f else 0.07f))
+                        .background(Color.White.copy(alpha = 0.07f))
                         .hoverable(interaction)
                         .pressable({ ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.99f)
                         .padding(20.dp),

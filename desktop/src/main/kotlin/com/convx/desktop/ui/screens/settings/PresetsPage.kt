@@ -143,7 +143,7 @@ private fun PresetCard(meta: Presets.Meta) {
                 .height(145.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(Color(0xFF1C1C1E))
-                .border(1.dp, Color.White.copy(alpha = if (hovered) 0.22f else 0.08f), RoundedCornerShape(14.dp)),
+                .border(1.dp, Color.White.copy(alpha = 0.08f), RoundedCornerShape(14.dp)),
             contentAlignment = Alignment.Center,
         ) {
             val image = thumbnail

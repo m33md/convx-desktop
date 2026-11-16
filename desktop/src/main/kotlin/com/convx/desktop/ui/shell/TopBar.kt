@@ -56,6 +56,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.times
 import com.convx.desktop.data.Library
+import com.convx.desktop.ui.components.pressable
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.ConvxWordmark
 import com.convx.desktop.ui.glass.GlassCircleButton
@@ -66,6 +67,7 @@ import com.convx.desktop.ui.glass.elasticStretch
 import com.convx.desktop.ui.glass.liquidGlass
 import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.shapes.NavContinuousCapsule
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
 
@@ -288,16 +290,11 @@ private fun FieldButton(
     iconModifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered) 0.10f else 0f))
-            .hoverable(interaction)
-            .pointerHoverIcon(PointerIcon.Hand)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .pressable(onClick, pressScale = ConvxMotion.PressScale),
         contentAlignment = Alignment.Center,
     ) {
         ConvxIcon(icon, tint = tint, size = 21.dp, modifier = iconModifier.additiveChrome())

@@ -64,10 +64,11 @@ import androidx.compose.ui.window.PopupPositionProvider
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.theme.ConvxColors
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxShapes
 import com.convx.desktop.ui.theme.ConvxType
 
-/** Hover + press feedback shared by every clickable surface: a hand cursor and a tiny squeeze. */
+/** Press feedback shared by every clickable surface: a hand cursor and a squeeze on the phone's press spring. */
 @Composable
 fun Modifier.pressable(
     onClick: () -> Unit,
@@ -76,7 +77,7 @@ fun Modifier.pressable(
     pressScale: Float = 0.96f,
 ): Modifier {
     val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && enabled) pressScale else 1f)
+    val scale by animateFloatAsState(if (pressed && enabled) pressScale else 1f, ConvxMotion.pressFor(pressScale))
     // The squeeze is drawn inside the hit area, so a press near the edge doesn't shrink out
     // from under the pointer and cancel itself.
     return this
@@ -180,38 +181,26 @@ fun IconButton(
     slot: PlayerIconSlot? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val bg by animateColorAsState(
-        when {
-            filled -> Color.Transparent
-            hovered && enabled -> Color.White.copy(alpha = 0.08f)
-            else -> Color.Transparent
-        },
-    )
     val color = when {
         !enabled -> tint.copy(alpha = 0.3f)
         active -> activeTint
-        hovered -> tint
         else -> tint.copy(alpha = if (filled) 1f else 0.86f)
     }
     Box(
         modifier
             .size(size)
-            // The filled disc is a drop of the glass, with its light and swell; the plain glyph keeps the quiet wash.
+            // The filled disc is a drop of the glass, with its light and swell under a press; the plain glyph only shrinks.
             .then(
                 if (filled) {
                     Modifier
                         // No rims: these discs sit in rows of plain glyphs (the player's top row), where a ringed one looked out of place.
                         .glassControl(GlassShapes.Capsule, enabled = enabled, rims = false)
-                        .hoverable(interaction)
                         .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
                         .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
                 } else {
                     Modifier
                         .clip(CircleShape)
-                        .background(bg)
-                        .hoverable(interaction)
-                        .pressable(onClick, enabled, interaction, pressScale = 0.9f)
+                        .pressable(onClick, enabled, interaction, pressScale = ConvxMotion.PressScale)
                 },
             ),
         contentAlignment = Alignment.Center,
@@ -244,17 +233,12 @@ fun PlayButton(
     player: Boolean = false,
     ended: Boolean = false,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val scale by animateFloatAsState(if (hovered) 1.05f else 1f)
     Box(
         modifier
             .size(size)
-            .scale(scale)
             .clip(CircleShape)
             .background(color)
-            .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.92f),
+            .pressable(onClick, pressScale = ConvxMotion.PressScale),
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
@@ -284,18 +268,12 @@ fun PillButton(
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     // The quiet pill is the glass itself; the white and red ones keep their paint and move like it.
-    val fill = when {
-        accent != null -> if (hovered) accent.copy(alpha = 0.9f) else accent
-        filled -> if (hovered) Color.White.copy(alpha = 0.9f) else Color.White
-        else -> null
-    }
+    val fill = accent ?: if (filled) Color.White else null
     val fg = if (filled || accent != null) Color.Black.takeIf { accent == null } ?: Color.White else Color.White
     Row(
         modifier
             .glassControl(GlassShapes.Capsule, fill = fill)
-            .hoverable(interaction)
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(contentPadding),

@@ -65,6 +65,7 @@ import com.convx.desktop.ui.shell.LocalNavigator
 import com.convx.desktop.ui.shell.Screen
 import com.convx.desktop.ui.shell.SidePanel
 import com.convx.desktop.ui.shell.UiState
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
@@ -116,15 +117,11 @@ fun TransportControls(
             )
         } else {
             // The phone's v2: a bare glyph, no disc, popping between play and pause.
-            val interaction = remember { MutableInteractionSource() }
-            val hovered by interaction.collectIsHoveredAsState()
             Box(
                 Modifier
                     .size(play)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = if (hovered && state.current != null) 0.08f else 0f))
-                    .hoverable(interaction)
-                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null, interaction = interaction, pressScale = 0.86f),
+                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null, pressScale = ConvxMotion.WobblePressScale),
                 contentAlignment = Alignment.Center,
             ) {
                 AnimatedPlayGlyph(

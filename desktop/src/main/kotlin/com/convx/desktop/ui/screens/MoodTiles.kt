@@ -129,7 +129,6 @@ fun MoodTile(mood: MoodAndGenres.Item, modifier: Modifier = Modifier, onClick: (
     val art by MoodArt.art.collectAsState()
     val image by rememberImage(artworkUrl(art[mood.key], 360))
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     val ground = Color(mood.stripeColor).copy(alpha = 1f)
     val shape = ContinuousRoundedRectangle(15.dp)
     Box(
@@ -167,7 +166,7 @@ fun MoodTile(mood: MoodAndGenres.Item, modifier: Modifier = Modifier, onClick: (
         Box(
             Modifier
                 .fillMaxSize()
-                .background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = if (hovered) 0.4f else 0.28f))),
+                .background(Brush.verticalGradient(0.45f to Color.Transparent, 1f to Color.Black.copy(alpha = 0.28f))),
         )
         Text(
             mood.title,

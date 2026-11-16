@@ -357,13 +357,11 @@ private fun ArtistActionRow(
 @Composable
 private fun ControlCircle(size: Dp, fill: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .size(size)
             .clip(CircleShape)
             .background(fill)
-            .background(if (hovered) Color.White.copy(alpha = 0.08f) else Color.Transparent)
             .hoverable(interaction)
             .pressable(onClick, interaction = interaction, pressScale = 0.92f),
         contentAlignment = Alignment.Center,
@@ -385,8 +383,7 @@ private fun FeaturedReleaseCard(
 ) {
     val shape = RoundedCornerShape(22.dp)
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val wash = (0.09f + 0.25f * pageColor.luminance()).coerceIn(0.08f, 0.14f) + if (hovered) 0.04f else 0f
+    val wash = (0.09f + 0.25f * pageColor.luminance()).coerceIn(0.08f, 0.14f)
     Row(
         modifier
             .fillMaxWidth()

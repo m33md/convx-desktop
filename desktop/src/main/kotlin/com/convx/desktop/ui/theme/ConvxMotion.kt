@@ -36,12 +36,16 @@ object ConvxMotion {
     /** The scale-down under a press, and its release. */
     fun <T> press(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.75f, stiffness = 1220f)
 
-    /** How far a pressed button or icon shrinks, and a pressed card or row. */
+    /** How far a pressed button or icon shrinks. */
     const val PressScale = 0.97f
-    const val BouncePressScale = 0.94f
 
-    /** A card or row springing back from a press, with the phone's small bounce. */
-    fun <T> bounce(): FiniteAnimationSpec<T> = spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMediumLow)
+    /** A bare glyph on glass (the bar's play and skip) shrinks further and wobbles back, the phone's pressWobble. */
+    const val WobblePressScale = 0.86f
+
+    fun <T> wobble(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.38f, stiffness = Spring.StiffnessMedium)
+
+    /** The spring a press to [scale] plays on. */
+    fun <T> pressFor(scale: Float): FiniteAnimationSpec<T> = if (scale <= WobblePressScale) wobble() else press()
 
     /** Something arriving in place: a sheet, a panel, a chip row. */
     fun <T> appear(): FiniteAnimationSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 450f)

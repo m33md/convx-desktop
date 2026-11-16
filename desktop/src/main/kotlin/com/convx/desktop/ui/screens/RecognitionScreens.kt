@@ -284,7 +284,6 @@ private fun SuccessState(result: RecognitionResult, onPlay: () -> Unit, onTryAga
 @Composable
 private fun WideButton(text: String, icon: String, onClick: () -> Unit, accent: Boolean = false, outlined: Boolean = false) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     val red = LocalAccent.current
     val shape = RoundedCornerShape(50)
     Row(
@@ -294,9 +293,9 @@ private fun WideButton(text: String, icon: String, onClick: () -> Unit, accent: 
             .clip(shape)
             .background(
                 when {
-                    accent -> if (hovered) red.copy(alpha = 0.88f) else red
-                    outlined -> if (hovered) Color.White.copy(alpha = 0.06f) else Color.Transparent
-                    else -> Color.White.copy(alpha = if (hovered) 0.16f else 0.1f)
+                    accent -> red
+                    outlined -> Color.Transparent
+                    else -> Color.White.copy(alpha = 0.1f)
                 },
             )
             .then(if (outlined) Modifier.border(1.dp, Color.White.copy(alpha = 0.25f), shape) else Modifier)
@@ -434,7 +433,6 @@ private fun dayLabel(at: Long): String {
 @Composable
 private fun HistoryRow(item: Recognition, onClick: () -> Unit, onDelete: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     val shape = RoundedCornerShape(12.dp)
     Row(
         Modifier
@@ -442,7 +440,7 @@ private fun HistoryRow(item: Recognition, onClick: () -> Unit, onDelete: () -> U
             .widthIn(max = 900.dp)
             .fillMaxWidth()
             .clip(shape)
-            .background(if (hovered) ConvxColors.CardSecondary else ConvxColors.Card)
+            .background(ConvxColors.Card)
             .hoverable(interaction)
             .pressable(onClick, interaction = interaction, pressScale = 0.99f)
             .padding(12.dp),

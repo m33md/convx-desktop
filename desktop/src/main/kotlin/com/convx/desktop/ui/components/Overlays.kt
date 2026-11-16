@@ -12,10 +12,10 @@ import com.convx.desktop.ui.shell.UiState
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -56,6 +56,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.theme.ConvxColors
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxShapes
 import com.convx.desktop.ui.theme.ConvxType
 import kotlinx.coroutines.delay
@@ -196,7 +197,8 @@ fun DialogCard(title: String, content: @Composable () -> Unit) {
 @Composable
 fun OverlayHost() {
     val dialog = Overlays.dialog
-    AnimatedVisibility(dialog != null, enter = fadeIn(), exit = fadeOut()) {
+    // The phone's dialog entrance: the scrim fades while the dialog grows from 96%.
+    AnimatedVisibility(dialog != null, enter = fadeIn(ConvxMotion.appear()), exit = fadeOut(ConvxMotion.fade())) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -204,7 +206,9 @@ fun OverlayHost() {
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { Overlays.dismissDialog() },
             contentAlignment = Alignment.Center,
         ) {
-            dialog?.invoke()
+            Box(Modifier.animateEnterExit(enter = scaleIn(ConvxMotion.appear(), initialScale = 0.96f), exit = ExitTransition.None)) {
+                dialog?.invoke()
+            }
         }
     }
     Box(Modifier.fillMaxSize().padding(bottom = 112.dp), contentAlignment = Alignment.BottomCenter) {

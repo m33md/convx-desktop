@@ -405,12 +405,10 @@ private fun Pill(content: @Composable () -> Unit) {
 @Composable
 private fun PillIcon(icon: String, enabled: Boolean = true, tint: Color = Color.White, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .size(40.dp)
             .clip(CircleShape)
-            .background(if (hovered && enabled) Color.White.copy(alpha = 0.1f) else Color.Transparent)
             .hoverable(interaction)
             .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
             .clickable(interaction, null, enabled = enabled, onClick = onClick),
@@ -424,14 +422,12 @@ private fun PillIcon(icon: String, enabled: Boolean = true, tint: Color = Color.
 private fun PillText(text: String, selected: Boolean = false, enabled: Boolean = true, onClick: () -> Unit = {}) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .clip(CircleShape)
             .background(
                 when {
                     selected -> accent
-                    hovered && enabled -> Color.White.copy(alpha = 0.1f)
                     else -> Color.Transparent
                 },
             )

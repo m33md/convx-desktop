@@ -7,9 +7,6 @@ package com.convx.desktop.ui.components
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -36,6 +33,7 @@ import com.convx.desktop.core.AppDirs
 import com.convx.desktop.core.AppScope
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.PlayerIconOverride
+import com.convx.desktop.ui.theme.ConvxMotion
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -254,17 +252,17 @@ fun PlayerGlyph(slot: PlayerIconSlot?, icon: String, tint: Color, size: Dp, modi
 }
 
 /**
- * Play, pause or replay, popping between them as the phone's does: the old glyph shrinks to a
- * fifth as it fades and the new one springs up from the same point, so it reads as the same
- * button changing its mind rather than another button appearing.
+ * Play, pause or replay, popping between them as the phone's does: the old glyph shrinks to 30%
+ * as it fades and the new one grows from the same point, so it reads as the same button
+ * changing its mind rather than another button appearing.
  */
 @Composable
 fun AnimatedPlayGlyph(slot: PlayerIconSlot, tint: Color, size: Dp, modifier: Modifier = Modifier) {
     AnimatedContent(
         targetState = slot,
         transitionSpec = {
-            (scaleIn(spring(dampingRatio = 0.75f, stiffness = 500f), initialScale = 0.2f) + fadeIn(tween(120)))
-                .togetherWith(scaleOut(tween(100, easing = FastOutSlowInEasing), targetScale = 0.2f) + fadeOut(tween(90)))
+            (fadeIn(ConvxMotion.swapEnter()) + scaleIn(ConvxMotion.swapEnter(), initialScale = ConvxMotion.SwapInitialScale))
+                .togetherWith(fadeOut(ConvxMotion.swapExit()) + scaleOut(ConvxMotion.swapExit(), targetScale = ConvxMotion.SwapInitialScale))
                 .using(SizeTransform(clip = false))
         },
         contentAlignment = Alignment.Center,

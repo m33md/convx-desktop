@@ -79,6 +79,7 @@ import com.convx.desktop.integrations.spotify.SpotifyApi
 import com.convx.desktop.integrations.spotify.SpotifyMatcher
 import com.convx.desktop.integrations.spotify.SpotifyPlaylist
 import com.convx.desktop.player.PlayerController
+import com.convx.desktop.ui.components.pressable
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.Artwork
 import com.convx.desktop.ui.components.ConvxIcon
@@ -99,6 +100,7 @@ import com.convx.desktop.ui.glass.onSelected
 import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.glass.rememberSymbolBounce
 import com.convx.desktop.ui.screens.SpotifyGreen
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
 import com.music.innertube.YouTube
@@ -291,7 +293,7 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
     val settings by AppSettings.state.collectAsState()
     val library by Library.state.collectAsState()
     val player by PlayerController.state.collectAsState()
-    val panelWidth by animateDpAsState(if (collapsed) SideBarCollapsedWidth else SideBarWidth, spring(0.9f, 400f))
+    val panelWidth by animateDpAsState(if (collapsed) SideBarCollapsedWidth else SideBarWidth, ConvxMotion.appear())
     val shape = if (collapsed) GlassShapes.Capsule else GlassShapes.Panel
     // Measured against the whole panel, so a small radius keeps the glow to about one row.
     val glow = rememberInteractiveHighlight(radiusScale = 0.3f)
@@ -550,19 +552,14 @@ private fun Heading(title: String, collapsed: Boolean, action: (@Composable () -
 
 @Composable
 private fun HeadingButton(icon: String, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .size(26.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
-            .hoverable(interaction)
-            .pointerHoverIcon(PointerIcon.Hand)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .pressable(onClick, pressScale = ConvxMotion.PressScale),
         contentAlignment = Alignment.Center,
     ) {
-        ConvxIcon(icon, tint = Color.White.copy(alpha = if (hovered) 0.9f else 0.6f), size = 16.dp)
+        ConvxIcon(icon, tint = Color.White.copy(alpha = 0.6f), size = 16.dp)
     }
 }
 
@@ -737,19 +734,14 @@ private fun Avatar(picture: String?, size: Dp) {
 
 @Composable
 private fun SettingsButton(lit: Boolean, accent: Color, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .size(32.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
-            .hoverable(interaction)
-            .pointerHoverIcon(PointerIcon.Hand)
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick),
+            .pressable(onClick, pressScale = ConvxMotion.PressScale),
         contentAlignment = Alignment.Center,
     ) {
-        ConvxIcon("settings", tint = if (lit) accent else Color.White.copy(alpha = if (hovered) 0.9f else 0.65f), size = 18.dp)
+        ConvxIcon("settings", tint = if (lit) accent else Color.White.copy(alpha = 0.65f), size = 18.dp)
     }
 }
 

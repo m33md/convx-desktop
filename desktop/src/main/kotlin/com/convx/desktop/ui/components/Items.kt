@@ -419,7 +419,7 @@ fun ItemCard(
         modifier
             .width(width)
             .clip(ConvxShapes.Card)
-            .background(if (hovered || menu.expanded) Color.White.copy(alpha = 0.06f) else Color.Transparent)
+            .background(if (menu.expanded) Color.White.copy(alpha = 0.06f) else Color.Transparent)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
             .pressable(onClick ?: { ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.98f),
@@ -428,7 +428,7 @@ fun ItemCard(
             Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
                 Artwork(
                     item.thumbnail,
-                    Modifier.fillMaxSize().shadow(if (hovered) 14.dp else 6.dp, shape),
+                    Modifier.fillMaxSize().shadow(6.dp, shape),
                     size = 400,
                     shape = shape,
                     placeholderIcon = if (isArtist) "person" else "music_note",
@@ -500,11 +500,6 @@ fun TopPickCard(item: YTItem, modifier: Modifier = Modifier, onClick: (() -> Uni
         modifier
             .width(242.dp)
             .height(323.dp)
-            .graphicsLayer {
-                val s = if (hovered) 1.015f else 1f
-                scaleX = s
-                scaleY = s
-            }
             .shadow(20.dp, shape, ambientColor = Color.Black.copy(alpha = 0.3f), spotColor = Color.Black.copy(alpha = 0.3f))
             .clip(shape)
             .background(ConvxColors.CardSecondary)

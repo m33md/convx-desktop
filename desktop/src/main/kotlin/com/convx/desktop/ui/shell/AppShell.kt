@@ -7,14 +7,14 @@ package com.convx.desktop.ui.shell
 
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
@@ -47,6 +47,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.glass.of
 import com.convx.desktop.ui.glass.LocalGlassConfig
@@ -79,6 +84,7 @@ import com.convx.desktop.ui.player.NowPlayingPillHeight
 import com.convx.desktop.ui.player.NowPlayingPillWidthFraction
 import com.convx.desktop.ui.screens.ScreenHost
 import com.convx.desktop.ui.theme.ConvxColors
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxTheme
 import com.convx.desktop.ui.theme.ConvxType
 import com.kyant.backdrop.backdrops.layerBackdrop
@@ -167,10 +173,10 @@ fun AppShell(navigator: Navigator) {
             BoxWithConstraints(Modifier.fillMaxSize().then(if (IsMacShell) Modifier else Modifier.background(Color.Black))) {
                 val windowWidth = maxWidth
                 val collapsed = settings.sidebarCollapsed || maxWidth < AutoCollapseWidth
-                // A spring overshoots past its target; an inset below zero would be negative padding.
+                // A spring turned round mid-way can carry past its target; an inset below zero would be negative padding.
                 val startInsetRaw by animateDpAsState(
                     if (collapsed) SideBarCollapsedContentInset else SideBarContentInset,
-                    spring(0.9f, 400f),
+                    ConvxMotion.appear(),
                 )
                 val startInset = startInsetRaw.coerceAtLeast(0.dp)
                 val showPill = player.current != null
@@ -183,7 +189,7 @@ fun AppShell(navigator: Navigator) {
                 // It keeps showing what it showed while it slides away.
                 var shownPanel by remember { mutableStateOf(panel ?: SidePanel.NowPlaying) }
                 if (panel != null) shownPanel = panel
-                val endInsetRaw by animateDpAsState(if (showPanel) RightPanelInset else 0.dp, spring(0.9f, 400f))
+                val endInsetRaw by animateDpAsState(if (showPanel) RightPanelInset else 0.dp, ConvxMotion.appear())
                 val endInset = endInsetRaw.coerceAtLeast(0.dp)
                 val insets = PageInsets(
                     start = startInset,
@@ -227,7 +233,7 @@ fun AppShell(navigator: Navigator) {
                         },
                 ) {
                     CompositionLocalProvider(LocalPageInsets provides insets, LocalPageWidth provides windowWidth - insets.start - insets.end) {
-                        Pages(navigator)
+                        Pages(navigator, blackFrom = if (IsMacShell) (startInset - 8.dp).coerceAtLeast(0.dp) else 0.dp)
                     }
                 }
 
@@ -246,8 +252,8 @@ fun AppShell(navigator: Navigator) {
 
                     AnimatedVisibility(
                         visible = showPanel,
-                        enter = slideInHorizontally(spring(0.9f, 400f)) { it / 3 } + fadeIn(tween(220)),
-                        exit = slideOutHorizontally(spring(1f, 500f)) { it / 3 } + fadeOut(tween(160)),
+                        enter = slideInHorizontally(ConvxMotion.appear()) { it / 3 } + fadeIn(ConvxMotion.fade()),
+                        exit = slideOutHorizontally(ConvxMotion.appear()) { it / 3 } + fadeOut(ConvxMotion.fade()),
                         modifier = Modifier
                             .align(Alignment.TopEnd)
                             .padding(end = SideBarMargin, top = TopBarHeight, bottom = SideBarMargin),
@@ -280,8 +286,9 @@ fun AppShell(navigator: Navigator) {
 
                 AnimatedVisibility(
                     visible = UiState.fullPlayer,
-                    enter = slideInVertically { it / 6 } + fadeIn(tween(220)) + scaleIn(initialScale = 0.98f),
-                    exit = slideOutVertically { it / 6 } + fadeOut(tween(180)) + scaleOut(targetScale = 0.98f),
+                    // The phone's player sheet: up from the bottom edge and back down into the bar.
+                    enter = slideInVertically(ConvxMotion.playerSheet()) { it },
+                    exit = slideOutVertically(ConvxMotion.playerSheet()) { it },
                 ) {
                     // Menus over the player would refract the pages hidden under it. Its top edge
                     // is the window's title bar while it covers the window.
@@ -308,8 +315,9 @@ fun AppShell(navigator: Navigator) {
 
 private val IsMacShell = com.convx.desktop.integrations.MacWindow.isMac
 
+/** The pages, each on black from [blackFrom] rightwards so one can slide or fade in over another. */
 @Composable
-private fun Pages(navigator: Navigator) {
+private fun Pages(navigator: Navigator, blackFrom: Dp) {
     val holder = rememberSaveableStateHolder()
     // Drop saved scroll positions for history entries that can't be reached any more.
     LaunchedEffect(navigator) {
@@ -322,14 +330,59 @@ private fun Pages(navigator: Navigator) {
     }
     AnimatedContent(
         targetState = navigator.current,
-        transitionSpec = { fadeIn(tween(200, delayMillis = 40)) togetherWith fadeOut(tween(120)) },
+        transitionSpec = { pageTransition(initialState, targetState, navigator.backStack.size) },
         contentKey = { it.key },
         modifier = Modifier.fillMaxSize(),
     ) { entry ->
-        holder.SaveableStateProvider(entry.key) {
-            ScreenHost(entry.screen)
+        Box(
+            Modifier.fillMaxSize().drawBehind {
+                val left = blackFrom.toPx()
+                drawRect(Color.Black, Offset(left, 0f), Size(size.width - left, size.height))
+            },
+        ) {
+            holder.SaveableStateProvider(entry.key) {
+                ScreenHost(entry.screen)
+            }
         }
     }
+}
+
+/**
+ * The phone's page motion (its NavigationBuilder): an album or a playlist slides in from the right
+ * over the page it was opened from, which holds still, and slides back out on the way back; an
+ * artist slides in while it fades; every other page fades in over the one before, which dims.
+ * Going back plays each in reverse, with the page being left on top.
+ */
+private fun pageTransition(from: Entry, to: Entry, depth: Int): ContentTransform {
+    val back = to.key < from.key
+    // The page whose kind sets the motion: the one opened, or on the way back the one being left.
+    val moving = if (back) from.screen else to.screen
+    val enterFade = tween<Float>(ConvxMotion.PageEnterMillis)
+    val exitFade = tween<Float>(ConvxMotion.PageExitMillis)
+    val transform = when {
+        moving.isCollection() ->
+            if (back) fadeIn(enterFade, initialAlpha = 0.999f) togetherWith slideOutHorizontally(ConvxMotion.collectionPush()) { it }
+            else slideInHorizontally(ConvxMotion.collectionPush()) { it } togetherWith fadeOut(exitFade, targetAlpha = 0.999f)
+        moving is Screen.Artist -> {
+            val slideIn = tween<IntOffset>(ConvxMotion.PageEnterMillis, easing = FastOutSlowInEasing)
+            val slideOut = tween<IntOffset>(ConvxMotion.PageExitMillis, easing = FastOutSlowInEasing)
+            if (back) fadeIn(enterFade, initialAlpha = 0.7f) togetherWith slideOutHorizontally(slideOut) { it / 4 } + fadeOut(tween(ConvxMotion.PageExitMillis, easing = FastOutSlowInEasing))
+            else slideInHorizontally(slideIn) { it } + fadeIn(tween(ConvxMotion.PageEnterMillis, easing = FastOutSlowInEasing)) togetherWith fadeOut(exitFade, targetAlpha = 0.7f)
+        }
+        back -> fadeIn(enterFade, initialAlpha = 0.7f) togetherWith fadeOut(ConvxMotion.appearExit())
+        else -> fadeIn(tween(ConvxMotion.PushMillis)) togetherWith fadeOut(exitFade, targetAlpha = 0.7f)
+    }
+    // Deeper pages draw over shallower ones, so the page opened is on top going in and the page left is on top going back.
+    transform.targetContentZIndex = depth.toFloat()
+    return transform
+}
+
+/** An album or a playlist of any kind: the pages the phone slides in whole. */
+private fun Screen.isCollection(): Boolean = when (this) {
+    is Screen.Album, is Screen.Playlist, is Screen.LocalPlaylist, is Screen.SpotifyPlaylist,
+    Screen.Liked, Screen.Downloads, Screen.Cached, Screen.Uploaded, Screen.MyTop, Screen.SpotifyLiked,
+    -> true
+    else -> false
 }
 
 private fun queueConflictDialog(conflict: PlayerController.QueueConflict) {

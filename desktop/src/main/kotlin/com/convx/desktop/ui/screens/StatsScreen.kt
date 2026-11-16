@@ -318,12 +318,11 @@ private fun StatsChips(
         val menu = rememberMenuAnchor()
         Box {
             val interaction = remember { MutableInteractionSource() }
-            val hovered by interaction.collectIsHoveredAsState()
             val turn by animateFloatAsState(if (menu.expanded) 180f else 0f, tween(400), label = "chevron")
             Row(
                 Modifier
                     .clip(ConvxShapes.Capsule)
-                    .background(Color.White.copy(alpha = if (hovered || menu.expanded) 0.16f else 0.08f))
+                    .background(Color.White.copy(alpha = if (menu.expanded) 0.16f else 0.08f))
                     .hoverable(interaction)
                     .pressable({
                         menu.offset = DpOffset(0.dp, 36.dp)

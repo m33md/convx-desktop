@@ -68,6 +68,7 @@ import com.convx.desktop.ui.shell.UiState
 import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.shell.Screen
 import com.convx.desktop.ui.shell.LocalNavigator
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
 
@@ -226,15 +227,11 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
 
 @Composable
 private fun PlayPauseGlyph(state: PlayerState, size: Dp, iconSize: Dp) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered) 0.10f else 0f))
-            .hoverable(interaction)
-            .pressable({ PlayerController.togglePlay() }, interaction = interaction, pressScale = 0.86f),
+            .pressable({ PlayerController.togglePlay() }, pressScale = ConvxMotion.WobblePressScale),
         contentAlignment = Alignment.Center,
     ) {
         if (state.isLoading) {
@@ -263,19 +260,15 @@ fun GlassGlyph(
     slot: PlayerIconSlot? = null,
     onClick: () -> Unit,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     val symbolBounce = rememberSymbolBounce()
     Box(
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered && enabled) 0.10f else 0f))
-            .hoverable(interaction)
             .pressable({
                 if (bounce) symbolBounce.play()
                 onClick()
-            }, enabled = enabled, interaction = interaction, pressScale = 0.86f),
+            }, enabled = enabled, pressScale = ConvxMotion.WobblePressScale),
         contentAlignment = Alignment.Center,
     ) {
         PlayerGlyph(

@@ -282,12 +282,11 @@ private fun HeaderText(text: String, style: TextStyle, onClick: (() -> Unit)? = 
 @Composable
 private fun HeaderCircle(icon: String, onClick: () -> Unit, enabled: Boolean = true, size: Dp = 54.dp) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .size(size)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered && enabled) 0.24f else 0.16f))
+            .background(Color.White.copy(alpha = 0.16f))
             .hoverable(interaction)
             .pressable(onClick, enabled = enabled, interaction = interaction, pressScale = 0.92f),
         contentAlignment = Alignment.Center,
@@ -300,10 +299,8 @@ private fun HeaderCircle(icon: String, onClick: () -> Unit, enabled: Boolean = t
 @Composable
 private fun PlayPill(playing: Boolean, enabled: Boolean, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     val fill = when {
         !enabled -> 0.4f
-        hovered -> 0.92f
         else -> 0.82f
     }
     Row(

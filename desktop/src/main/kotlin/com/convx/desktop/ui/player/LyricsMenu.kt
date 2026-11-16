@@ -202,11 +202,10 @@ internal fun offsetLabel(ms: Int) = "${if (ms >= 0) "+" else ""}${ms}ms"
 @Composable
 private fun ActionTile(text: String, icon: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Column(
         modifier
             .clip(ConvxShapes.Card)
-            .background(Color.White.copy(alpha = if (hovered) 0.14f else 0.08f))
+            .background(Color.White.copy(alpha = 0.08f))
             .hoverable(interaction)
             .pressable(onClick, interaction = interaction)
             .padding(vertical = 12.dp),
@@ -229,11 +228,9 @@ private fun MenuRow(
     trailing: (@Composable () -> Unit)? = null,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Row(
         Modifier
             .fillMaxWidth()
-            .background(if (hovered && enabled) Color.White.copy(alpha = 0.08f) else Color.Transparent)
             .hoverable(interaction)
             .pressable(onClick, interaction = interaction, enabled = enabled)
             .heightIn(min = 44.dp)

@@ -331,12 +331,11 @@ internal fun SavedCard(
         Modifier
             .width(width)
             .clip(ConvxShapes.Card)
-            .background(if (hovered) Color.White.copy(alpha = 0.06f) else Color.Transparent)
             .hoverable(interaction)
             .pressable(onClick, interaction = interaction, pressScale = 0.98f),
     ) {
         Column(Modifier.padding(10.dp)) {
-            Box(Modifier.fillMaxWidth().aspectRatio(1f).shadow(if (hovered) 14.dp else 6.dp, shape)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(1f).shadow(6.dp, shape)) {
                 if (art != null) {
                     Box(Modifier.fillMaxSize().clip(shape), contentAlignment = Alignment.Center) { art(width - 20.dp) }
                 } else {

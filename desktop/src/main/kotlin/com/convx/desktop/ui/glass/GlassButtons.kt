@@ -85,7 +85,7 @@ fun GlassCircleButton(
 
 /**
  * Any control made of the glass: the material, or [fill] for the white and red pills that keep
- * their paint, then the pointer's light and the swell and lean that answer hover and press, as on
+ * their paint, then the pointer's light and the swell that answer a press, as on
  * GlassCircleButton. The motion is a couple of dp, so the target stays under the pointer. The
  * caller adds its own click handling after this.
  */

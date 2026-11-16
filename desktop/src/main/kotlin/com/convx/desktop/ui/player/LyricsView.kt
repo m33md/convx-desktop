@@ -696,12 +696,10 @@ private fun LineBody(
     val blurTarget = if (!blur || isCurrent) 0.dp else (abs(index - anchor.value) * 2.5f).coerceAtMost(8f).dp
     val blurRadius by animateDpAsState(blurTarget, snap(if (index == anchor.value - 1) 260 else 0))
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    // The glass strip under the current line; on a desktop, a fainter one under the pointer.
+    // The glass strip under the current line.
     val chrome by animateFloatAsState(
         when {
             isCurrent -> 1f
-            hovered -> 0.5f
             else -> 0f
         },
         tween(240, easing = YosEasing),
