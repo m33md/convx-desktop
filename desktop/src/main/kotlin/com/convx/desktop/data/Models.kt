@@ -220,7 +220,7 @@ data class GlassSettings(
     val lensHeight: Float = 0.60f,
     /** 0..1 of 48 dp: how strongly it bends it. */
     val lensAmount: Float = 0.69f,
-    val chromaticAberration: Boolean = false,
+    val chromaticAberration: Boolean = true,
     val depthEffect: Boolean = false,
     /** How much of the dark tint the glass carries. */
     val surfaceOpacity: Float = 0.50f,
@@ -349,6 +349,8 @@ data class Settings(
     /** A Spotify app of your own (developer.spotify.com) to link with, instead of Spotify's shared desktop client. */
     val spotifyClientId: String = "",
     val glass: GlassSettings = GlassSettings(),
+    /** Which of the glass' defaults these settings have taken; see [AppSettings]. */
+    val glassDefaults: Int = 0,
     // The phone's Layout & home page and its Arrange home feed, with its defaults.
     /** home, search or library: where Convx opens. */
     val defaultTab: String = "home",

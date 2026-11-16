@@ -58,6 +58,7 @@ import com.convx.desktop.player.PlayerController
 import kotlinx.coroutines.launch
 import com.convx.desktop.ui.components.DialogCard
 import com.convx.desktop.ui.components.LocalCardWidth
+import com.convx.desktop.ui.components.LocalPageWidth
 import com.convx.desktop.ui.components.LocalPageInsets
 import com.convx.desktop.ui.components.LocalPlayback
 import com.convx.desktop.ui.components.OverlayHost
@@ -164,6 +165,7 @@ fun AppShell(navigator: Navigator) {
             LocalCardWidth provides settings.cardWidth(),
         ) {
             BoxWithConstraints(Modifier.fillMaxSize().then(if (IsMacShell) Modifier else Modifier.background(Color.Black))) {
+                val windowWidth = maxWidth
                 val collapsed = settings.sidebarCollapsed || maxWidth < AutoCollapseWidth
                 // A spring overshoots past its target; an inset below zero would be negative padding.
                 val startInsetRaw by animateDpAsState(
@@ -224,7 +226,7 @@ fun AppShell(navigator: Navigator) {
                             }
                         },
                 ) {
-                    CompositionLocalProvider(LocalPageInsets provides insets) {
+                    CompositionLocalProvider(LocalPageInsets provides insets, LocalPageWidth provides windowWidth - insets.start - insets.end) {
                         Pages(navigator)
                     }
                 }

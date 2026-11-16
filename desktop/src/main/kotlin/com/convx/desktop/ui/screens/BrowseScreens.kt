@@ -48,7 +48,8 @@ import com.convx.desktop.data.Library
 import com.convx.desktop.data.toSong
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.Artwork
-import com.convx.desktop.ui.components.CardGrid
+import com.convx.desktop.ui.components.cardGrid
+import com.convx.desktop.ui.components.rememberCardGrid
 import com.convx.desktop.ui.components.LocalCardWidth
 import com.convx.desktop.ui.components.Gutter
 import com.convx.desktop.ui.components.SectionHeader
@@ -126,6 +127,7 @@ fun BrowseScreen(browseId: String, params: String?, title: String?) {
             }
         }
     }
+    val grid = rememberCardGrid()
     PageList {
         item(key = "title") {
             Text(page.value?.title ?: title ?: "", style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
@@ -141,9 +143,7 @@ fun BrowseScreen(browseId: String, params: String?, title: String?) {
                     // A single list reads better as a grid than a lone sideways shelf.
                     val (t, items) = shelves.first()
                     if (t != null) item { Text(t, style = ConvxType.Title2, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp)) }
-                    item(key = "grid") {
-                        CardGrid { items.forEach { ItemCard(it) } }
-                    }
+                    cardGrid(grid, items, key = { it.id }) { ItemCard(it) }
                 } else {
                     shelves.forEachIndexed { index, (t, items) ->
                         item(key = "b-$index-$t") {
@@ -172,108 +172,129 @@ fun LibraryScreen() {
     val settings by com.convx.desktop.data.AppSettings.state.collectAsState()
     val downloaded by com.convx.desktop.player.Downloads.done.collectAsState()
     val tab = UiState.libraryTab
+    val grid = rememberCardGrid()
+    val cached = remember(library, downloaded) { cachedSongs(library, downloaded.values) }
+    // The page's cards in order; the list below builds only the rows on screen.
+    val cards = buildList<@Composable () -> Unit> {
+        if (tab == LibraryTab.All || tab == LibraryTab.Playlists) {
+            // The phone's auto playlists first, each as its Settings switch says.
+            if (settings.showLikedPlaylist) {
+                val liked = library.liked.map { it.song }
+                add {
+                    SavedCard(
+                        "Liked Songs",
+                        pluralize(liked.size, "song"),
+                        art = { size -> com.convx.desktop.ui.components.LikedSongsArt(size, RoundedCornerShape(8.dp)) },
+                        onClick = { navigator.navigate(Screen.Liked) },
+                        onPlay = if (liked.isEmpty()) null else ({ PlayerController.playSongs(liked, 0, "Liked Songs") }),
+                    )
+                }
+            }
+            if (settings.showDownloadedPlaylist && downloaded.isNotEmpty()) {
+                val songs = downloaded.values.sortedByDescending { it.at }.map { it.song }
+                add {
+                    SavedCard(
+                        "Downloaded",
+                        pluralize(songs.size, "song"),
+                        art = { size -> GradientTile("download", size, com.convx.desktop.ui.shell.DownloadsGradient, RoundedCornerShape(8.dp)) },
+                        onClick = { navigator.navigate(Screen.Downloads) },
+                        onPlay = { PlayerController.playSongs(songs, 0, "Downloaded") },
+                    )
+                }
+            }
+            if (settings.showTopPlaylist && library.history.isNotEmpty()) {
+                val title = "My top ${settings.topSize}"
+                add {
+                    SavedCard(
+                        title,
+                        "Playlist",
+                        art = { size -> GradientTile("trending_up", size, TopGradient, RoundedCornerShape(8.dp)) },
+                        onClick = { navigator.navigate(Screen.MyTop) },
+                        onPlay = { PlayerController.playSongs(myTopSongs(TopFilter.AllTime, settings).map { it.value }, 0, title) },
+                    )
+                }
+            }
+            if (settings.showCachedPlaylist) {
+                    if (cached.isNotEmpty()) {
+                    add {
+                        SavedCard(
+                            "Cached",
+                            pluralize(cached.size, "song"),
+                            art = { size -> GradientTile("cached", size, CachedGradient, RoundedCornerShape(8.dp)) },
+                            onClick = { navigator.navigate(Screen.Cached) },
+                            onPlay = { PlayerController.playSongs(cached, 0, "Cached") },
+                        )
+                    }
+                }
+            }
+            if (settings.showUploadedPlaylist && library.uploaded.isNotEmpty()) {
+                add {
+                    SavedCard(
+                        "Uploaded",
+                        pluralize(library.uploaded.size, "song"),
+                        art = { size -> GradientTile("cloud", size, UploadedGradient, RoundedCornerShape(8.dp)) },
+                        onClick = { navigator.navigate(Screen.Uploaded) },
+                        onPlay = { PlayerController.playSongs(library.uploaded, 0, "Uploaded") },
+                    )
+                }
+            }
+            // The phone's AI DJ Mix sits with the auto playlists, though it opens a builder, not songs.
+            add {
+                SavedCard(
+                    "AI DJ Mix",
+                    "Build a set from a vibe or a song",
+                    art = { size -> GradientTile("sparks", size, AiDjGradient, RoundedCornerShape(8.dp)) },
+                    onClick = { navigator.navigate(Screen.AiDj()) },
+                )
+            }
+            library.localPlaylists.forEach { p ->
+                add {
+                    SavedCard(
+                        p.name,
+                        "Playlist • ${pluralize(p.songs.size, "song")}",
+                        art = { size -> com.convx.desktop.ui.components.PlaylistCoverArt(p, size, RoundedCornerShape(8.dp)) },
+                        onClick = { navigator.navigate(Screen.LocalPlaylist(p.id)) },
+                        onPlay = if (p.songs.isEmpty()) null else ({ PlayerController.playSongs(p.songs, 0, p.name) }),
+                    )
+                }
+            }
+            library.playlists.forEach { p ->
+                add {
+                    SavedCard(
+                        p.title,
+                        listOfNotNull("Playlist", p.author).joinToString(" • "),
+                        thumbnail = p.thumbnail,
+                        onClick = { navigator.navigate(Screen.Playlist(p.id)) },
+                    )
+                }
+            }
+        }
+        if (tab == LibraryTab.All || tab == LibraryTab.Albums) {
+            library.albums.forEach { a ->
+                add {
+                    SavedCard(
+                        a.title,
+                        a.artists.joinToString(", ") { it.name }.ifBlank { "Album" },
+                        thumbnail = a.thumbnail,
+                        onClick = { navigator.navigate(Screen.Album(a.browseId)) },
+                    )
+                }
+            }
+        }
+        if (tab == LibraryTab.All || tab == LibraryTab.Artists) {
+            library.artists.forEach { a ->
+                add { SavedCard(a.name, "Artist", thumbnail = a.thumbnail, round = true, onClick = { navigator.navigate(Screen.Artist(a.id)) }) }
+            }
+        }
+    }.mapIndexed { index, card -> index to card }
     PageList {
         // The filters live in Library's strip under the top bar.
         item(key = "title") {
             Text(tab.title, style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
         }
-        item(key = "grid") {
-            CardGrid(Modifier.padding(vertical = 8.dp)) {
-                if (tab == LibraryTab.All || tab == LibraryTab.Playlists) {
-                    // The phone's auto playlists first, each as its Settings switch says.
-                    if (settings.showLikedPlaylist) {
-                        val liked = library.liked.map { it.song }
-                        SavedCard(
-                            "Liked Songs",
-                            pluralize(liked.size, "song"),
-                            art = { size -> com.convx.desktop.ui.components.LikedSongsArt(size, RoundedCornerShape(8.dp)) },
-                            onClick = { navigator.navigate(Screen.Liked) },
-                            onPlay = if (liked.isEmpty()) null else ({ PlayerController.playSongs(liked, 0, "Liked Songs") }),
-                        )
-                    }
-                    if (settings.showDownloadedPlaylist && downloaded.isNotEmpty()) {
-                        val songs = downloaded.values.sortedByDescending { it.at }.map { it.song }
-                        SavedCard(
-                            "Downloaded",
-                            pluralize(songs.size, "song"),
-                            art = { size -> GradientTile("download", size, com.convx.desktop.ui.shell.DownloadsGradient, RoundedCornerShape(8.dp)) },
-                            onClick = { navigator.navigate(Screen.Downloads) },
-                            onPlay = { PlayerController.playSongs(songs, 0, "Downloaded") },
-                        )
-                    }
-                    if (settings.showTopPlaylist && library.history.isNotEmpty()) {
-                        val title = "My top ${settings.topSize}"
-                        SavedCard(
-                            title,
-                            "Playlist",
-                            art = { size -> GradientTile("trending_up", size, TopGradient, RoundedCornerShape(8.dp)) },
-                            onClick = { navigator.navigate(Screen.MyTop) },
-                            onPlay = { PlayerController.playSongs(myTopSongs(TopFilter.AllTime, settings).map { it.value }, 0, title) },
-                        )
-                    }
-                    if (settings.showCachedPlaylist) {
-                        val cached = remember(library, downloaded) { cachedSongs(library, downloaded.values) }
-                        if (cached.isNotEmpty()) {
-                            SavedCard(
-                                "Cached",
-                                pluralize(cached.size, "song"),
-                                art = { size -> GradientTile("cached", size, CachedGradient, RoundedCornerShape(8.dp)) },
-                                onClick = { navigator.navigate(Screen.Cached) },
-                                onPlay = { PlayerController.playSongs(cached, 0, "Cached") },
-                            )
-                        }
-                    }
-                    if (settings.showUploadedPlaylist && library.uploaded.isNotEmpty()) {
-                        SavedCard(
-                            "Uploaded",
-                            pluralize(library.uploaded.size, "song"),
-                            art = { size -> GradientTile("cloud", size, UploadedGradient, RoundedCornerShape(8.dp)) },
-                            onClick = { navigator.navigate(Screen.Uploaded) },
-                            onPlay = { PlayerController.playSongs(library.uploaded, 0, "Uploaded") },
-                        )
-                    }
-                    // The phone's AI DJ Mix sits with the auto playlists, though it opens a builder, not songs.
-                    SavedCard(
-                        "AI DJ Mix",
-                        "Build a set from a vibe or a song",
-                        art = { size -> GradientTile("sparks", size, AiDjGradient, RoundedCornerShape(8.dp)) },
-                        onClick = { navigator.navigate(Screen.AiDj()) },
-                    )
-                    library.localPlaylists.forEach { p ->
-                        SavedCard(
-                            p.name,
-                            "Playlist • ${pluralize(p.songs.size, "song")}",
-                            art = { size -> com.convx.desktop.ui.components.PlaylistCoverArt(p, size, RoundedCornerShape(8.dp)) },
-                            onClick = { navigator.navigate(Screen.LocalPlaylist(p.id)) },
-                            onPlay = if (p.songs.isEmpty()) null else ({ PlayerController.playSongs(p.songs, 0, p.name) }),
-                        )
-                    }
-                    library.playlists.forEach { p ->
-                        SavedCard(
-                            p.title,
-                            listOfNotNull("Playlist", p.author).joinToString(" • "),
-                            thumbnail = p.thumbnail,
-                            onClick = { navigator.navigate(Screen.Playlist(p.id)) },
-                        )
-                    }
-                }
-                if (tab == LibraryTab.All || tab == LibraryTab.Albums) {
-                    library.albums.forEach { a ->
-                        SavedCard(
-                            a.title,
-                            a.artists.joinToString(", ") { it.name }.ifBlank { "Album" },
-                            thumbnail = a.thumbnail,
-                            onClick = { navigator.navigate(Screen.Album(a.browseId)) },
-                        )
-                    }
-                }
-                if (tab == LibraryTab.All || tab == LibraryTab.Artists) {
-                    library.artists.forEach { a ->
-                        SavedCard(a.name, "Artist", thumbnail = a.thumbnail, round = true, onClick = { navigator.navigate(Screen.Artist(a.id)) })
-                    }
-                }
-            }
-        }
+        item(key = "above-cards") { Spacer(Modifier.height(8.dp)) }
+        cardGrid(grid, cards, key = { it.first }) { it.second() }
+        item(key = "below-cards") { Spacer(Modifier.height(8.dp)) }
         val empty = when (tab) {
             LibraryTab.All -> false
             LibraryTab.Playlists -> false

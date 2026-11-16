@@ -12,8 +12,10 @@
 package com.kyant.backdrop.shadow
 
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.ClipOp
+import androidx.compose.ui.graphics.Outline
 import androidx.compose.ui.graphics.Paint
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawOutline
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -81,6 +83,10 @@ internal class ShadowNode(
 
     private val paint = Paint()
 
+    private var recordedShadow: Shadow? = null
+    private var recordedSize = IntSize.Zero
+    private var recordedOutline: Outline? = null
+
     override fun ContentDrawScope.draw() {
         val shadow = shadow() ?: return drawContent()
 
@@ -99,18 +105,27 @@ internal class ShadowNode(
             )
             val outline = shapeProvider.shape.createOutline(size, layoutDirection, density)
 
-            configurePaint(shadow)
-
             shadowLayer.alpha = shadow.alpha
             shadowLayer.blendMode = shadow.blendMode
-            shadowLayer.record(shadowSize) {
-                translate(radius * 2f + offsetX, radius * 2f + offsetY) {
-                    val canvas = drawContext.canvas
-                    canvas.drawOutline(outline, paint)
-                    canvas.translate(-offsetX, -offsetY)
-                    canvas.drawOutline(outline, ShadowMaskPaint)
-                    canvas.translate(offsetX, offsetY)
+            // Recorded again only when something the shadow depends on changed.
+            if (shadow != recordedShadow || shadowSize != recordedSize || outline != recordedOutline) {
+                configurePaint(shadow)
+                shadowLayer.record(shadowSize) {
+                    translate(radius * 2f + offsetX, radius * 2f + offsetY) {
+                        val canvas = drawContext.canvas
+                        // The shape is cut out with a difference clip, which leaves the blurred
+                        // shape everywhere but under the surface without a buffer of its own.
+                        canvas.save()
+                        canvas.translate(-offsetX, -offsetY)
+                        canvas.clipOutlineOut(outline)
+                        canvas.translate(offsetX, offsetY)
+                        canvas.drawOutline(outline, paint)
+                        canvas.restore()
+                    }
                 }
+                recordedShadow = shadow
+                recordedSize = shadowSize
+                recordedOutline = outline
             }
 
             translate(-radius * 2f, -radius * 2f) {
@@ -125,7 +140,8 @@ internal class ShadowNode(
         val graphicsContext = requireGraphicsContext()
         shadowLayer =
             graphicsContext.createGraphicsLayer().apply {
-                compositingStrategy = CompositingStrategy.Offscreen
+                // One draw, no overlap: alpha folds into it with no buffer.
+                compositingStrategy = CompositingStrategy.ModulateAlpha
             }
     }
 
@@ -135,6 +151,9 @@ internal class ShadowNode(
             graphicsContext.releaseGraphicsLayer(layer)
             shadowLayer = null
         }
+        recordedShadow = null
+        recordedSize = IntSize.Zero
+        recordedOutline = null
     }
 
     private fun DrawScope.configurePaint(shadow: Shadow) {
@@ -143,6 +162,10 @@ internal class ShadowNode(
     }
 }
 
-private val ShadowMaskPaint = Paint().apply {
-    blendMode = BlendMode.Clear
+private fun androidx.compose.ui.graphics.Canvas.clipOutlineOut(outline: Outline) {
+    when (outline) {
+        is Outline.Rectangle -> clipRect(outline.rect, ClipOp.Difference)
+        is Outline.Rounded -> clipPath(Path().apply { addRoundRect(outline.roundRect) }, ClipOp.Difference)
+        is Outline.Generic -> clipPath(outline.path, ClipOp.Difference)
+    }
 }

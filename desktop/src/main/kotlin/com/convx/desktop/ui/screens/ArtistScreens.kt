@@ -61,7 +61,8 @@ import com.convx.desktop.data.toSong
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.Artwork
-import com.convx.desktop.ui.components.CardGrid
+import com.convx.desktop.ui.components.cardGrid
+import com.convx.desktop.ui.components.rememberCardGrid
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Gutter
 import com.convx.desktop.ui.components.ItemActions
@@ -447,6 +448,7 @@ fun ArtistItemsScreen(browseId: String, params: String?, title: String) {
     val scope = rememberCoroutineScope()
     var loadingMore by remember { mutableStateOf(false) }
     val page = rememberPage("artist-items:$browseId:$params") { YouTube.artistItems(BrowseEndpoint(browseId, params)).getOrThrow() }
+    val grid = rememberCardGrid()
     PageList(
         onNearEnd = {
             val continuation = page.value?.continuation ?: return@PageList
@@ -471,9 +473,7 @@ fun ArtistItemsScreen(browseId: String, params: String?, title: String) {
                     val mapped = songs.map { it.toSong() }
                     songTable(mapped, title, "ai")
                 } else {
-                    item(key = "grid") {
-                        CardGrid { items.forEach { ItemCard(it) } }
-                    }
+                    cardGrid(grid, items, key = { it.id }) { ItemCard(it) }
                 }
                 if (loadingMore) item { LoadingState() }
             }

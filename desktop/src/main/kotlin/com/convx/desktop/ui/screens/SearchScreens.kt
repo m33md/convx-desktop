@@ -51,7 +51,8 @@ import com.convx.desktop.data.Library
 import com.convx.desktop.data.toSong
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.Artwork
-import com.convx.desktop.ui.components.CardGrid
+import com.convx.desktop.ui.components.cardGrid
+import com.convx.desktop.ui.components.rememberCardGrid
 import com.convx.desktop.ui.components.Chip
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Gutter
@@ -272,6 +273,7 @@ fun SearchResultsScreen(query: String) {
     } else null
     var loadingMore by remember(filter) { mutableStateOf(false) }
 
+    val grid = rememberCardGrid()
     PageList(
         onNearEnd = {
             val page = filtered?.value ?: return@PageList
@@ -366,9 +368,7 @@ fun SearchResultsScreen(query: String) {
                             }
                         }
                     } else {
-                        item(key = "grid") {
-                            CardGrid { items.forEach { ItemCard(it) } }
-                        }
+                        cardGrid(grid, items, key = { it.id }) { ItemCard(it) }
                     }
                     if (loadingMore) item { LoadingState() }
                 }

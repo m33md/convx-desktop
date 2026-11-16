@@ -319,6 +319,17 @@ object Library {
 object AppSettings {
     private val store = JsonFile(File(AppDirs.data, "settings.json"), Settings.serializer()) { Settings() }
 
+    /** The glass' defaults as they stand: chromatic aberration is on. */
+    private const val GlassDefaults = 1
+
+    init {
+        // Saved settings spell every value out, so a default that changed reaches them here, once;
+        // what the user then picks in Settings stays.
+        if (store.value.glassDefaults < GlassDefaults) {
+            store.update { it.copy(glassDefaults = GlassDefaults, glass = it.glass.copy(chromaticAberration = true)) }
+        }
+    }
+
     val state: StateFlow<Settings> = store.state
     val value: Settings get() = store.value
 

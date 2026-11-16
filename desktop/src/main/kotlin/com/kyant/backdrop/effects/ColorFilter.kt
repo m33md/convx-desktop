@@ -21,6 +21,14 @@ import com.kyant.backdrop.isRenderEffectSupported
 fun BackdropEffectScope.colorFilter(colorFilter: ColorFilter) {
     if (!isRenderEffectSupported()) return
 
+    // First in the chain (the usual case: vibrancy before blur and lens), it rides on the
+    // layer's composite instead of costing a render pass of its own. Anything after an effect
+    // still chains, so ordering against a non-linear effect is kept.
+    if (renderEffect == null && compositeColorFilter == null) {
+        compositeColorFilter = colorFilter
+        return
+    }
+
     renderEffect = ColorFilterEffect(renderEffect, colorFilter)
 }
 

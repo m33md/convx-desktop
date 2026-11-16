@@ -131,6 +131,9 @@ compose.desktop {
             "-XX:MinHeapFreeRatio=10",
             "-XX:MaxHeapFreeRatio=30",
             "-XX:+UseStringDeduplication",
+            // Memory.kt asks for a collection when the heap holds far more than it uses; this makes
+            // that one run beside the app rather than stopping it.
+            "-XX:+ExplicitGCInvokesConcurrent",
         )
         // The installer bundles this Java. CI points it at the JetBrains Runtime, whose custom
         // title bar the app uses; without it the app keeps the Windows title bar.

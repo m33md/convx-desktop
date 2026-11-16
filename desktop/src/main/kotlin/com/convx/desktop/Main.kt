@@ -201,6 +201,7 @@ fun main() {
                     WindowTitleBar.updateInsets()
                 }
                 com.convx.desktop.core.Perf.watch(window)
+                com.convx.desktop.core.Memory.start()
                 // Media keys, the Windows media box and the taskbar preview's buttons, once the frame is settled.
                 withContext(Dispatchers.IO) { com.convx.desktop.integrations.MediaControls.install(window) }
             }

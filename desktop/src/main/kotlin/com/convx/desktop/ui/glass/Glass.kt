@@ -106,7 +106,7 @@ data class GlassConfig(
     val lensHeight: Float = 0.60f,
     /** 0..1 of [LensMaxDp]. */
     val lensAmount: Float = 0.69f,
-    val chromaticAberration: Boolean = false,
+    val chromaticAberration: Boolean = true,
     val depthEffect: Boolean = false,
     val surfaceTint: Color = GlassTokens.SurfaceTint,
     val surfaceOpacity: Float = GlassTokens.SurfaceOpacity,
@@ -163,6 +163,23 @@ private val DarkRimWidth = 1.6.dp
 private const val DarkRimAlpha = 0.32f
 
 private const val GlassFadeMillis = 280
+
+/**
+ * The share of its pixels a glass surface captures what's under it at, as the phone's
+ * glassResolutionScale: clear glass is captured whole, and from a 2.5dp blur on the capture is
+ * as small as the blur can hide, which makes the blur and the lens that much cheaper. The phone
+ * goes down to 30% of its pixels, 0.825 of a pixel per dp on its screen; a PC's pixels are
+ * bigger, so the same detail per dp is a larger share of them here.
+ */
+fun glassResolutionScale(blurRadiusDp: Float, density: Float): Float {
+    val t = (blurRadiusDp / FullQualityBlurDp).coerceIn(0f, 1f)
+    val smallest = (MinCapturePixelsPerDp / density).coerceIn(MinGlassResolutionScale, 1f)
+    return 1f - t * (1f - smallest)
+}
+
+private const val FullQualityBlurDp = 2.5f
+private const val MinGlassResolutionScale = 0.30f
+private const val MinCapturePixelsPerDp = 0.825f
 
 /** Maps the 0..2 vibrancy setting to a saturation multiplier. */
 fun glassSaturation(vibrancy: Float): Float = 1f + 0.5f * vibrancy.coerceIn(0f, 2f)
@@ -308,10 +325,12 @@ fun Modifier.liquidGlass(
     }
 
     val density = LocalDensity.current
-    val blurPx = with(density) { config.blurRadius.dp.toPx() }
+    // The effects work on the capture's own pixels, so their sizes shrink with it.
+    val resolution = glassResolutionScale(config.blurRadius, density.density)
+    val blurPx = with(density) { config.blurRadius.dp.toPx() } * resolution
     val saturation = glassSaturation(config.vibrancy)
-    val lensHeightPx = with(density) { (config.lensHeight * LensMaxDp).dp.toPx() }
-    val lensAmountPx = with(density) { (config.lensAmount * LensMaxDp).dp.toPx() }
+    val lensHeightPx = with(density) { (config.lensHeight * LensMaxDp).dp.toPx() } * resolution
+    val lensAmountPx = with(density) { (config.lensAmount * LensMaxDp).dp.toPx() } * resolution
 
     val flatness = rememberFlatness()
     val flat = remember { derivedStateOf { flatness.value >= 1f } }
@@ -379,6 +398,7 @@ fun Modifier.liquidGlass(
             shadow = shadow,
             onDrawBackdrop = onDrawBackdrop,
             onDrawSurface = surface,
+            backdropScale = resolution,
         )
         .then(
             if (applyEdgeEffects && darkRimAlpha > 0f) {
@@ -403,9 +423,10 @@ fun Modifier.glassPuck(
 ): Modifier {
     if (backdrop == null) return this.drawWithCache { onDrawWithContent { drawOutline(shape.createOutline(size, layoutDirection, this), wash); drawContent() } }
     val density = LocalDensity.current
-    val blurPx = with(density) { blurRadius.toPx() }
-    val heightPx = with(density) { 32.dp.toPx() }
-    val amountPx = with(density) { 28.dp.toPx() }
+    val resolution = glassResolutionScale(blurRadius.value, density.density)
+    val blurPx = with(density) { blurRadius.toPx() } * resolution
+    val heightPx = with(density) { 32.dp.toPx() } * resolution
+    val amountPx = with(density) { 28.dp.toPx() } * resolution
     val flatness = rememberFlatness()
     val flat = remember { derivedStateOf { flatness.value >= 1f } }
     val effects: BackdropEffectScope.() -> Unit = remember(blurPx, heightPx, amountPx) {
@@ -424,6 +445,7 @@ fun Modifier.glassPuck(
         shadow = { Shadow(alpha = shadowAlpha) },
         onDrawBackdrop = { draw -> if (flatness.value < 1f) draw() },
         onDrawSurface = { drawRect(wash) },
+        backdropScale = resolution,
     )
 }
 

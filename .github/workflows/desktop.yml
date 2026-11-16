@@ -131,11 +131,12 @@ jobs:
           fi
           CONVX_JBR= ./gradlew --no-daemon packageMsi packageExe createDistributable
 
-      # What Convx costs while it sits paused (CPU, memory, frames drawn, a CPU profile), for this
-      # build and for the release people have now, side by side in the screenshots' idle folder.
+      # What Convx costs while it sits paused and while its page is scrolled (CPU, memory, frames
+      # drawn, a CPU profile), for this build and for the release people have now, side by side in
+      # the screenshots' idle folder.
       - name: Idle check
         continue-on-error: true
-        timeout-minutes: 12
+        timeout-minutes: 18
         shell: powershell
         env:
           GH_TOKEN: ${{ github.token }}
