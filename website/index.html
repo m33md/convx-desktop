@@ -12,6 +12,7 @@
 <meta property="og:description" content="A free, open-source music app with liquid glass, word-synced lyrics and AutoMix. For Android and Windows.">
 <meta property="og:image" content="https://m33md.github.io/convx-desktop/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Convx","applicationCategory":"MultimediaApplication","operatingSystem":"Android 8.0+, Windows 10+","description":"A free, open-source music app with liquid glass, word-synced lyrics and AutoMix.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://www.gnu.org/licenses/gpl-3.0.html","author":{"@type":"Person","name":"Aryan (Cosmic Taser)"},"downloadUrl":"https://github.com/m33md/convx-desktop/releases/latest"}</script>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
@@ -164,10 +165,16 @@ p { margin: 0; }
   .stage { margin-right: calc(-1 * max(min(3vw, 40px), (100vw - 1168px) / 2 - 24px)); padding-right: 3%; padding-left: 8%; }
   .stage-cap { right: 3%; }
 }
+@media (max-width: 999px) {
+  .stage { margin-inline: calc(-1 * max(16px, env(safe-area-inset-left, 0px))); padding: 2% 3% 0 12%; }
+  .stage-cap { position: relative; right: auto; bottom: auto; justify-content: flex-end; margin: 13% 16px 0 0; }
+}
 @media (min-width: 1200px) {
   .hero-grid { grid-template-columns: minmax(0, 4.1fr) minmax(0, 7.9fr); gap: 28px; }
 }
 .hero-copy { min-width: 0; }
+.ww { display: inline-block; overflow: hidden; vertical-align: top; padding-bottom: 0.14em; margin-bottom: -0.14em; }
+.ww > span { display: inline-block; will-change: transform; }
 .hero h1 { margin: 0 0 30px; line-height: 0; }
 .title svg { display: block; width: min(100%, 540px); height: auto; overflow: visible; }
 .title .t-body { fill: var(--label); }
@@ -1527,12 +1534,45 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       const show = batch => gs.to(batch, { opacity: 1, x: 0, y: 0, scale: 1, rotationX: 0, duration: 1.1, ease: 'expo.out', stagger, overwrite: true, clearProps: 'transform,opacity' });
       ScrollTrigger.batch(els, { start: 'top 90%', once: true, onEnter: show, onEnterBack: show, onLeave: show });
     };
-    rise('.section-head, #lyrics .split > div:first-child, .plat, .studio-grid > div, .oss, .community, .foot', { y: 56, scale: 0.97 }, 0.12);
+    rise('.section-head > :not(h2), #lyrics .split > div:first-child > :not(h2), .plat, .studio-grid > div:first-child > :not(h2), .studio-shot, .oss, .community, .foot', { y: 56, scale: 0.97 }, 0.12);
     rise('.tile, .dl', { y: 64, scale: 0.96 }, 0.09);
     rise('.tour-stage', { y: 40 }, 0);
     rise('.lyrics-demo, .studio-shot .screen', { y: 50, scale: 0.94, rotationX: 18, transformPerspective: 1400 }, 0);
-    gs.to('.stage', { y: -70, scale: 0.94, opacity: 0.25, ease: 'none', scrollTrigger: { start: 0, end: () => innerHeight * 0.9, scrub: 0.4 } });
-    gs.to('.hero-copy', { y: -40, opacity: 0.2, ease: 'none', scrollTrigger: { start: 0, end: () => innerHeight * 0.8, scrub: 0.4 } });
+    gs.to('.stage', { y: -70, scale: 0.94, opacity: 0.25, ease: 'none', scrollTrigger: { trigger: '.stage', start: 'center 45%', end: 'bottom top', scrub: 0.4 } });
+    gs.to('.hero-copy', { y: -40, opacity: 0.2, ease: 'none', scrollTrigger: { trigger: '.hero-copy', start: 'center 40%', end: 'bottom top', scrub: 0.4 } });
+
+    /* Headlines: each word rises out of its own line as the heading arrives. */
+    gs.utils.toArray('main h2').forEach(h => {
+      const walk = node => [...node.childNodes].forEach(n => {
+        if (n.nodeType === 3) {
+          const frag = document.createDocumentFragment();
+          n.textContent.split(/(\s+)/).forEach(part => {
+            if (!part) return;
+            if (/^\s+$/.test(part)) { frag.append(part); return; }
+            const outer = document.createElement('span'), inner = document.createElement('span');
+            outer.className = 'ww'; inner.textContent = part; outer.append(inner); frag.append(outer);
+          });
+          n.replaceWith(frag);
+        } else if (n.nodeType === 1 && n.tagName !== 'BR') walk(n);
+      });
+      h.setAttribute('aria-label', h.textContent.replace(/\s+/g, ' ').trim());
+      walk(h);
+      const words = h.querySelectorAll('.ww > span');
+      words.forEach(w => w.setAttribute('aria-hidden', 'true'));
+      gs.set(words, { yPercent: 115 });
+      ScrollTrigger.create({ trigger: h, start: 'top 88%', once: true,
+        onEnter: () => gs.to(words, { yPercent: 0, duration: 1.05, ease: 'expo.out', stagger: 0.055, delay: 0.08, clearProps: 'transform' }) });
+    });
+
+    /* Numbers count up the first time you see them. */
+    gs.utils.toArray('.fact b').forEach(b => {
+      const end = parseInt(b.textContent.replace(/[^0-9]/g, ''), 10);
+      if (!end || !/^[\d,]+$/.test(b.textContent.trim())) return;
+      const fmt = n => Math.round(n).toLocaleString('en-US'), o = { n: 0 };
+      b.style.minWidth = b.offsetWidth + 'px'; b.textContent = '0';
+      ScrollTrigger.create({ trigger: b, start: 'top 90%', once: true,
+        onEnter: () => gs.to(o, { n: end, duration: 1.6, ease: 'power3.out', onUpdate: () => { b.textContent = fmt(o.n); } }) });
+    });
   }
   if (gs && document.fonts) document.fonts.ready.then(() => { ScrollTrigger.refresh(); toTop(); });
 
