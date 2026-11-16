@@ -335,7 +335,7 @@ internal fun SavedCard(
             .pressable(onClick, interaction = interaction, pressScale = 0.98f),
     ) {
         Column(Modifier.padding(10.dp)) {
-            Box(Modifier.fillMaxWidth().aspectRatio(1f).shadow(6.dp, shape)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
                 if (art != null) {
                     Box(Modifier.fillMaxSize().clip(shape), contentAlignment = Alignment.Center) { art(width - 20.dp) }
                 } else {

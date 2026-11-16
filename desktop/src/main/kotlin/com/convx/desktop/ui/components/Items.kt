@@ -428,7 +428,7 @@ fun ItemCard(
             Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
                 Artwork(
                     item.thumbnail,
-                    Modifier.fillMaxSize().shadow(6.dp, shape),
+                    Modifier.fillMaxSize(),
                     size = 400,
                     shape = shape,
                     placeholderIcon = if (isArtist) "person" else "music_note",
