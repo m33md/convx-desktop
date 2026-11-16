@@ -48,6 +48,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -86,14 +88,35 @@ fun Modifier.pressable(
         .scale(scale)
 }
 
-/** Right-click (or the context-menu key path) reports where it happened. */
+/** Right-click, or a finger held still as on the phone, reports where it happened. */
 fun Modifier.onSecondaryClick(onClick: (Offset) -> Unit): Modifier = pointerInput(onClick) {
     awaitPointerEventScope {
         while (true) {
             val event = awaitPointerEvent()
-            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                event.changes.firstOrNull()?.let { onClick(it.position) }
+            if (event.type != PointerEventType.Press) continue
+            val down = event.changes.firstOrNull() ?: continue
+            if (event.buttons.isSecondaryPressed) {
+                onClick(down.position)
+                continue
             }
+            if (down.type != PointerType.Touch) continue
+            // Lifted, moved or taken by a scroll before the long-press time, it was a tap or a drag.
+            val heldStill = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                var still = true
+                while (still) {
+                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+                    still = change != null && change.pressed && !change.isConsumed &&
+                        (change.position - down.position).getDistance() <= viewConfiguration.touchSlop
+                }
+                false
+            } ?: true
+            if (!heldStill) continue
+            onClick(down.position)
+            // The lift that follows belongs to the menu, not to a tap on what's under it.
+            do {
+                val next = awaitPointerEvent(PointerEventPass.Initial)
+                next.changes.forEach { it.consume() }
+            } while (next.changes.any { it.pressed })
         }
     }
 }

@@ -207,25 +207,28 @@ enum class LyricsStyle(val label: String) {
 enum class LyricsPosition(val label: String) { Left("Left"), Center("Center"), Right("Right") }
 
 /**
- * The phone's Liquid Glass dials (GlassEffectSettings), with its defaults. Colours stay fixed:
- * Convx is red on black, so only how the glass bends, blurs and catches light can change.
+ * The phone's Liquid Glass dials (GlassEffectSettings). Their defaults bend more than the phone's,
+ * with the depth effect on and less blur, as the pages under the glass here are mostly black and
+ * plain frost over them reads as a dark panel. Colours stay fixed: Convx is red on black, so only
+ * how the glass bends, blurs and catches light can change.
  */
 @Serializable
 data class GlassSettings(
     /** dp of blur under the glass. */
-    val blurRadius: Float = 3f,
+    val blurRadius: Float = 2.5f,
     /** 0..2; 1 leaves colours as they are, 2 is the phone's richer default. */
     val vibrancy: Float = 2f,
     /** 0..1 of the lens' 48 dp: how far in from the edge the glass bends light. */
-    val lensHeight: Float = 0.60f,
+    val lensHeight: Float = 0.70f,
     /** 0..1 of 48 dp: how strongly it bends it. */
-    val lensAmount: Float = 0.69f,
+    val lensAmount: Float = 0.85f,
     val chromaticAberration: Boolean = true,
-    val depthEffect: Boolean = false,
+    /** The whole surface bends as a lens, not just its rim. */
+    val depthEffect: Boolean = true,
     /** How much of the dark tint the glass carries. */
-    val surfaceOpacity: Float = 0.50f,
+    val surfaceOpacity: Float = 0.40f,
     /** The light rim along the glass' edge. */
-    val highlightOpacity: Float = 0.33f,
+    val highlightOpacity: Float = 0.55f,
 )
 
 /**

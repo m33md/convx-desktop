@@ -170,7 +170,7 @@ fun LiquidGlassSettings() {
 
     SectionGap()
     SettingsSection {
-        ButtonRow("Reset to the phone's defaults", color = SystemColors.Red, enabled = glass != GlassSettings()) {
+        ButtonRow("Reset to the defaults", color = SystemColors.Red, enabled = glass != GlassSettings()) {
             update { GlassSettings() }
         }
     }

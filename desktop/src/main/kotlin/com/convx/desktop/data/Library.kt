@@ -319,14 +319,23 @@ object Library {
 object AppSettings {
     private val store = JsonFile(File(AppDirs.data, "settings.json"), Settings.serializer()) { Settings() }
 
-    /** The glass' defaults as they stand: chromatic aberration is on. */
-    private const val GlassDefaults = 1
+    /** The glass' defaults as they stand: chromatic aberration on (1), then the deeper lens (2). */
+    private const val GlassDefaults = 2
+
+    /** The phone's glass dials, which settings nobody changed still hold. */
+    private val PhoneGlass = GlassSettings(
+        blurRadius = 3f, lensHeight = 0.60f, lensAmount = 0.69f, depthEffect = false, surfaceOpacity = 0.50f, highlightOpacity = 0.33f,
+    )
 
     init {
         // Saved settings spell every value out, so a default that changed reaches them here, once;
-        // what the user then picks in Settings stays.
-        if (store.value.glassDefaults < GlassDefaults) {
-            store.update { it.copy(glassDefaults = GlassDefaults, glass = it.glass.copy(chromaticAberration = true)) }
+        // glass someone tuned in Settings stays as they left it.
+        val saved = store.value
+        if (saved.glassDefaults < GlassDefaults) {
+            var glass = saved.glass
+            if (saved.glassDefaults < 1) glass = glass.copy(chromaticAberration = true)
+            if (glass.copy(chromaticAberration = true) == PhoneGlass) glass = GlassSettings(chromaticAberration = glass.chromaticAberration)
+            store.update { it.copy(glassDefaults = GlassDefaults, glass = glass) }
         }
     }
 

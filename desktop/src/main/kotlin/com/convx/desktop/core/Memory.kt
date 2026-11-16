@@ -62,8 +62,8 @@ object Memory {
 
     @Volatile private var lastInputNanos = System.nanoTime()
 
-    /** Someone scrolled, moved, clicked or typed: Convx is in use, so nothing is trimmed under them. */
-    private fun onInput() {
+    /** Someone scrolled, moved, clicked, typed or touched: Convx is in use, so nothing is trimmed under them. */
+    fun noteInput() {
         lastInputNanos = System.nanoTime()
     }
 
@@ -77,7 +77,7 @@ object Memory {
     fun start() {
         runCatching {
             val events = AWTEvent.MOUSE_EVENT_MASK or AWTEvent.MOUSE_MOTION_EVENT_MASK or AWTEvent.MOUSE_WHEEL_EVENT_MASK or AWTEvent.KEY_EVENT_MASK
-            Toolkit.getDefaultToolkit().addAWTEventListener({ onInput() }, events)
+            Toolkit.getDefaultToolkit().addAWTEventListener({ noteInput() }, events)
         }
         AppScope.launch(Dispatchers.IO) {
             for (ask in collections) {
