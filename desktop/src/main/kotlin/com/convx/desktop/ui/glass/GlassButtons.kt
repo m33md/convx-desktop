@@ -71,7 +71,6 @@ fun GlassCircleButton(
             .chromeShadow(GlassCircleShape)
             .clip(GlassCircleShape)
             .liquidGlass(GlassCircleShape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
-            .then(glow.modifier)
             .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
             .then(if (enabled) glow.gestureModifier else Modifier),
@@ -115,7 +114,6 @@ fun Modifier.glassControl(
         .then(if (shadow) Modifier.chromeShadow(shape) else Modifier)
         .clip(shape)
         .then(surface)
-        .then(glow.modifier)
         .then(if (enabled) glow.gestureModifier else Modifier)
 }
 

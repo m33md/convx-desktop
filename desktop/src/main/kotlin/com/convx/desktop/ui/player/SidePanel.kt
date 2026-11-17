@@ -89,7 +89,6 @@ import androidx.compose.ui.unit.sp
 import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.ui.glass.GlassShapes
 import com.convx.desktop.ui.glass.liquidGlass
-import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.shell.FullPlayerMode
 import com.convx.desktop.ui.components.ScrollbarColumn
 import com.convx.desktop.ui.components.ListScrollbar
@@ -110,16 +109,12 @@ private val LyricsCardHeight = 330.dp
 fun RightPanel(panel: SidePanel, modifier: Modifier = Modifier) {
     val state by PlayerController.state.collectAsState()
     val shape = GlassShapes.Panel
-    // Measured against the whole panel, so a small radius keeps the glow near the pointer.
-    val glow = rememberInteractiveHighlight(radiusScale = 0.3f)
     Column(
         modifier
             .width(NowPlayingPanelWidth)
             .fillMaxHeight()
             .clip(shape)
-            .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
-            .then(glow.modifier)
-            .then(glow.gestureModifier),
+            .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f),
     ) {
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 6.dp),

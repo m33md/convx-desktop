@@ -208,14 +208,14 @@ enum class LyricsPosition(val label: String) { Left("Left"), Center("Center"), R
 
 /**
  * The phone's Liquid Glass dials (GlassEffectSettings). Their defaults bend more than the phone's,
- * with the depth effect on and less blur, as the pages under the glass here are mostly black and
- * plain frost over them reads as a dark panel. Colours stay fixed: Convx is red on black, so only
+ * with the depth effect on and only a touch of blur, as the pages under the glass here are mostly
+ * black and plain frost over them reads as a dark panel. Colours stay fixed: Convx is red on black, so only
  * how the glass bends, blurs and catches light can change.
  */
 @Serializable
 data class GlassSettings(
-    /** dp of blur under the glass. */
-    val blurRadius: Float = 2.5f,
+    /** dp of blur under the glass: 1 of the slider's 20, 5%. */
+    val blurRadius: Float = 1f,
     /** 0..2; 1 leaves colours as they are, 2 is the phone's richer default. */
     val vibrancy: Float = 2f,
     /** 0..1 of the lens' 48 dp: how far in from the edge the glass bends light. */

@@ -13,11 +13,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerEventType
@@ -33,26 +29,13 @@ import kotlin.math.sin
 import kotlin.math.tanh
 
 /**
- * The phone's InteractiveHighlight: an additive sheen with a soft spot of light under the
- * pointer while the glass is pressed. Hovering does nothing, as on the phone.
- *
- * [modifier] draws the light and [gestureModifier] listens; they are separate so the light can
- * sit on a recorded glass layer while the hit target is the moving element.
- *
- * It also tracks the press itself, [pressProgress] and the drag since the press, [offset], which
- * [elasticStretch] turns into the phone's stretch: the glass swells a little under the press and
- * leans and stretches toward a drag, then springs back when let go.
+ * A press on floating glass, tracked for [elasticStretch]: the press itself, [pressProgress], and
+ * the drag since the press, [offset]. The glass swells a little under the press, leans and
+ * stretches toward a drag, then springs back when let go. Nothing lights up under the pointer.
  */
-class InteractiveHighlight(
-    private val scope: CoroutineScope,
-    private val radiusScale: Float = 1.5f,
-    private val sheenAlpha: Float = 0.08f,
-    private val spotAlpha: Float = 0.15f,
-) {
+class InteractiveHighlight(private val scope: CoroutineScope) {
     private val progressSpec = spring(0.5f, 300f, 0.001f)
     private val positionSpec = spring(0.5f, 300f, Offset.VisibilityThreshold)
-    private val progress = Animatable(0f, 0.001f)
-    private val position = Animatable(Offset.Zero, Offset.VectorConverter, Offset.VisibilityThreshold)
     private val press = Animatable(0f, 0.001f)
     private val drag = Animatable(Offset.Zero, Offset.VectorConverter, Offset.VisibilityThreshold)
     private var start = Offset.Zero
@@ -63,29 +46,6 @@ class InteractiveHighlight(
 
     /** How far the pointer has moved since the press, springing back to zero after it. */
     val offset: Offset get() = drag.value
-
-    val modifier: Modifier = Modifier.drawWithContent {
-        val p = progress.value
-        if (p > 0f) {
-            // Plus lifts what is behind without replacing its detail.
-            drawRect(Color.White.copy(alpha = sheenAlpha * p), blendMode = BlendMode.Plus)
-            val radius = (size.minDimension * radiusScale).coerceAtLeast(1f)
-            val pos = position.value
-            val center = Offset(pos.x.coerceIn(0f, size.width), pos.y.coerceIn(0f, size.height))
-            val spot = Color.White.copy(alpha = spotAlpha * p)
-            drawRect(
-                brush = Brush.radialGradient(
-                    0f to spot,
-                    0.5f to spot,
-                    1f to Color.White.copy(alpha = 0f),
-                    center = center,
-                    radius = radius,
-                ),
-                blendMode = BlendMode.Plus,
-            )
-        }
-        drawContent()
-    }
 
     val gestureModifier: Modifier = Modifier.pointerInput(this) {
         awaitPointerEventScope {
@@ -98,30 +58,23 @@ class InteractiveHighlight(
                         if (pressed && !event.buttons.isPrimaryPressed) {
                             pressed = false
                             letGo()
-                            settle()
                         }
                     }
                     PointerEventType.Move -> {
                         if (pressed) {
                             val at = change.position
-                            scope.launch {
-                                position.snapTo(at)
-                                drag.snapTo(at - start)
-                            }
+                            scope.launch { drag.snapTo(at - start) }
                         }
                     }
                     PointerEventType.Press -> {
                         pressed = true
                         start = change.position
-                        scope.launch { position.snapTo(change.position) }
                         scope.launch { drag.snapTo(Offset.Zero) }
                         scope.launch { press.animateTo(1f, progressSpec) }
-                        settle()
                     }
                     PointerEventType.Release -> {
                         pressed = false
                         letGo()
-                        settle()
                     }
                     else -> Unit
                 }
@@ -133,16 +86,12 @@ class InteractiveHighlight(
         scope.launch { press.animateTo(0f, progressSpec) }
         scope.launch { drag.animateTo(Offset.Zero, positionSpec) }
     }
-
-    private fun settle() {
-        scope.launch { progress.animateTo(if (pressed) 1f else 0f, progressSpec) }
-    }
 }
 
 @Composable
-fun rememberInteractiveHighlight(radiusScale: Float = 1.5f): InteractiveHighlight {
+fun rememberInteractiveHighlight(): InteractiveHighlight {
     val scope = rememberCoroutineScope()
-    return remember(scope, radiusScale) { InteractiveHighlight(scope, radiusScale = radiusScale) }
+    return remember(scope) { InteractiveHighlight(scope) }
 }
 
 /**

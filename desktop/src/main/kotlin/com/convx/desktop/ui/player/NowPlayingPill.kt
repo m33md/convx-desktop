@@ -104,7 +104,6 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
             .shadow(10.dp, shape)
             .clip(shape)
             .liquidGlass(shape, highlightAlpha = 0.3f)
-            .then(glow.modifier)
             .then(glow.gestureModifier)
             .onSecondaryClick(menu.openAtProvider()),
     ) {

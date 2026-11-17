@@ -97,7 +97,6 @@ import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.ui.glass.GlassShapes
 import com.convx.desktop.ui.glass.liquidGlass
 import com.convx.desktop.ui.glass.onSelected
-import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.glass.rememberSymbolBounce
 import com.convx.desktop.ui.screens.SpotifyGreen
 import com.convx.desktop.ui.theme.ConvxMotion
@@ -135,7 +134,10 @@ val DownloadsGradient = listOf(Color(0xFF30D158), Color(0xFF0A84FF))
 
 private val RowHeight = 36.dp
 private val RailRowHeight = 44.dp
-private val ArtSize = 24.dp
+
+/** Your playlists sit a little taller than the places above them, so their covers can be seen. */
+private val PlaylistRowHeight = 44.dp
+private val PlaylistArtSize = 32.dp
 private val RailArtSize = 32.dp
 private val RowShape = RoundedCornerShape(10.dp)
 
@@ -295,8 +297,6 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
     val player by PlayerController.state.collectAsState()
     val panelWidth by animateDpAsState(if (collapsed) SideBarCollapsedWidth else SideBarWidth, ConvxMotion.appear())
     val shape = if (collapsed) GlassShapes.Capsule else GlassShapes.Panel
-    // Measured against the whole panel, so a small radius keeps the glow to about one row.
-    val glow = rememberInteractiveHighlight(radiusScale = 0.3f)
 
     val spotify by SpotifyAccount.state.collectAsState()
     var spotifyLists by remember { mutableStateOf<List<SpotifyPlaylist>?>(null) }
@@ -464,10 +464,7 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
                     // macOS: the system's material is the window itself (MacWindow), so the rows sit right on it.
                     Modifier
                 } else {
-                    Modifier
-                        .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
-                        .then(glow.modifier)
-                        .then(glow.gestureModifier)
+                    Modifier.liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
                 },
             ),
     ) {
@@ -627,7 +624,7 @@ private fun PlaylistRow(
         Row(
             Modifier
                 .fillMaxWidth()
-                .height(if (collapsed) RailRowHeight else RowHeight)
+                .height(if (collapsed) RailRowHeight else PlaylistRowHeight)
                 .clip(RowShape)
                 .background(rowWash(selected, hovered))
                 .hoverable(interaction)
@@ -637,7 +634,7 @@ private fun PlaylistRow(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
         ) {
-            EntryArt(entry, if (collapsed) RailArtSize else ArtSize)
+            EntryArt(entry, if (collapsed) RailArtSize else PlaylistArtSize)
             if (!collapsed) {
                 Spacer(Modifier.width(10.dp))
                 Text(

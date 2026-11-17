@@ -504,13 +504,12 @@ fun rememberCoverRotation(style: CoverStyle, playing: Boolean): State<Float> {
 
 private const val CoverTurnMillis = 20_000L
 
-/** A record's grooves over the cover: a black ring leaves the art in the middle as the label. */
+/** A record's grooves over the cover, which shows whole under them, and the hole in the middle. */
 @Composable
 fun VinylGrooves(modifier: Modifier) {
     Canvas(modifier) {
         val r = size.minDimension / 2f
         val c = Offset(size.width / 2f, size.height / 2f)
-        drawCircle(Color.Black.copy(alpha = 0.82f), radius = r * 0.67f, center = c, style = Stroke(width = r * 0.66f))
         for (i in 1..7) {
             drawCircle(Color.White.copy(alpha = 0.05f), radius = r * (0.40f + i * 0.083f), center = c, style = Stroke(width = 1.dp.toPx()))
         }

@@ -200,7 +200,6 @@ private fun SearchField(width: Dp, modifier: Modifier = Modifier) {
             .chromeShadow(shape)
             .clip(shape)
             .liquidGlass(shape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
-            .then(glow.modifier)
             .then(glow.gestureModifier)
             .titleBarClient()
             .padding(start = 14.dp, end = 4.dp),

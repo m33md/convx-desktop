@@ -23,7 +23,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -39,7 +38,6 @@ import com.convx.desktop.data.Song
 import com.convx.desktop.data.toItem
 import com.convx.desktop.player.Downloads
 import com.convx.desktop.player.PlayerController
-import com.convx.desktop.ui.glass.InteractiveHighlight
 import com.convx.desktop.ui.glass.LocalMenuBackdrop
 import com.convx.desktop.ui.glass.MenuGlass
 import com.convx.desktop.ui.glass.liquidGlass
@@ -75,13 +73,8 @@ fun AppMenu(anchor: MenuAnchor, content: @Composable () -> Unit) {
     // The phone's sheet corner radius, which its menus are drawn on.
     val corner = AppSettings.state.collectAsState().value.menuCorner
     val shape = if (corner >= 0) RoundedCornerShape(corner.dp) else MenuShape
-    val scope = rememberCoroutineScope()
-    val glow = remember(scope) { InteractiveHighlight(scope, radiusScale = 0.6f, sheenAlpha = 0.06f, spotAlpha = 0.32f) }
     val glass = if (backdrop != null) {
-        Modifier
-            .liquidGlass(shape, MenuGlass, highlightAlpha = 0.20f, outerShadow = false, backdrop = backdrop)
-            .then(glow.modifier)
-            .then(glow.gestureModifier)
+        Modifier.liquidGlass(shape, MenuGlass, highlightAlpha = 0.20f, outerShadow = false, backdrop = backdrop)
     } else {
         Modifier
     }

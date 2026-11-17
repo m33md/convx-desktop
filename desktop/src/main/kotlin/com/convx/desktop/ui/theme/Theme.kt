@@ -11,6 +11,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.selection.LocalTextSelectionColors
 import androidx.compose.foundation.text.selection.TextSelectionColors
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalRippleConfiguration
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -250,6 +251,8 @@ fun ConvxTheme(accent: Color, content: @Composable () -> Unit) {
         CompositionLocalProvider(
             LocalAccent provides accent,
             LocalContentColor provides Color.White,
+            // A click never blooms: no ripple spreading from the pointer, on anything.
+            LocalRippleConfiguration provides null,
             LocalTextSelectionColors provides TextSelectionColors(accent, accent.copy(alpha = 0.35f)),
             LocalScrollbarStyle provides ScrollbarStyle(
                 minimalHeight = 32.dp,
