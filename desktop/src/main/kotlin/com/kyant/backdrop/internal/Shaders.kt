@@ -147,7 +147,7 @@ half4 main(float2 coord) {
     // through real glass does: an even fringe all the way round the rim, widest where it bends most.
     // Each colour is gathered over a short spread rather than one shifted copy, so the fringe fades
     // through the spectrum instead of showing as separate red and blue outlines.
-    float2 dispersedCoord = d * grad * (chromaticAberration * 0.12);
+    float2 dispersedCoord = d * grad * (chromaticAberration * 0.06);
     
     half4 refr = content.eval(refractedCoord);
     half4 outer = content.eval(refractedCoord + dispersedCoord);
