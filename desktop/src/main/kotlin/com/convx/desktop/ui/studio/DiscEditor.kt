@@ -179,10 +179,9 @@ object DiscEditor {
         isOpen = true
     }
 
-    /** A new design from [preset], its text naming the playlist it's for. */
+    /** A new design from [preset], named after the playlist it's for. */
     fun openPreset(preset: DiscPresets.Preset, forPlaylist: String? = null) {
-        val playlist = forPlaylist?.let { Library.playlist(it) }
-        open(DiscPresets.start(preset, playlist?.name, playlist?.songs?.map { it.title }.orEmpty()), forPlaylist)
+        open(DiscPresets.start(preset, forPlaylist?.let { Library.playlist(it) }?.name), forPlaylist)
         dirty = true
         coversInto(preset)
     }
@@ -209,7 +208,7 @@ object DiscEditor {
         }
     }
 
-    /** The playlist's own design if it has one, or a new one with its name on it. */
+    /** The playlist's own design if it has one, or a new one for it. */
     fun openFor(playlistId: String) {
         val linked = DiscDesigns.get(Library.playlist(playlistId)?.design)
         if (linked != null) {
@@ -499,10 +498,9 @@ object DiscEditor {
         commit(design.copy(layers = layers))
     }
 
-    /** Swaps the whole design for [preset]'s, keeping its name and the playlist's name in its text. */
+    /** Swaps the whole design for [preset]'s, keeping its name. */
     fun usePreset(preset: DiscPresets.Preset) {
-        val playlist = playlistId?.let { Library.playlist(it) }
-        val fresh = DiscPresets.start(preset, playlist?.name ?: design.name, playlist?.songs?.map { it.title }.orEmpty())
+        val fresh = DiscPresets.start(preset)
         commit(fresh.copy(id = design.id, name = design.name, createdAt = design.createdAt))
         selectedId = null
         coversInto(preset)
