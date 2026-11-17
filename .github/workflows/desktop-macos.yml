@@ -20,9 +20,9 @@ jobs:
         include:
           - arch: intel
             runner: macos-15-intel
+          # macOS 26 has AppKit's Liquid Glass, so the try below sees the glass buttons and panel
+          # most Apple Silicon Macs show; the Intel one sees what macOS 15 and older show.
           - arch: arm64
-            runner: macos-15
-          - arch: arm64-26
             runner: macos-26
     defaults:
       run:

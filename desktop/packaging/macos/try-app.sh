@@ -69,7 +69,7 @@ else
 fi
 
 # What a person who downloaded Convx sees the first time: the same app marked as downloaded from
-# the web, opened, with Gatekeeper's answer in its log and on the screen.
+# the web, opened, and Gatekeeper's answer on the screen.
 echo "== Gatekeeper, as for a download"
 {
   echo "-- spctl --status"
@@ -77,12 +77,12 @@ echo "== Gatekeeper, as for a download"
   copy=$(mktemp -d)/Convx.app
   ditto "$app" "$copy"
   xattr -w com.apple.quarantine "0081;$(printf '%x' "$(date +%s)");Safari;" "$copy"
-  since=$(date '+%Y-%m-%d %H:%M:%S')
   # open waits while Gatekeeper's question is on screen, so it isn't waited for.
   open -n "$copy" > /dev/null 2>&1 &
   opener=$!
   sleep 25
   kill "$opener" 2>/dev/null || true
+  wait "$opener" 2>/dev/null || true
   if pgrep -f "$copy/Contents/MacOS/Convx" > /dev/null; then
     echo "It opened"
     pkill -f "$copy/Contents/MacOS/Convx"
@@ -90,8 +90,6 @@ echo "== Gatekeeper, as for a download"
     echo "macOS stopped it"
   fi
   screencapture -x "$out/gatekeeper.png" || true
-  echo "-- syspolicyd"
-  log show --start "$since" --style compact --info --predicate 'process == "syspolicyd" OR process == "XprotectService" OR process == "CoreServicesUIAgent"' 2>&1 | grep -viE "^(Filtering|Timestamp)" | tail -n 60
 } > "$out/gatekeeper.txt" 2>&1
 cat "$out/gatekeeper.txt"
 
@@ -102,7 +100,6 @@ find "$HOME" /tmp -maxdepth 1 -name 'hs_err_pid*.log' -exec cp {} "$out/" \; 2>/
 if [ -f "$out/logs/convx.log" ]; then
   echo "== The app's log (window and errors)"
   grep -E "MacWindow|MacSidebar|MacGlass|MacMedia| E/| W/|Exception|Error" "$out/logs/convx.log" | head -n 60
-  sed -n '/DIAG/,/^[0-9][0-9]:/p' "$out/logs/convx.log" | head -n 120
 fi
 for crash in "$out"/Convx*.ips "$out"/hs_err_pid*.log "$out"/logs/crash-report.txt; do
   [ -f "$crash" ] || continue

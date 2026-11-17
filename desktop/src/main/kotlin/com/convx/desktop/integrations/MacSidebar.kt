@@ -339,6 +339,8 @@ object MacSidebar {
             Log.i(Tag, "Using NSGlassEffectView (Liquid Glass)")
         } else {
             view = MacWindow.send(MacWindow.send(MacWindow.cls("NSVisualEffectView"), "alloc"), "init")
+            // Sized before the rows go in: sizing it after would grow them with it, past its edges.
+            frame(view, 8.0, 8.0, Width, height)
             MacWindow.send(view, "setMaterial:", 7L)
             MacWindow.send(view, "setBlendingMode:", 0L)
             MacWindow.send(view, "setState:", 1L)
@@ -361,13 +363,5 @@ object MacSidebar {
         MacWindow.send(view, "setHidden:", if (visible) 0 else 1)
         placeLogo()
         reload()
-        java.util.Timer(true).schedule(object : java.util.TimerTask() {
-            override fun run() = MacWindow.onMain {
-                val rows = MacWindow.sendLong(table, "numberOfRows")
-                val footerRows = MacWindow.sendLong(footerTable, "numberOfRows")
-                val tree = MacWindow.send(MacWindow.send(view, "_subtreeDescription"), "UTF8String")?.getString(0)
-                Log.i(Tag, "DIAG rows=$rows footerRows=$footerRows items=${items.size}\n$tree")
-            }
-        }, 6000)
     }
 }
