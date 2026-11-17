@@ -5,6 +5,7 @@
 
 package com.convx.desktop.ui.components
 
+import com.convx.desktop.ui.player.QueueFlight
 import com.convx.desktop.integrations.youtube.YouTubePlaylists
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -150,11 +151,17 @@ fun AppMenu(anchor: MenuAnchor, content: @Composable () -> Unit) {
                 onKeyEvent = { event -> morph.moveFocus(event) },
             ) {
                 morph.focus = LocalFocusManager.current
-                MorphingMenu(morph, placement, shape, backdrop, content)
+                val origin = remember(morph, fromButton) { { if (fromButton) morph.host?.center ?: morph.point else morph.point } }
+                CompositionLocalProvider(LocalMenuOrigin provides origin) {
+                    MorphingMenu(morph, placement, shape, backdrop, content)
+                }
             }
         }
     }
 }
+
+/** Where the open menu came from, in window px: its button's centre, or the right-click. */
+val LocalMenuOrigin = staticCompositionLocalOf<() -> Offset?> { { null } }
 
 /** The phone's menus round off at 32 on a 270-wide panel; a desktop menu is smaller. */
 private val MenuShape = RoundedCornerShape(20.dp)
@@ -401,12 +408,14 @@ fun SongMenuContent(
     }
 
     // In a party where the host holds the controls these say why instead, not "Playing next".
+    // With the bar showing, the cover hops into its queue button rather than a notice saying so.
+    val origin = LocalMenuOrigin.current
     MenuItem("Play next", "playlist_play") {
-        if (PlayerController.playNext(listOf(song)) != null) Overlays.toast("Playing next")
+        if (PlayerController.playNext(listOf(song)) != null && !QueueFlight.launch(song.thumbnail, origin(), 1)) Overlays.toast("Playing next")
         dismiss()
     }
     MenuItem("Add to queue", "queue_music") {
-        if (PlayerController.addToQueue(listOf(song)) != null) Overlays.toast("Added to queue")
+        if (PlayerController.addToQueue(listOf(song)) != null && !QueueFlight.launch(song.thumbnail, origin(), 1)) Overlays.toast("Added to queue")
         dismiss()
     }
     val local = com.convx.desktop.player.LocalMusic.isLocal(song.id)
@@ -520,12 +529,15 @@ fun CollectionMenuContent(
         PlayerController.playSongs(songs(), shuffle = true)
         dismiss()
     }
+    val origin = LocalMenuOrigin.current
     MenuItem("Play next", "playlist_play") {
-        if (PlayerController.playNext(songs()) != null) Overlays.toast("Playing next")
+        val list = songs()
+        if (PlayerController.playNext(list) != null && !QueueFlight.launch(list.firstOrNull()?.thumbnail, origin(), list.size)) Overlays.toast("Playing next")
         dismiss()
     }
     MenuItem("Add to queue", "queue_music") {
-        if (PlayerController.addToQueue(songs()) != null) Overlays.toast("Added to queue")
+        val list = songs()
+        if (PlayerController.addToQueue(list) != null && !QueueFlight.launch(list.firstOrNull()?.thumbnail, origin(), list.size)) Overlays.toast("Added to queue")
         dismiss()
     }
     MenuItem("Add to playlist", "playlist_add") { choosingPlaylist = true }

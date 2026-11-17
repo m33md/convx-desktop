@@ -151,7 +151,7 @@ private fun RadioStationCard(song: Song, modifier: Modifier, onClick: () -> Unit
             .aspectRatio(1f)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable(onClick, interaction = interaction, pressScale = 0.98f)
+            .pressable(onClick, interaction = interaction)
             .clip(shape)
             .background(ConvxColors.Card),
     ) {
@@ -283,7 +283,7 @@ private fun RadioStationHeader(seed: Song, title: String, onPlay: () -> Unit) {
             .widthIn(max = 720.dp)
             .fillMaxWidth()
             .hoverable(interaction)
-            .pressable(onPlay, interaction = interaction, pressScale = 0.99f)
+            .pressable(onPlay, interaction = interaction)
             .clip(shape)
             .background(ConvxColors.Card)
             .padding(14.dp),

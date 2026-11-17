@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
@@ -39,6 +40,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.sp
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.Library
@@ -47,6 +49,7 @@ import com.convx.desktop.player.PlayerController
 import com.convx.desktop.player.PlayerState
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.Artwork
+import com.convx.desktop.ui.components.likePop
 import com.convx.desktop.ui.components.AnimatedPlayGlyph
 import com.convx.desktop.ui.components.PlayerGlyph
 import com.convx.desktop.ui.components.PlayerIconSlot
@@ -58,10 +61,7 @@ import com.convx.desktop.ui.components.pressable
 import com.convx.desktop.ui.components.rememberMenuAnchor
 import com.convx.desktop.ui.glass.GlassTokens
 import com.convx.desktop.ui.glass.additiveChrome
-import com.convx.desktop.ui.glass.rememberSymbolBounce
 import com.convx.desktop.ui.glass.liquidGlass
-import com.convx.desktop.ui.glass.elasticStretch
-import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.shapes.NavContinuousCapsule
 import com.convx.desktop.ui.shell.FullPlayerMode
 import com.convx.desktop.ui.shell.UiState
@@ -91,7 +91,6 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
     val state by PlayerController.state.collectAsState()
     val navigator = LocalNavigator.current
     val song = state.current ?: return
-    val glow = rememberInteractiveHighlight()
     // The phone's bar pills are Apple's continuous (G2) capsule, not a stadium.
     val shape = NavContinuousCapsule
     val menu = rememberMenuAnchor()
@@ -99,12 +98,9 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
     BoxWithConstraints(
         modifier
             .height(NowPlayingPillHeight)
-            // The phone pill's press swell, a couple of dp; a bar this long neither leans nor follows a drag.
-            .graphicsLayer(elasticStretch(glow))
             .shadow(10.dp, shape)
             .clip(shape)
             .liquidGlass(shape, highlightAlpha = 0.3f)
-            .then(glow.gestureModifier)
             .onSecondaryClick(menu.openAtProvider()),
     ) {
         val roomy = maxWidth >= 680.dp
@@ -141,11 +137,13 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
                 Modifier
                     .weight(1f)
                     .clip(RoundedCornerShape(10.dp))
-                    .pressable({ UiState.fullPlayer = true }, pressScale = 0.99f),
+                    .pressable({ UiState.fullPlayer = true }),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 val art = 38.dp
-                Artwork(song.thumbnail, Modifier.size(art), size = 200, shape = RoundedCornerShape(art * 0.22f), iconSize = 18.dp)
+                // The player's big cover grows out of this one.
+                val artCorner = with(LocalDensity.current) { (art * 0.22f).toPx() }
+                Artwork(song.thumbnail, Modifier.size(art).coverBar(artCorner), size = 200, shape = RoundedCornerShape(art * 0.22f), iconSize = 18.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -180,17 +178,21 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
                 controlSize,
                 iconSize,
                 if (liked) LocalAccent.current else TransportTint,
-                bounce = true,
                 slot = if (liked) PlayerIconSlot.LIKED else PlayerIconSlot.LIKE,
+                glyphModifier = Modifier.likePop(liked),
             ) { Library.toggleLike(song) }
-            GlassGlyph("flamingo_lyrics", controlSize, iconSize * 1.18f, TransportTint, bounce = true) {
+            GlassGlyph("flamingo_lyrics", controlSize, iconSize * 1.18f, TransportTint) {
                 UiState.fullPlayerMode = FullPlayerMode.Lyrics
                 UiState.lyricsFullscreen = AppSettings.value.oneTapFullscreenLyrics
                 UiState.fullPlayer = true
             }
-            GlassGlyph("flamingo_queue", controlSize, iconSize, TransportTint, bounce = true) {
-                UiState.fullPlayerMode = FullPlayerMode.Queue
-                UiState.fullPlayer = true
+            // Covers queued from a menu land here.
+            Box(Modifier.queueTarget()) {
+                GlassGlyph("flamingo_queue", controlSize, iconSize, TransportTint, glyphModifier = Modifier.queueBump()) {
+                    UiState.fullPlayerMode = FullPlayerMode.Queue
+                    UiState.fullPlayer = true
+                }
+                QueueBadge(Modifier.align(Alignment.TopEnd).offset(x = 4.dp, y = (-2).dp))
             }
             // Spotify's Now Playing view button, for the panel on the right.
             val panelOpen = AppSettings.state.collectAsState().value.rightPanel != null
@@ -200,7 +202,6 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
                 controlSize,
                 iconSize,
                 TransportTint.copy(alpha = if (panelShown) TransportTint.alpha else 0.4f),
-                bounce = true,
             ) {
                 if (UiState.rightPanelFits) {
                     UiState.toggleNowPlayingPanel()
@@ -230,7 +231,7 @@ private fun PlayPauseGlyph(state: PlayerState, size: Dp, iconSize: Dp) {
         Modifier
             .size(size)
             .clip(CircleShape)
-            .pressable({ PlayerController.togglePlay() }, pressScale = ConvxMotion.WobblePressScale),
+            .pressable({ PlayerController.togglePlay() }),
         contentAlignment = Alignment.Center,
     ) {
         if (state.isLoading) {
@@ -247,7 +248,7 @@ private fun PlayPauseGlyph(state: PlayerState, size: Dp, iconSize: Dp) {
     }
 }
 
-/** A bare glyph on the glass, lit by a soft wash under the cursor; glyphs composite additively. */
+/** A bare glyph on the glass; glyphs composite additively. */
 @Composable
 fun GlassGlyph(
     icon: String,
@@ -255,19 +256,16 @@ fun GlassGlyph(
     iconSize: Dp,
     tint: Color,
     enabled: Boolean = true,
-    bounce: Boolean = false,
     slot: PlayerIconSlot? = null,
+    /** Extra motion for the glyph itself, such as the like's pop. */
+    glyphModifier: Modifier = Modifier,
     onClick: () -> Unit,
 ) {
-    val symbolBounce = rememberSymbolBounce()
     Box(
         Modifier
             .size(size)
             .clip(CircleShape)
-            .pressable({
-                if (bounce) symbolBounce.play()
-                onClick()
-            }, enabled = enabled, pressScale = ConvxMotion.WobblePressScale),
+            .pressable(onClick, enabled = enabled),
         contentAlignment = Alignment.Center,
     ) {
         PlayerGlyph(
@@ -275,7 +273,7 @@ fun GlassGlyph(
             icon,
             if (enabled) tint else tint.copy(alpha = tint.alpha * 0.45f),
             iconSize,
-            symbolBounce.modifier.additiveChrome(),
+            glyphModifier.additiveChrome(),
         )
     }
 }

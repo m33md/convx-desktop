@@ -5,6 +5,7 @@
 
 package com.convx.desktop.ui.studio
 
+import com.convx.desktop.ui.components.riseIn
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -296,14 +297,14 @@ private fun DesignCard(design: DiscDesign, wornBy: List<LocalPlaylist>, playlist
     val menu = rememberMenuAnchor()
     val useMenu = rememberMenuAnchor()
     val openMenu = menu.openAtProvider()
-    Column(Modifier.width(width)) {
+    Column(Modifier.riseIn().width(width)) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .hoverable(interaction)
                 .onSecondaryClick(openMenu)
-                .pressable({ DiscEditor.open(design) }, interaction = interaction, pressScale = 0.98f)
+                .pressable({ DiscEditor.open(design) }, interaction = interaction)
                 .clip(CardShape),
         ) {
             CoverImage("${DiscThumbs.designKey(design)}@$CardPixels", { design }, Modifier.fillMaxSize())
@@ -395,13 +396,13 @@ private fun DesignCard(design: DiscDesign, wornBy: List<LocalPlaylist>, playlist
 private fun PresetCard(preset: DiscPresets.Preset, width: Dp) {
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    Column(Modifier.width(width)) {
+    Column(Modifier.riseIn().width(width)) {
         Box(
             Modifier
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .hoverable(interaction)
-                .pressable({ DiscEditor.openPreset(preset) }, interaction = interaction, pressScale = 0.98f)
+                .pressable({ DiscEditor.openPreset(preset) }, interaction = interaction)
                 .clip(CardShape),
         ) {
             CoverImage("${DiscThumbs.presetKey(preset)}@$CardPixels", { DiscPresets.start(preset) }, Modifier.fillMaxSize())

@@ -363,7 +363,7 @@ private fun ControlCircle(size: Dp, fill: Color, onClick: () -> Unit, content: @
             .clip(CircleShape)
             .background(fill)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.92f),
+            .pressable(onClick, interaction = interaction),
         contentAlignment = Alignment.Center,
     ) { content() }
 }
@@ -392,7 +392,7 @@ private fun FeaturedReleaseCard(
             .background(Color.White.copy(alpha = wash))
             .border(0.33.dp, Color.White.copy(alpha = 0.10f), shape)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.98f)
+            .pressable(onClick, interaction = interaction)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -434,7 +434,7 @@ private fun Biography(text: String) {
             if (expanded) "Less" else "More",
             style = ConvxType.Headline,
             color = Color.White,
-            modifier = Modifier.pressable({ expanded = !expanded }, pressScale = 1f),
+            modifier = Modifier.pressable({ expanded = !expanded }),
         )
     }
 }

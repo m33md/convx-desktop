@@ -10,8 +10,6 @@ import com.convx.desktop.ui.glass.LocalMenuBackdrop
 import com.convx.desktop.ui.glass.MenuGlass
 import com.convx.desktop.ui.glass.glassControl
 import com.convx.desktop.ui.glass.liquidGlass
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
@@ -20,7 +18,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,7 +39,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -66,27 +62,18 @@ import androidx.compose.ui.window.PopupPositionProvider
 import kotlin.math.roundToInt
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.theme.ConvxColors
-import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxShapes
 import com.convx.desktop.ui.theme.ConvxType
 
-/** Press feedback shared by every clickable surface: a hand cursor and a squeeze on the phone's press spring. */
+/** What every clickable surface shares: a hand cursor, and no glow, bloom or squeeze. */
 @Composable
 fun Modifier.pressable(
     onClick: () -> Unit,
     enabled: Boolean = true,
     interaction: MutableInteractionSource = remember { MutableInteractionSource() },
-    pressScale: Float = 0.96f,
-): Modifier {
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && enabled) pressScale else 1f, ConvxMotion.pressFor(pressScale))
-    // The squeeze is drawn inside the hit area, so a press near the edge doesn't shrink out
-    // from under the pointer and cancel itself.
-    return this
-        .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
-        .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-        .scale(scale)
-}
+): Modifier = this
+    .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
+    .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
 
 /** Right-click, or a finger held still as on the phone, reports where it happened. */
 fun Modifier.onSecondaryClick(onClick: (Offset) -> Unit): Modifier = pointerInput(onClick) {
@@ -202,6 +189,8 @@ fun IconButton(
     activeTint: Color = tint,
     /** A player control draws the image picked for it in Player icons, if any. */
     slot: PlayerIconSlot? = null,
+    /** Motion for the glyph alone, such as the like's pop. */
+    iconModifier: Modifier = Modifier,
 ) {
     val interaction = remember { MutableInteractionSource() }
     val color = when {
@@ -212,23 +201,23 @@ fun IconButton(
     Box(
         modifier
             .size(size)
-            // The filled disc is a drop of the glass, with its light and swell under a press; the plain glyph only shrinks.
+            // The filled disc is a drop of the glass; the plain glyph is just the glyph.
             .then(
                 if (filled) {
                     Modifier
                         // No rims: these discs sit in rows of plain glyphs (the player's top row), where a ringed one looked out of place.
-                        .glassControl(GlassShapes.Capsule, enabled = enabled, rims = false)
+                        .glassControl(GlassShapes.Capsule, rims = false)
                         .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
                         .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
                 } else {
                     Modifier
                         .clip(CircleShape)
-                        .pressable(onClick, enabled, interaction, pressScale = ConvxMotion.PressScale)
+                        .pressable(onClick, enabled, interaction)
                 },
             ),
         contentAlignment = Alignment.Center,
     ) {
-        if (slot != null) PlayerGlyph(slot, icon, color, iconSize) else ConvxIcon(icon, tint = color, size = iconSize)
+        if (slot != null) PlayerGlyph(slot, icon, color, iconSize, iconModifier) else ConvxIcon(icon, iconModifier, tint = color, size = iconSize)
         if (active) {
             Box(
                 Modifier
@@ -261,7 +250,7 @@ fun PlayButton(
             .size(size)
             .clip(CircleShape)
             .background(color)
-            .pressable(onClick, pressScale = ConvxMotion.PressScale),
+            .pressable(onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {

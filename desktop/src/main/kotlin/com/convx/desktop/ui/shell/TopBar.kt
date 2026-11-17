@@ -63,9 +63,7 @@ import com.convx.desktop.ui.glass.GlassCircleButton
 import com.convx.desktop.ui.glass.GlassTokens
 import com.convx.desktop.ui.glass.additiveChrome
 import com.convx.desktop.ui.glass.chromeShadow
-import com.convx.desktop.ui.glass.elasticStretch
 import com.convx.desktop.ui.glass.liquidGlass
-import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.shapes.NavContinuousCapsule
 import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxType
@@ -165,7 +163,6 @@ private fun NavArrow(icon: String, enabled: Boolean, onClick: () -> Unit) {
 private fun SearchField(width: Dp, modifier: Modifier = Modifier) {
     val navigator = LocalNavigator.current
     val focusManager = LocalFocusManager.current
-    val glow = rememberInteractiveHighlight()
     val shape = NavContinuousCapsule
     val query = navigator.searchQuery
     val screen = navigator.current.screen
@@ -196,11 +193,9 @@ private fun SearchField(width: Dp, modifier: Modifier = Modifier) {
         modifier
             .width(width)
             .height(TopBarButtonSize)
-            .graphicsLayer(elasticStretch(glow))
             .chromeShadow(shape)
             .clip(shape)
             .liquidGlass(shape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
-            .then(glow.gestureModifier)
             .titleBarClient()
             .padding(start = 14.dp, end = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -293,7 +288,7 @@ private fun FieldButton(
         modifier
             .size(40.dp)
             .clip(CircleShape)
-            .pressable(onClick, pressScale = ConvxMotion.PressScale),
+            .pressable(onClick),
         contentAlignment = Alignment.Center,
     ) {
         ConvxIcon(icon, tint = tint, size = 21.dp, modifier = iconModifier.additiveChrome())

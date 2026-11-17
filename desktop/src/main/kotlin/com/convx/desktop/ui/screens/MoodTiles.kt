@@ -5,6 +5,7 @@
 
 package com.convx.desktop.ui.screens
 
+import com.convx.desktop.ui.components.riseIn
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -133,12 +134,13 @@ fun MoodTile(mood: MoodAndGenres.Item, modifier: Modifier = Modifier, onClick: (
     val shape = ContinuousRoundedRectangle(15.dp)
     Box(
         modifier
+            .riseIn()
             .aspectRatio(TileAspect)
             .clip(shape)
             .background(ground)
             .border(0.25.dp, Color.Black.copy(alpha = 0.1f), shape)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.97f),
+            .pressable(onClick, interaction = interaction),
     ) {
         val bitmap = image
         if (bitmap != null) {

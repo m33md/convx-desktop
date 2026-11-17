@@ -61,6 +61,7 @@ import com.convx.desktop.player.PlayerState
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.ArtistLinks
 import com.convx.desktop.ui.components.Artwork
+import com.convx.desktop.ui.components.likePop
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.EqualizerBars
 import com.convx.desktop.ui.components.IconButton
@@ -132,7 +133,7 @@ fun RightPanel(panel: SidePanel, modifier: Modifier = Modifier) {
                             .height(30.dp)
                             .clip(GlassShapes.Capsule)
                             .background(if (selected) Color.White.copy(alpha = 0.18f) else Color.Transparent)
-                            .pressable({ UiState.openSidePanel(p) }, pressScale = 0.97f),
+                            .pressable({ UiState.openSidePanel(p) }),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -190,7 +191,7 @@ private fun NowPlayingPanel(state: PlayerState) {
     // A bar to drag beside it, for a mouse or touchpad without a wheel.
     ScrollbarColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp)) {
         val coverShape = RoundedCornerShape(14.dp)
-        val coverModifier = Modifier.fillMaxWidth().aspectRatio(1f).shadow(18.dp, coverShape).pressable({ UiState.fullPlayer = true }, pressScale = 0.99f)
+        val coverModifier = Modifier.fillMaxWidth().aspectRatio(1f).shadow(18.dp, coverShape).pressable({ UiState.fullPlayer = true })
         if (settings.hidePlayerArtwork) {
             HiddenArtwork(coverModifier.clip(coverShape), markSize = 96.dp)
         } else {
@@ -207,6 +208,7 @@ private fun NowPlayingPanel(state: PlayerState) {
                 { Library.toggleLike(song) },
                 tint = if (liked) LocalAccent.current else Color.White,
                 slot = if (liked) com.convx.desktop.ui.components.PlayerIconSlot.LIKED else com.convx.desktop.ui.components.PlayerIconSlot.LIKE,
+                iconModifier = Modifier.likePop(liked),
             )
             Box {
                 IconButton("more_horiz", { menu.expanded = true })
@@ -233,7 +235,7 @@ private fun NowPlayingPanel(state: PlayerState) {
             Spacer(Modifier.height(12.dp))
             InfoCard("From the album") {
                 Row(
-                    Modifier.fillMaxWidth().pressable({ navigator.navigate(Screen.Album(album.id)) }, pressScale = 0.99f),
+                    Modifier.fillMaxWidth().pressable({ navigator.navigate(Screen.Album(album.id)) }),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ConvxIcon("album", tint = ConvxColors.SecondaryLabel, size = 22.dp)
@@ -399,7 +401,7 @@ fun QueueRow(
             )
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable({ if (isCurrent) PlayerController.togglePlay() else PlayerController.skipTo(position) }, interaction = interaction, pressScale = 0.99f),
+            .pressable({ if (isCurrent) PlayerController.togglePlay() else PlayerController.skipTo(position) }, interaction = interaction),
     ) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp)) {

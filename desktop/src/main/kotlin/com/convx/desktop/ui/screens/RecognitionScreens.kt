@@ -442,7 +442,7 @@ private fun HistoryRow(item: Recognition, onClick: () -> Unit, onDelete: () -> U
             .clip(shape)
             .background(ConvxColors.Card)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.99f)
+            .pressable(onClick, interaction = interaction)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

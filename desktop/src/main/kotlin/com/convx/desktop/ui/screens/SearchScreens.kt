@@ -186,7 +186,7 @@ private fun SuggestionRow(text: String, onClick: () -> Unit, onFill: () -> Unit)
             .clip(RoundedCornerShape(8.dp))
             .background(if (hovered) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.995f)
+            .pressable(onClick, interaction = interaction)
             .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -217,7 +217,7 @@ fun ResultRow(item: YTItem) {
             .clip(RoundedCornerShape(8.dp))
             .background(if (hovered) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
-            .pressable({ ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.995f)
+            .pressable({ ItemActions.open(item, navigator) }, interaction = interaction)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -410,7 +410,7 @@ private fun TopResult(title: String, item: YTItem, songs: List<SongItem>) {
                         .clip(RoundedCornerShape(14.dp))
                         .background(Color.White.copy(alpha = 0.07f))
                         .hoverable(interaction)
-                        .pressable({ ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.99f)
+                        .pressable({ ItemActions.open(item, navigator) }, interaction = interaction)
                         .padding(20.dp),
                 ) {
                     Column {

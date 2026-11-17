@@ -288,7 +288,7 @@ private fun HeaderCircle(icon: String, onClick: () -> Unit, enabled: Boolean = t
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.16f))
             .hoverable(interaction)
-            .pressable(onClick, enabled = enabled, interaction = interaction, pressScale = 0.92f),
+            .pressable(onClick, enabled = enabled, interaction = interaction),
         contentAlignment = Alignment.Center,
     ) {
         ConvxIcon(icon, tint = Color.White.copy(alpha = if (enabled) 1f else 0.4f), size = size * 0.48f)
@@ -310,7 +310,7 @@ private fun PlayPill(playing: Boolean, enabled: Boolean, onClick: () -> Unit) {
             .clip(RoundedCornerShape(25.dp))
             .background(Color.White.copy(alpha = fill))
             .hoverable(interaction)
-            .pressable(onClick, enabled = enabled, interaction = interaction, pressScale = 0.95f),
+            .pressable(onClick, enabled = enabled, interaction = interaction),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -336,13 +336,13 @@ private fun ExpandableDescription(text: String, modifier: Modifier = Modifier) {
             textAlign = TextAlign.Center,
             maxLines = if (expanded) Int.MAX_VALUE else 2,
             overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.pressable({ expanded = !expanded }, pressScale = 1f),
+            modifier = Modifier.pressable({ expanded = !expanded }),
         )
         Text(
             if (expanded) "LESS" else "MORE",
             style = ConvxType.CaptionStrong,
             color = Color.White.copy(alpha = 0.7f),
-            modifier = Modifier.padding(top = 4.dp).pressable({ expanded = !expanded }, pressScale = 1f),
+            modifier = Modifier.padding(top = 4.dp).pressable({ expanded = !expanded }),
         )
     }
 }

@@ -284,6 +284,9 @@ fun AppShell(navigator: Navigator) {
                     }
                 }
 
+                // A queued song's cover on its way into the bar.
+                com.convx.desktop.ui.player.QueueFlightLayer()
+
                 AnimatedVisibility(
                     visible = UiState.fullPlayer,
                     // The phone's player sheet: up from the bottom edge and back down into the bar.
@@ -297,6 +300,9 @@ fun AppShell(navigator: Navigator) {
                     }
                 }
 
+                // The bar's cover growing into the player's, and back.
+                com.convx.desktop.ui.player.CoverMorphLayer()
+
                 com.convx.desktop.ui.player.AmbientOverlay()
 
                 ReplayOverlay()
@@ -307,7 +313,18 @@ fun AppShell(navigator: Navigator) {
                 // Disc Studio's editor, also over everything but toasts and dialogs.
                 CompositionLocalProvider(LocalMenuBackdrop provides null) { com.convx.desktop.ui.studio.DiscEditorOverlay() }
 
-                OverlayHost()
+                // Notices rise out from behind the bar. With the player or a full-window view over
+                // the pages there's no bar to hide behind and no page to frost, so they rise in place on dark glass.
+                val pagesCovered = UiState.fullPlayer || com.convx.desktop.ui.player.Ambient.on ||
+                    com.convx.desktop.ui.screens.replay.Replay.open ||
+                    com.convx.desktop.ui.player.DiyEditor.isOpen || com.convx.desktop.ui.studio.DiscEditor.isOpen
+                OverlayHost(
+                    noticeLine = 12.dp + NowPlayingPillHeight,
+                    clipNotices = showPill && !pagesCovered,
+                    noticeStart = if (pagesCovered) 0.dp else startInset,
+                    noticeEnd = if (pagesCovered) 0.dp else endInset,
+                    glassNotices = !pagesCovered,
+                )
             }
         }
     }
@@ -341,7 +358,10 @@ private fun Pages(navigator: Navigator, blackFrom: Dp) {
             },
         ) {
             holder.SaveableStateProvider(entry.key) {
-                ScreenHost(entry.screen)
+                // Each opening of a page paces its own cascade of covers.
+                CompositionLocalProvider(com.convx.desktop.ui.components.LocalPageReveal provides remember { com.convx.desktop.ui.components.PageReveal() }) {
+                    ScreenHost(entry.screen)
+                }
             }
         }
     }

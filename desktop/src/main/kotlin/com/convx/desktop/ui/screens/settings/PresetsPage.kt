@@ -135,7 +135,7 @@ private fun PresetCard(meta: Presets.Meta) {
             .width(232.dp)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable({ applyPresetDialog(meta) }, interaction = interaction, pressScale = 0.98f),
+            .pressable({ applyPresetDialog(meta) }, interaction = interaction),
     ) {
         Box(
             Modifier
@@ -337,7 +337,7 @@ private fun CategoryChecks(selected: Set<PresetCategory>, available: Set<PresetC
                 Modifier
                     .clip(RoundedCornerShape(50))
                     .background(if (on) accent.copy(alpha = 0.18f) else Color.White.copy(alpha = 0.07f))
-                    .pressable({ onChange(if (on) selected - category else selected + category) }, pressScale = 0.97f)
+                    .pressable({ onChange(if (on) selected - category else selected + category) })
                     .padding(start = 8.dp, end = 12.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {

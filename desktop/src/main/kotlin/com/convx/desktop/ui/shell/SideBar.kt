@@ -5,6 +5,22 @@
 
 package com.convx.desktop.ui.shell
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.keyframes
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.util.lerp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
@@ -96,8 +112,6 @@ import com.convx.desktop.ui.components.reorderGestures
 import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.ui.glass.GlassShapes
 import com.convx.desktop.ui.glass.liquidGlass
-import com.convx.desktop.ui.glass.onSelected
-import com.convx.desktop.ui.glass.rememberSymbolBounce
 import com.convx.desktop.ui.screens.SpotifyGreen
 import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxType
@@ -470,20 +484,27 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
     ) {
         if (macNative) Spacer(Modifier.weight(1f))
         if (!macNative) Box(Modifier.weight(1f).fillMaxWidth()) {
+            val scope = rememberCoroutineScope()
+            val spot = remember(scope) { SelectionSpot(scope) }
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().fadingEdge(12.dp).reorderGestures(reorder),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .fadingEdge(12.dp)
+                    .onGloballyPositioned { spot.list = it }
+                    .drawBehind { with(spot) { draw() } }
+                    .reorderGestures(reorder),
                 contentPadding = PaddingValues(start = 8.dp, end = if (collapsed) 8.dp else 10.dp, top = 10.dp, bottom = 12.dp),
             ) {
-                items(places, key = { "nav:${it.key}" }) { NavRow(it, collapsed) }
+                items(places, key = { "nav:${it.key}" }) { NavRow(it, collapsed, spot) }
                 if (libraryItems.isNotEmpty()) {
                     item(key = "heading:library") { Heading("Library", collapsed) }
-                    items(libraryItems, key = { "nav:${it.key}" }) { NavRow(it, collapsed) }
+                    items(libraryItems, key = { "nav:${it.key}" }) { NavRow(it, collapsed, spot) }
                 }
                 item(key = "heading:playlists") {
                     Heading("Playlists", collapsed) { HeadingButton("add") { create() } }
                 }
-                item(key = "nav:all-playlists") { NavRow(allPlaylists, collapsed) }
+                item(key = "nav:all-playlists") { NavRow(allPlaylists, collapsed, spot) }
                 items(rows, key = { it.key }) { entry ->
                     val held = reorder.held == entry.key
                     Box(
@@ -508,6 +529,7 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
                             playing = player.queueTitle != null && player.queueTitle == entry.title && player.current != null,
                             isPlaying = player.isPlaying,
                             onClick = { navigator.navigate(entry.screen) },
+                            spot = spot,
                         )
                     }
                 }
@@ -553,32 +575,128 @@ private fun HeadingButton(icon: String, onClick: () -> Unit) {
         Modifier
             .size(26.dp)
             .clip(CircleShape)
-            .pressable(onClick, pressScale = ConvxMotion.PressScale),
+            .pressable(onClick),
         contentAlignment = Alignment.Center,
     ) {
         ConvxIcon(icon, tint = Color.White.copy(alpha = 0.6f), size = 16.dp)
     }
 }
 
-/** A row's wash: lit where you are, faint under the pointer. */
-private fun rowWash(selected: Boolean, hovered: Boolean): Color = when {
-    selected -> Color.White.copy(alpha = 0.12f)
+/**
+ * A row's wash: lit where you are, faint under the pointer. In the list the lit one is
+ * [SelectionSpot]'s, which [glides] from row to row, so the row itself only shows the hover.
+ */
+private fun rowWash(selected: Boolean, hovered: Boolean, glides: Boolean = false): Color = when {
+    selected && glides -> Color.Transparent
+    selected -> SelectedWash
     hovered -> Color.White.copy(alpha = 0.06f)
     else -> Color.Transparent
 }
 
+private val SelectedWash = Color.White.copy(alpha = 0.12f)
+
+/**
+ * The side bar's selection as one wash that glides to the page you pick, stretching a little on
+ * the way. Rows report where they are while selected, so it scrolls with them.
+ */
+private class SelectionSpot(private val scope: CoroutineScope) {
+    /** The list it draws behind. */
+    var list: LayoutCoordinates? = null
+    private var rect by mutableStateOf<Rect?>(null)
+    private var key: String? = null
+    private var from: Rect? = null
+    private var left: Rect? = null
+    private var leftKey: String? = null
+    private var leftAt = 0L
+    private val progress = Animatable(1f)
+    private val stretch = Animatable(1f)
+
+    fun place(key: String, row: LayoutCoordinates) {
+        val list = list ?: return
+        if (!list.isAttached || !row.isAttached) return
+        // Two rows can stand for one page; the first keeps it.
+        if (this.key != null && this.key != key) return
+        val bounds = list.localBoundingBoxOf(row, clipBounds = false)
+        if (this.key == null) {
+            this.key = key
+            val previous = left
+            // Only straight from the page just left; a row that scrolled away long ago starts fresh.
+            if (previous != null && leftKey != key && System.nanoTime() - leftAt < GlideWindowNanos) glide(previous, bounds)
+        }
+        rect = bounds
+    }
+
+    fun leave(key: String) {
+        if (this.key != key) return
+        left = currentRect() ?: rect
+        leftKey = key
+        leftAt = System.nanoTime()
+        this.key = null
+        rect = null
+    }
+
+    private fun currentRect(): Rect? {
+        val to = rect ?: return null
+        val start = from ?: return to
+        val p = progress.value
+        return Rect(lerp(start.left, to.left, p), lerp(start.top, to.top, p), lerp(start.right, to.right, p), lerp(start.bottom, to.bottom, p))
+    }
+
+    private fun glide(start: Rect, to: Rect) {
+        from = start
+        val far = (kotlin.math.abs(to.top - start.top) / GlideFarPx).coerceAtMost(1f)
+        // Started in place, so the first frame already draws it where it was.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            progress.snapTo(0f)
+            progress.animateTo(1f, ConvxMotion.glide())
+            from = null
+        }
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            stretch.snapTo(1f)
+            stretch.animateTo(1f, keyframes {
+                durationMillis = 300
+                1f + 0.22f * far at 105 using FastOutSlowInEasing
+            })
+        }
+    }
+
+    fun DrawScope.draw() {
+        val r = currentRect() ?: return
+        val height = r.height * stretch.value
+        drawRoundRect(
+            SelectedWash,
+            topLeft = Offset(r.left, r.center.y - height / 2f),
+            size = Size(r.width, height),
+            cornerRadius = CornerRadius(10.dp.toPx()),
+        )
+    }
+
+    private companion object {
+        const val GlideWindowNanos = 250_000_000L
+        const val GlideFarPx = 180f
+    }
+}
+
+/** Tells [spot] where this row is while it's the selected one. */
 @Composable
-private fun NavRow(item: NavItem, collapsed: Boolean) {
+private fun Modifier.selectionSpot(key: String, selected: Boolean, spot: SelectionSpot?): Modifier {
+    if (spot == null) return this
+    DisposableEffect(key, selected) { onDispose { if (selected) spot.leave(key) } }
+    return if (selected) onGloballyPositioned { spot.place(key, it) } else this
+}
+
+@Composable
+private fun NavRow(item: NavItem, collapsed: Boolean, spot: SelectionSpot? = null) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    val bounce = rememberSymbolBounce().onSelected(item.selected)
     Row(
         Modifier
             .fillMaxWidth()
             .height(if (collapsed) RailRowHeight else RowHeight)
+            .selectionSpot("nav:${item.key}", item.selected, spot)
             .clip(RowShape)
-            .background(rowWash(item.selected, hovered))
+            .background(rowWash(item.selected, hovered, spot != null))
             .hoverable(interaction)
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable(interactionSource = interaction, indication = null, onClick = item.onClick)
@@ -591,7 +709,6 @@ private fun NavRow(item: NavItem, collapsed: Boolean) {
             tint = if (item.selected) accent else Color.White.copy(alpha = 0.78f),
             size = if (collapsed) 22.dp else 19.dp,
             contentDescription = item.label,
-            modifier = bounce.modifier,
         )
         if (!collapsed) {
             Spacer(Modifier.width(12.dp))
@@ -615,6 +732,7 @@ private fun PlaylistRow(
     playing: Boolean,
     isPlaying: Boolean,
     onClick: () -> Unit,
+    spot: SelectionSpot? = null,
 ) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
@@ -625,8 +743,9 @@ private fun PlaylistRow(
             Modifier
                 .fillMaxWidth()
                 .height(if (collapsed) RailRowHeight else PlaylistRowHeight)
+                .selectionSpot(entry.key, selected, spot)
                 .clip(RowShape)
-                .background(rowWash(selected, hovered))
+                .background(rowWash(selected, hovered, spot != null))
                 .hoverable(interaction)
                 .pointerHoverIcon(PointerIcon.Hand)
                 .clickable(interactionSource = interaction, indication = null, onClick = onClick)
@@ -735,7 +854,7 @@ private fun SettingsButton(lit: Boolean, accent: Color, onClick: () -> Unit) {
         Modifier
             .size(32.dp)
             .clip(CircleShape)
-            .pressable(onClick, pressScale = ConvxMotion.PressScale),
+            .pressable(onClick),
         contentAlignment = Alignment.Center,
     ) {
         ConvxIcon("settings", tint = if (lit) accent else Color.White.copy(alpha = 0.65f), size = 18.dp)

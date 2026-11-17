@@ -5,6 +5,7 @@
 
 package com.convx.desktop.ui.screens
 
+import com.convx.desktop.ui.components.riseIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -329,10 +330,11 @@ internal fun SavedCard(
     val shape: Shape = if (round) CircleShape else ConvxShapes.Artwork
     Box(
         Modifier
+            .riseIn()
             .width(width)
             .clip(ConvxShapes.Card)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.98f),
+            .pressable(onClick, interaction = interaction),
     ) {
         Column(Modifier.padding(10.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(1f)) {

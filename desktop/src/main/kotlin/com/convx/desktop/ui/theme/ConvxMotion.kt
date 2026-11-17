@@ -33,20 +33,6 @@ object ConvxMotion {
     /** A selection moving between two places: a tab's puck, a segmented control's thumb. */
     fun <T> select(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.76f, stiffness = 750f)
 
-    /** The scale-down under a press, and its release. */
-    fun <T> press(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.75f, stiffness = 1220f)
-
-    /** How far a pressed button or icon shrinks. */
-    const val PressScale = 0.97f
-
-    /** A bare glyph on glass (the bar's play and skip) shrinks further and wobbles back, the phone's pressWobble. */
-    const val WobblePressScale = 0.86f
-
-    fun <T> wobble(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.38f, stiffness = Spring.StiffnessMedium)
-
-    /** The spring a press to [scale] plays on. */
-    fun <T> pressFor(scale: Float): FiniteAnimationSpec<T> = if (scale <= WobblePressScale) wobble() else press()
-
     /** Something arriving in place: a sheet, a panel, a chip row. */
     fun <T> appear(): FiniteAnimationSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 450f)
 
@@ -58,6 +44,27 @@ object ConvxMotion {
 
     /** The menu pulled back into its button: quicker, no give. */
     fun <T> menuClose(): FiniteAnimationSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 700f)
+
+    /** A heart filling in on a like: a quick pop with a lively settle. */
+    fun <T> likePop(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.38f, stiffness = 640f)
+
+    /** A button taking something in, such as the queue button when a song lands in it. */
+    fun <T> bump(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.42f, stiffness = 760f)
+
+    /** A highlight moving between rows, with a little give at the end. */
+    fun <T> glide(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.74f, stiffness = 520f)
+
+    /** A page's covers rising into place one after another. */
+    fun <T> cascade(): FiniteAnimationSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 450f)
+
+    /** A dialog springing up from a little smaller. */
+    fun <T> dialog(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.74f, stiffness = 430f)
+
+    /** A notice rising out from behind the bottom bar. */
+    fun <T> notice(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.66f, stiffness = 480f)
+
+    /** Leaving quickly: material's accelerate curve, for anything that goes away. */
+    val ExitEasing: Easing = CubicBezierEasing(0.4f, 0f, 1f, 1f)
 
     /** An icon changing in place, play to pause: quick, with a pop from 30% size. */
     const val SwapInitialScale = 0.3f

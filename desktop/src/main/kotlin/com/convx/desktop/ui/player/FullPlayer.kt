@@ -68,6 +68,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.sp
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.Library
@@ -79,6 +80,7 @@ import com.convx.desktop.player.PlayerState
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.ArtistLinks
 import com.convx.desktop.ui.components.Artwork
+import com.convx.desktop.ui.components.likePop
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.IconButton
 import com.convx.desktop.ui.components.PlayerIconSlot
@@ -212,7 +214,11 @@ fun PlayerStage(
                 val side = if (split) min(maxHeight.value * 0.82f, leftWidth.value + 160f).dp else min(maxWidth.value, maxHeight.value * 0.82f).dp
                 HeroCover(
                     song?.thumbnail,
-                    Modifier.align(if (split) Alignment.TopStart else Alignment.TopCenter).size(side).graphicsLayer { alpha = 1f - away },
+                    Modifier
+                        .align(if (split) Alignment.TopStart else Alignment.TopCenter)
+                        .size(side)
+                        .then(if (preview || settings.hidePlayerArtwork) Modifier else Modifier.coverStage(0f, soft = true))
+                        .graphicsLayer { alpha = (1f - away) * CoverMorph.stageAlpha() },
                     fadeEnd = split,
                     fadeSides = !split && side < maxWidth,
                     hidden = settings.hidePlayerArtwork,
@@ -362,6 +368,7 @@ fun PlayerStage(
                                             iconSize = actionIcon,
                                             filled = !v2,
                                             slot = likeSlot,
+                                            iconModifier = Modifier.likePop(liked),
                                         )
                                         Spacer(Modifier.width(if (v2) 4.dp else 8.dp))
                                         Box {
@@ -480,6 +487,7 @@ private fun StageCover(
         // Apple's tell: the cover sinks back a little while paused.
         val artScale by animateFloatAsState(if (playing) 1f else 0.86f, spring(dampingRatio = 0.72f, stiffness = Spring.StiffnessLow))
         val shape = RoundedCornerShape(corner ?: 14.dp)
+        val cornerPx = with(LocalDensity.current) { (corner ?: 14.dp).toPx() }
         Box(Modifier.size(size), contentAlignment = Alignment.Center) {
             Box(
                 Modifier
@@ -487,7 +495,10 @@ private fun StageCover(
                     .graphicsLayer {
                         scaleX = artScale
                         scaleY = artScale
+                        // The bar's cover stands in for it while the player opens.
+                        alpha = CoverMorph.stageAlpha()
                     }
+                    .then(if (still || hidden) Modifier else Modifier.coverStage(cornerPx, soft = false))
                     .shadow(if (playing) 40.dp else 18.dp, shape)
                     .clip(shape)
                     .then(toggle),
@@ -500,15 +511,27 @@ private fun StageCover(
     }
     val style = design.coverStyle()
     val shape = style.shape(corner ?: 16.dp)
-    val angle by rememberCoverRotation(style, playing && !still)
+    val angleState = rememberCoverRotation(style, playing && !still)
+    val angle by angleState
+    // A record is round and wears grooves, a clover has its own outline: the bar's cover hands
+    // over to those with a fade; a card it becomes exactly.
+    val density = LocalDensity.current
+    val stage = if (still || hidden) {
+        Modifier
+    } else {
+        val cornerPx = with(density) { if (style == CoverStyle.Vinyl) size.toPx() / 2f else (corner ?: 16.dp).toPx() }
+        Modifier.coverStage(cornerPx, soft = style != CoverStyle.Card, angle = { if (style.artSpins) angleState.value else 0f })
+    }
     Box(
         Modifier
             .size(size)
+            .then(stage)
             .graphicsLayer {
                 rotationZ = angle
                 this.shape = shape
                 clip = true
                 shadowElevation = if (shadow) 24.dp.toPx() else 0f
+                alpha = CoverMorph.stageAlpha()
             }
             .then(toggle),
     ) {

@@ -127,7 +127,7 @@ fun HomeHeroCard(
                 .clip(shape)
                 .background(ConvxColors.CardSecondary)
                 .hoverable(interaction)
-                .pressable(onClick, interaction = interaction, pressScale = 0.99f),
+                .pressable(onClick, interaction = interaction),
         ) {
             val bitmap = image
             if (bitmap != null) {
@@ -260,7 +260,7 @@ fun HomeSignInCard(onGetStarted: () -> Unit, onDismiss: () -> Unit, modifier: Mo
                 .clip(ContinuousRoundedRectangle(12.dp))
                 .background(accent.copy(alpha = 0.12f))
                 .hoverable(interaction)
-                .pressable(onGetStarted, interaction = interaction, pressScale = 0.99f),
+                .pressable(onGetStarted, interaction = interaction),
         ) {
             Text("Get Started", style = ConvxType.BodyStrong.copy(fontSize = 15.sp, letterSpacing = (-0.23).sp, fontWeight = FontWeight.SemiBold), color = accent)
         }
@@ -335,7 +335,7 @@ fun CompactItemRow(item: YTItem, onClick: () -> Unit, modifier: Modifier = Modif
             .background(if (hovered || menu.expanded) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable({ if (isCurrent) PlayerController.togglePlay() else onClick() }, interaction = interaction, pressScale = 0.99f),
+            .pressable({ if (isCurrent) PlayerController.togglePlay() else onClick() }, interaction = interaction),
     ) {
         Row(Modifier.fillMaxWidth().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(52.dp)) {
@@ -393,7 +393,7 @@ private fun ActionRow(entry: ListEntry.Action) {
             .clip(RoundedCornerShape(10.dp))
             .background(if (hovered) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
-            .pressable(entry.onClick, interaction = interaction, pressScale = 0.99f)
+            .pressable(entry.onClick, interaction = interaction)
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

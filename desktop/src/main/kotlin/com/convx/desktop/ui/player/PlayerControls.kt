@@ -121,7 +121,7 @@ fun TransportControls(
                 Modifier
                     .size(play)
                     .clip(CircleShape)
-                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null, pressScale = ConvxMotion.WobblePressScale),
+                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null),
                 contentAlignment = Alignment.Center,
             ) {
                 AnimatedPlayGlyph(
