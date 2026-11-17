@@ -201,6 +201,9 @@ fun main() {
                     WindowTitleBar.updateInsets()
                 }
                 com.convx.desktop.core.Perf.watch(window)
+                com.convx.desktop.core.Memory.start()
+                // A finger on a touch screen, as touch rather than as the runtime's wheel steps.
+                com.convx.desktop.integrations.TouchInput.install(window)
                 // Media keys, the Windows media box and the taskbar preview's buttons, once the frame is settled.
                 withContext(Dispatchers.IO) { com.convx.desktop.integrations.MediaControls.install(window) }
             }

@@ -61,6 +61,7 @@ import com.convx.desktop.player.PlayerState
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.ArtistLinks
 import com.convx.desktop.ui.components.Artwork
+import com.convx.desktop.ui.components.likePop
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.EqualizerBars
 import com.convx.desktop.ui.components.IconButton
@@ -89,7 +90,6 @@ import androidx.compose.ui.unit.sp
 import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.ui.glass.GlassShapes
 import com.convx.desktop.ui.glass.liquidGlass
-import com.convx.desktop.ui.glass.rememberInteractiveHighlight
 import com.convx.desktop.ui.shell.FullPlayerMode
 import com.convx.desktop.ui.components.ScrollbarColumn
 import com.convx.desktop.ui.components.ListScrollbar
@@ -110,16 +110,12 @@ private val LyricsCardHeight = 330.dp
 fun RightPanel(panel: SidePanel, modifier: Modifier = Modifier) {
     val state by PlayerController.state.collectAsState()
     val shape = GlassShapes.Panel
-    // Measured against the whole panel, so a small radius keeps the glow near the pointer.
-    val glow = rememberInteractiveHighlight(radiusScale = 0.3f)
     Column(
         modifier
             .width(NowPlayingPanelWidth)
             .fillMaxHeight()
             .clip(shape)
-            .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
-            .then(glow.modifier)
-            .then(glow.gestureModifier),
+            .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f),
     ) {
         Row(
             Modifier.fillMaxWidth().padding(start = 12.dp, end = 8.dp, top = 12.dp, bottom = 6.dp),
@@ -137,7 +133,7 @@ fun RightPanel(panel: SidePanel, modifier: Modifier = Modifier) {
                             .height(30.dp)
                             .clip(GlassShapes.Capsule)
                             .background(if (selected) Color.White.copy(alpha = 0.18f) else Color.Transparent)
-                            .pressable({ UiState.openSidePanel(p) }, pressScale = 0.97f),
+                            .pressable({ UiState.openSidePanel(p) }),
                         contentAlignment = Alignment.Center,
                     ) {
                         Text(
@@ -155,7 +151,7 @@ fun RightPanel(panel: SidePanel, modifier: Modifier = Modifier) {
             }
             Spacer(Modifier.width(6.dp))
             if (panel == SidePanel.Lyrics) LyricsMenuButton(state.current, size = 32.dp, iconSize = 18.dp, filled = false)
-            IconButton("close", { UiState.closeSidePanel() }, size = 32.dp, iconSize = 18.dp, tooltip = "Close")
+            IconButton("close", { UiState.closeSidePanel() }, size = 32.dp, iconSize = 18.dp)
         }
         Crossfade(panel, modifier = Modifier.weight(1f)) { p ->
             when (p) {
@@ -195,7 +191,7 @@ private fun NowPlayingPanel(state: PlayerState) {
     // A bar to drag beside it, for a mouse or touchpad without a wheel.
     ScrollbarColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp)) {
         val coverShape = RoundedCornerShape(14.dp)
-        val coverModifier = Modifier.fillMaxWidth().aspectRatio(1f).shadow(18.dp, coverShape).pressable({ UiState.fullPlayer = true }, pressScale = 0.99f)
+        val coverModifier = Modifier.fillMaxWidth().aspectRatio(1f).shadow(18.dp, coverShape).pressable({ UiState.fullPlayer = true })
         if (settings.hidePlayerArtwork) {
             HiddenArtwork(coverModifier.clip(coverShape), markSize = 96.dp)
         } else {
@@ -211,11 +207,11 @@ private fun NowPlayingPanel(state: PlayerState) {
                 if (liked) "favorite" else "favorite_border",
                 { Library.toggleLike(song) },
                 tint = if (liked) LocalAccent.current else Color.White,
-                tooltip = if (liked) "Remove from Liked Songs" else "Add to Liked Songs",
                 slot = if (liked) com.convx.desktop.ui.components.PlayerIconSlot.LIKED else com.convx.desktop.ui.components.PlayerIconSlot.LIKE,
+                iconModifier = Modifier.likePop(liked),
             )
             Box {
-                IconButton("more_horiz", { menu.expanded = true }, tooltip = "More options")
+                IconButton("more_horiz", { menu.expanded = true })
                 AppMenu(menu) { SongMenuContent(song, { menu.expanded = false }) }
             }
         }
@@ -239,7 +235,7 @@ private fun NowPlayingPanel(state: PlayerState) {
             Spacer(Modifier.height(12.dp))
             InfoCard("From the album") {
                 Row(
-                    Modifier.fillMaxWidth().pressable({ navigator.navigate(Screen.Album(album.id)) }, pressScale = 0.99f),
+                    Modifier.fillMaxWidth().pressable({ navigator.navigate(Screen.Album(album.id)) }),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     ConvxIcon("album", tint = ConvxColors.SecondaryLabel, size = 22.dp)
@@ -284,7 +280,6 @@ private fun LyricsCard(song: Song) {
                 },
                 size = 32.dp,
                 iconSize = 15.dp,
-                tooltip = "Open lyrics",
             )
         }
         Box(Modifier.fillMaxWidth().height(LyricsCardHeight).clipToBounds()) {
@@ -406,7 +401,7 @@ fun QueueRow(
             )
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable({ if (isCurrent) PlayerController.togglePlay() else PlayerController.skipTo(position) }, interaction = interaction, pressScale = 0.99f),
+            .pressable({ if (isCurrent) PlayerController.togglePlay() else PlayerController.skipTo(position) }, interaction = interaction),
     ) {
         Row(Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(44.dp)) {
@@ -423,7 +418,7 @@ fun QueueRow(
                 Text(song.artistText, style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
             if (hovered && removable) {
-                IconButton("remove", { PlayerController.removeFromQueue(position) }, size = 30.dp, iconSize = 18.dp, tooltip = "Remove from queue")
+                IconButton("remove", { PlayerController.removeFromQueue(position) }, size = 30.dp, iconSize = 18.dp)
             } else {
                 Text(formatSeconds(song.duration), style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel)
             }

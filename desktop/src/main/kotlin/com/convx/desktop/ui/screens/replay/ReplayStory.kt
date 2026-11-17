@@ -329,12 +329,11 @@ private fun yy(year: Int) = (year % 100).toString().padStart(2, '0')
 @Composable
 private fun ChromeCircle(icon: String, description: String, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         Modifier
             .size(30.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered) 0.32f else 0.22f))
+            .background(Color.White.copy(alpha = 0.22f))
             .hoverable(interaction)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -347,12 +346,11 @@ private fun ChromeCircle(icon: String, description: String, onClick: () -> Unit)
 @Composable
 private fun NavArrow(icon: String, description: String, modifier: Modifier, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Box(
         modifier
             .size(44.dp)
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered) 0.28f else 0.16f))
+            .background(Color.White.copy(alpha = 0.16f))
             .hoverable(interaction)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick),
         contentAlignment = Alignment.Center,

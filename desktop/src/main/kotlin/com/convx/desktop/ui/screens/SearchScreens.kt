@@ -51,7 +51,8 @@ import com.convx.desktop.data.Library
 import com.convx.desktop.data.toSong
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.Artwork
-import com.convx.desktop.ui.components.CardGrid
+import com.convx.desktop.ui.components.cardGrid
+import com.convx.desktop.ui.components.rememberCardGrid
 import com.convx.desktop.ui.components.Chip
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Gutter
@@ -185,14 +186,14 @@ private fun SuggestionRow(text: String, onClick: () -> Unit, onFill: () -> Unit)
             .clip(RoundedCornerShape(8.dp))
             .background(if (hovered) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.995f)
+            .pressable(onClick, interaction = interaction)
             .padding(horizontal = 8.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ConvxIcon("cosmos_search", tint = ConvxColors.SecondaryLabel, size = 20.dp)
         Spacer(Modifier.width(14.dp))
         Text(text, style = ConvxType.Body, modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-        IconButton("arrow_top_left", onFill, size = 30.dp, iconSize = 18.dp, tint = ConvxColors.SecondaryLabel, tooltip = "Fill in search")
+        IconButton("arrow_top_left", onFill, size = 30.dp, iconSize = 18.dp, tint = ConvxColors.SecondaryLabel)
     }
 }
 
@@ -216,7 +217,7 @@ fun ResultRow(item: YTItem) {
             .clip(RoundedCornerShape(8.dp))
             .background(if (hovered) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
-            .pressable({ ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.995f)
+            .pressable({ ItemActions.open(item, navigator) }, interaction = interaction)
             .padding(horizontal = 12.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -272,6 +273,7 @@ fun SearchResultsScreen(query: String) {
     } else null
     var loadingMore by remember(filter) { mutableStateOf(false) }
 
+    val grid = rememberCardGrid()
     PageList(
         onNearEnd = {
             val page = filtered?.value ?: return@PageList
@@ -366,9 +368,7 @@ fun SearchResultsScreen(query: String) {
                             }
                         }
                     } else {
-                        item(key = "grid") {
-                            CardGrid { items.forEach { ItemCard(it) } }
-                        }
+                        cardGrid(grid, items, key = { it.id }) { ItemCard(it) }
                     }
                     if (loadingMore) item { LoadingState() }
                 }
@@ -408,9 +408,9 @@ private fun TopResult(title: String, item: YTItem, songs: List<SongItem>) {
                     Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(14.dp))
-                        .background(Color.White.copy(alpha = if (hovered) 0.12f else 0.07f))
+                        .background(Color.White.copy(alpha = 0.07f))
                         .hoverable(interaction)
-                        .pressable({ ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.99f)
+                        .pressable({ ItemActions.open(item, navigator) }, interaction = interaction)
                         .padding(20.dp),
                 ) {
                     Column {

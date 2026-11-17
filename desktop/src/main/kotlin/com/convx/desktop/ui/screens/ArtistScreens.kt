@@ -61,7 +61,8 @@ import com.convx.desktop.data.toSong
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.Artwork
-import com.convx.desktop.ui.components.CardGrid
+import com.convx.desktop.ui.components.cardGrid
+import com.convx.desktop.ui.components.rememberCardGrid
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Gutter
 import com.convx.desktop.ui.components.ItemActions
@@ -73,7 +74,6 @@ import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.components.MessageState
 import com.convx.desktop.ui.components.Overlays
 import com.convx.desktop.ui.components.SongShelf
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.artworkUrl
 import com.convx.desktop.ui.components.link
 import com.convx.desktop.ui.components.onSecondaryClick
@@ -342,34 +342,30 @@ private fun ArtistActionRow(
         horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onInfo, "About") {
+        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onInfo) {
             ConvxIcon("info", tint = Color.White, size = 22.dp)
         }
-        ControlCircle(73.dp, Color.White, onPlay, if (isPlaying) "Pause" else "Play") {
+        ControlCircle(73.dp, Color.White, onPlay) {
             ConvxIcon(if (isPlaying) "pause_applemusic" else "play_applemusic", tint = lerp(pageColor, Color.Black, 0.3f), size = 36.dp)
         }
-        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onFollow, if (followed) "Unfollow" else "Follow") {
+        ControlCircle(50.dp, Color.White.copy(alpha = 0.08f), onFollow) {
             ConvxIcon(if (followed) "star_fill" else "star", tint = Color.White, size = 24.dp)
         }
     }
 }
 
 @Composable
-private fun ControlCircle(size: Dp, fill: Color, onClick: () -> Unit, tooltip: String, content: @Composable () -> Unit) {
+private fun ControlCircle(size: Dp, fill: Color, onClick: () -> Unit, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    Tooltip(tooltip) {
-        Box(
-            Modifier
-                .size(size)
-                .clip(CircleShape)
-                .background(fill)
-                .background(if (hovered) Color.White.copy(alpha = 0.08f) else Color.Transparent)
-                .hoverable(interaction)
-                .pressable(onClick, interaction = interaction, pressScale = 0.92f),
-            contentAlignment = Alignment.Center,
-        ) { content() }
-    }
+    Box(
+        Modifier
+            .size(size)
+            .clip(CircleShape)
+            .background(fill)
+            .hoverable(interaction)
+            .pressable(onClick, interaction = interaction),
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 /**
@@ -387,8 +383,7 @@ private fun FeaturedReleaseCard(
 ) {
     val shape = RoundedCornerShape(22.dp)
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val wash = (0.09f + 0.25f * pageColor.luminance()).coerceIn(0.08f, 0.14f) + if (hovered) 0.04f else 0f
+    val wash = (0.09f + 0.25f * pageColor.luminance()).coerceIn(0.08f, 0.14f)
     Row(
         modifier
             .fillMaxWidth()
@@ -397,7 +392,7 @@ private fun FeaturedReleaseCard(
             .background(Color.White.copy(alpha = wash))
             .border(0.33.dp, Color.White.copy(alpha = 0.10f), shape)
             .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.98f)
+            .pressable(onClick, interaction = interaction)
             .padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -439,7 +434,7 @@ private fun Biography(text: String) {
             if (expanded) "Less" else "More",
             style = ConvxType.Headline,
             color = Color.White,
-            modifier = Modifier.pressable({ expanded = !expanded }, pressScale = 1f),
+            modifier = Modifier.pressable({ expanded = !expanded }),
         )
     }
 }
@@ -450,6 +445,7 @@ fun ArtistItemsScreen(browseId: String, params: String?, title: String) {
     val scope = rememberCoroutineScope()
     var loadingMore by remember { mutableStateOf(false) }
     val page = rememberPage("artist-items:$browseId:$params") { YouTube.artistItems(BrowseEndpoint(browseId, params)).getOrThrow() }
+    val grid = rememberCardGrid()
     PageList(
         onNearEnd = {
             val continuation = page.value?.continuation ?: return@PageList
@@ -474,9 +470,7 @@ fun ArtistItemsScreen(browseId: String, params: String?, title: String) {
                     val mapped = songs.map { it.toSong() }
                     songTable(mapped, title, "ai")
                 } else {
-                    item(key = "grid") {
-                        CardGrid { items.forEach { ItemCard(it) } }
-                    }
+                    cardGrid(grid, items, key = { it.id }) { ItemCard(it) }
                 }
                 if (loadingMore) item { LoadingState() }
             }

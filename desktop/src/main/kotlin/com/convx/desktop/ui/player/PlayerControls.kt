@@ -65,6 +65,7 @@ import com.convx.desktop.ui.shell.LocalNavigator
 import com.convx.desktop.ui.shell.Screen
 import com.convx.desktop.ui.shell.SidePanel
 import com.convx.desktop.ui.shell.UiState
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
@@ -102,10 +103,9 @@ fun TransportControls(
             tint = tint.copy(alpha = 0.75f),
             active = state.shuffle,
             activeTint = accent,
-            tooltip = if (state.shuffle) "Disable shuffle" else "Enable shuffle",
         )
         val previous = if (v2) PlayerIconSlot.V2_PREVIOUS else PlayerIconSlot.PREVIOUS
-        IconButton(previous.fallback, { PlayerController.previous() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, tooltip = "Previous", slot = previous)
+        IconButton(previous.fallback, { PlayerController.previous() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, slot = previous)
         if (compact || !v2) {
             PlayButton(
                 isPlaying = state.isPlaying,
@@ -117,15 +117,11 @@ fun TransportControls(
             )
         } else {
             // The phone's v2: a bare glyph, no disc, popping between play and pause.
-            val interaction = remember { MutableInteractionSource() }
-            val hovered by interaction.collectIsHoveredAsState()
             Box(
                 Modifier
                     .size(play)
                     .clip(CircleShape)
-                    .background(Color.White.copy(alpha = if (hovered && state.current != null) 0.08f else 0f))
-                    .hoverable(interaction)
-                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null, interaction = interaction, pressScale = 0.86f),
+                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null),
                 contentAlignment = Alignment.Center,
             ) {
                 AnimatedPlayGlyph(
@@ -136,7 +132,7 @@ fun TransportControls(
             }
         }
         val next = if (v2) PlayerIconSlot.V2_NEXT else PlayerIconSlot.NEXT
-        IconButton(next.fallback, { PlayerController.next() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, tooltip = "Next", slot = next)
+        IconButton(next.fallback, { PlayerController.next() }, size = skip, iconSize = skipIcon, tint = tint, enabled = state.current != null, slot = next)
         if (!v2) IconButton(
             when (state.repeat) {
                 RepeatMode.ONE -> "repeat_one_on"
@@ -149,11 +145,6 @@ fun TransportControls(
             tint = tint.copy(alpha = 0.75f),
             active = state.repeat != RepeatMode.OFF,
             activeTint = accent,
-            tooltip = when (state.repeat) {
-                RepeatMode.OFF -> "Enable repeat"
-                RepeatMode.ALL -> "Enable repeat one"
-                RepeatMode.ONE -> "Disable repeat"
-            },
         )
     }
 }
@@ -257,7 +248,6 @@ fun VolumeControl(
             size = 34.dp,
             iconSize = 19.dp,
             tint = tint,
-            tooltip = if (state.muted) "Unmute" else "Mute",
             slot = slot,
         )
         ValueSlider(

@@ -102,7 +102,6 @@ fun HomeHeroCard(
     val reduced = settings.reduceLiveBlur
     val image by rememberImage(artworkUrl(thumbnail, 1200))
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     // Zooms in from 112% as it fades in, once the cover is there to show; Reduce live blur just shows it.
     val scale = remember { Animatable(1.12f) }
     val alpha = remember { Animatable(0f) }
@@ -128,7 +127,7 @@ fun HomeHeroCard(
                 .clip(shape)
                 .background(ConvxColors.CardSecondary)
                 .hoverable(interaction)
-                .pressable(onClick, interaction = interaction, pressScale = 0.99f),
+                .pressable(onClick, interaction = interaction),
         ) {
             val bitmap = image
             if (bitmap != null) {
@@ -137,7 +136,7 @@ fun HomeHeroCard(
                     contentDescription = "$title — $subtitle",
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().graphicsLayer {
-                        val s = scale.value * if (hovered) 1.02f else 1f
+                        val s = scale.value
                         scaleX = s
                         scaleY = s
                         this.alpha = alpha.value
@@ -208,13 +207,12 @@ fun HomeHeroCard(
 @Composable
 private fun HeroPill(icon: String, label: String, onClick: () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Row(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
         modifier = Modifier
             .clip(CircleShape)
-            .background(Color.White.copy(alpha = if (hovered) 0.3f else 0.22f))
+            .background(Color.White.copy(alpha = 0.22f))
             .hoverable(interaction)
             .pressable(onClick, interaction = interaction)
             .padding(horizontal = 20.dp, vertical = 12.dp),
@@ -253,7 +251,6 @@ fun HomeSignInCard(onGetStarted: () -> Unit, onDismiss: () -> Unit, modifier: Mo
         }
         Spacer(Modifier.height(14.dp))
         val interaction = remember { MutableInteractionSource() }
-        val hovered by interaction.collectIsHoveredAsState()
         Box(
             contentAlignment = Alignment.Center,
             modifier = Modifier
@@ -261,9 +258,9 @@ fun HomeSignInCard(onGetStarted: () -> Unit, onDismiss: () -> Unit, modifier: Mo
                 .fillMaxWidth()
                 .height(44.dp)
                 .clip(ContinuousRoundedRectangle(12.dp))
-                .background(accent.copy(alpha = if (hovered) 0.2f else 0.12f))
+                .background(accent.copy(alpha = 0.12f))
                 .hoverable(interaction)
-                .pressable(onGetStarted, interaction = interaction, pressScale = 0.99f),
+                .pressable(onGetStarted, interaction = interaction),
         ) {
             Text("Get Started", style = ConvxType.BodyStrong.copy(fontSize = 15.sp, letterSpacing = (-0.23).sp, fontWeight = FontWeight.SemiBold), color = accent)
         }
@@ -338,7 +335,7 @@ fun CompactItemRow(item: YTItem, onClick: () -> Unit, modifier: Modifier = Modif
             .background(if (hovered || menu.expanded) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable({ if (isCurrent) PlayerController.togglePlay() else onClick() }, interaction = interaction, pressScale = 0.99f),
+            .pressable({ if (isCurrent) PlayerController.togglePlay() else onClick() }, interaction = interaction),
     ) {
         Row(Modifier.fillMaxWidth().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(52.dp)) {
@@ -396,7 +393,7 @@ private fun ActionRow(entry: ListEntry.Action) {
             .clip(RoundedCornerShape(10.dp))
             .background(if (hovered) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
-            .pressable(entry.onClick, interaction = interaction, pressScale = 0.99f)
+            .pressable(entry.onClick, interaction = interaction)
             .padding(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

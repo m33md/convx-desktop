@@ -95,6 +95,11 @@ internal class HighlightNode(
 
     private var prevStyle: HighlightStyle? = null
 
+    private var recordedHighlight: Highlight? = null
+    private var recordedSize = IntSize.Zero
+    private var recordedOutline: Outline? = null
+    private var recordedDensity = Float.NaN
+
     override fun ContentDrawScope.draw() {
         val highlight = highlight()
         if (highlight == null || highlight.width.value <= 0f) {
@@ -123,18 +128,29 @@ internal class HighlightNode(
                     null
                 }
 
-            configurePaint(highlight)
-
             highlightLayer.alpha = highlight.alpha
             highlightLayer.blendMode = highlight.style.blendMode
-            highlightLayer.record(safeSize) {
-                translate(1f, 1f) {
-                    val canvas = drawContext.canvas
-                    canvas.save()
-                    canvas.clipOutline(outline, clipPath)
-                    canvas.drawOutline(outline, paint)
-                    canvas.restore()
+            // The rim is recorded again only when what it's drawn from changed; its alpha is composited separately.
+            val prev = recordedHighlight
+            if (prev == null || prev.width != highlight.width ||
+                prev.blurRadius != highlight.blurRadius || prev.style != highlight.style ||
+                safeSize != recordedSize ||
+                outline != recordedOutline || density.density != recordedDensity
+            ) {
+                configurePaint(highlight)
+                highlightLayer.record(safeSize) {
+                    translate(1f, 1f) {
+                        val canvas = drawContext.canvas
+                        canvas.save()
+                        canvas.clipOutline(outline, clipPath)
+                        canvas.drawOutline(outline, paint)
+                        canvas.restore()
+                    }
                 }
+                recordedHighlight = highlight
+                recordedSize = safeSize
+                recordedOutline = outline
+                recordedDensity = density.density
             }
 
             translate(-1f, -1f) {
@@ -157,6 +173,10 @@ internal class HighlightNode(
         clipPath = null
         runtimeShaderCache.clear()
         prevStyle = null
+        recordedHighlight = null
+        recordedSize = IntSize.Zero
+        recordedOutline = null
+        recordedDensity = Float.NaN
     }
 
     private fun DrawScope.configurePaint(highlight: Highlight) {

@@ -24,6 +24,9 @@ data class PageInsets(val start: Dp = 0.dp, val top: Dp = 64.dp, val bottom: Dp 
 
 val LocalPageInsets = compositionLocalOf { PageInsets() }
 
+/** The width a page's list has between the side bar and the side panel. */
+val LocalPageWidth = compositionLocalOf { 1000.dp }
+
 /**
  * Widens a list item [start] to the left, out to the window's edge, so a sideways shelf or a
  * hero photo runs under the side bar's glass instead of stopping at its inset.

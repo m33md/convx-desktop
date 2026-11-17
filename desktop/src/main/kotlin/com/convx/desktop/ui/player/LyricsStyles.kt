@@ -142,8 +142,7 @@ internal fun StyledLyrics(lyrics: Lyrics, subs: List<LineSubs?>, lyricsStyle: Ly
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val half = maxHeight / 2
         LaunchedEffect(anchor.value, follow, maxHeight, settings.lyricsAutoScroll) {
-            // The list's first item is the source credit, so line i is item i + 1.
-            if (follow && settings.lyricsAutoScroll && anchor.value >= 0) listState.followLyricLine(anchor.value + 1)
+            if (follow && settings.lyricsAutoScroll && anchor.value >= 0) listState.followLyricLine(anchor.value)
         }
         LazyColumn(
             state = listState,
@@ -160,14 +159,6 @@ internal fun StyledLyrics(lyrics: Lyrics, subs: List<LineSubs?>, lyricsStyle: Ly
                     }
                 },
         ) {
-            item(key = "credit") {
-                Text(
-                    "Lyrics from ${lyrics.source}",
-                    style = ConvxType.Caption.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
-                    color = Ink.copy(alpha = 0.6f),
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
-                )
-            }
             itemsIndexed(lines, key = { index, _ -> index }) { index, line ->
                 val active by remember(index, lines) {
                     derivedStateOf { anchor.value >= 0 && lines[index].timeMs == lines[anchor.value].timeMs }
@@ -186,6 +177,15 @@ internal fun StyledLyrics(lyrics: Lyrics, subs: List<LineSubs?>, lyricsStyle: Ly
                 } else {
                     StyledLine(line, index, anchor, nextTime, live, synced, active, distance, lyricsStyle, look, settings.lyricsStandardBlur && follow, seek, subs.getOrNull(index))
                 }
+            }
+            // The source, under the last line and in line with the lyrics.
+            item(key = "credit") {
+                Text(
+                    "Lyrics from ${lyrics.source}",
+                    style = ConvxType.Caption.copy(fontSize = 12.sp, fontWeight = FontWeight.Medium),
+                    color = Ink.copy(alpha = 0.6f),
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 16.dp),
+                )
             }
             item(key = "extra") { Spacer(Modifier.height(200.dp)) }
         }

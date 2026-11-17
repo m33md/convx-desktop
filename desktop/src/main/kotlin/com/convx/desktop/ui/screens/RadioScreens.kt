@@ -145,14 +145,13 @@ private fun RadioStationCard(song: Song, modifier: Modifier, onClick: () -> Unit
     val shape = RoundedCornerShape(16.dp)
     val artist = song.artists.joinToString { it.name }.ifBlank { song.title }
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     val menu = rememberMenuAnchor()
     Box(
         modifier
             .aspectRatio(1f)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable(onClick, interaction = interaction, pressScale = 0.98f)
+            .pressable(onClick, interaction = interaction)
             .clip(shape)
             .background(ConvxColors.Card),
     ) {
@@ -160,7 +159,7 @@ private fun RadioStationCard(song: Song, modifier: Modifier, onClick: () -> Unit
         Box(
             Modifier.fillMaxSize().background(
                 Brush.verticalGradient(
-                    0f to Color.Black.copy(alpha = if (hovered) 0.16f else 0.08f),
+                    0f to Color.Black.copy(alpha = 0.08f),
                     0.45f to Color.Black.copy(alpha = 0.28f),
                     1f to Color.Black.copy(alpha = 0.82f),
                 ),
@@ -179,7 +178,7 @@ private fun RadioStationCard(song: Song, modifier: Modifier, onClick: () -> Unit
                 .padding(8.dp)
                 .size(38.dp)
                 .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered) 0.26f else 0.18f))
+                .background(Color.White.copy(alpha = 0.18f))
                 .border(0.5.dp, Color.White.copy(alpha = 0.28f), CircleShape)
                 .pressable(onPlay),
             contentAlignment = Alignment.Center,
@@ -278,16 +277,15 @@ fun RadioStationScreen(seed: Song) {
 private fun RadioStationHeader(seed: Song, title: String, onPlay: () -> Unit) {
     val shape = RoundedCornerShape(20.dp)
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     Row(
         Modifier
             .padding(horizontal = Gutter, vertical = 10.dp)
             .widthIn(max = 720.dp)
             .fillMaxWidth()
             .hoverable(interaction)
-            .pressable(onPlay, interaction = interaction, pressScale = 0.99f)
+            .pressable(onPlay, interaction = interaction)
             .clip(shape)
-            .background(if (hovered) ConvxColors.CardSecondary else ConvxColors.Card)
+            .background(ConvxColors.Card)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp),
@@ -298,7 +296,7 @@ private fun RadioStationHeader(seed: Song, title: String, onPlay: () -> Unit) {
             Text(title, style = ConvxType.Headline, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Text(seed.artistText, style = ConvxType.Body, color = ConvxColors.SecondaryLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
-        GlassCircleButton(onClick = onPlay, size = 44.dp, tooltip = "Play station") {
+        GlassCircleButton(onClick = onPlay, size = 44.dp) {
             ConvxIcon("play_applemusic", tint = Color.White, size = 19.dp)
         }
         Spacer(Modifier.width(2.dp))

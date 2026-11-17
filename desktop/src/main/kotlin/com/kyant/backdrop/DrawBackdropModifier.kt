@@ -38,6 +38,9 @@ import androidx.compose.ui.node.requireGraphicsContext
 import androidx.compose.ui.platform.InspectorInfo
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.drawscope.scale
+import kotlin.math.ceil
 import androidx.compose.ui.unit.IntSize
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.highlight.Highlight
@@ -62,7 +65,10 @@ fun Modifier.drawPlainBackdrop(
     onDrawBehind: (DrawScope.() -> Unit)? = null,
     onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit = DefaultOnDrawBackdrop,
     onDrawSurface: (DrawScope.() -> Unit)? = null,
-    onDrawFront: (DrawScope.() -> Unit)? = null
+    onDrawFront: (DrawScope.() -> Unit)? = null,
+    // The backdrop is captured at this share of the surface's resolution, which makes its effects
+    // that much cheaper; pixel-sized effect parameters are scaled by the same factor by the caller.
+    backdropScale: Float = 1f
 ): Modifier {
     val shapeProvider = ShapeProvider(shape)
     return this
@@ -83,7 +89,8 @@ fun Modifier.drawPlainBackdrop(
                 onDrawBehind = onDrawBehind,
                 onDrawBackdrop = onDrawBackdrop,
                 onDrawSurface = onDrawSurface,
-                onDrawFront = onDrawFront
+                onDrawFront = onDrawFront,
+                backdropScale = backdropScale.coerceIn(0.05f, 1f)
             )
         )
 }
@@ -100,7 +107,10 @@ fun Modifier.drawBackdrop(
     onDrawBehind: (DrawScope.() -> Unit)? = null,
     onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit = DefaultOnDrawBackdrop,
     onDrawSurface: (DrawScope.() -> Unit)? = null,
-    onDrawFront: (DrawScope.() -> Unit)? = null
+    onDrawFront: (DrawScope.() -> Unit)? = null,
+    // The backdrop is captured at this share of the surface's resolution, which makes its effects
+    // that much cheaper; pixel-sized effect parameters are scaled by the same factor by the caller.
+    backdropScale: Float = 1f
 ): Modifier {
     val shapeProvider = ShapeProvider(shape)
     return this
@@ -151,7 +161,8 @@ fun Modifier.drawBackdrop(
                 onDrawBehind = onDrawBehind,
                 onDrawBackdrop = onDrawBackdrop,
                 onDrawSurface = onDrawSurface,
-                onDrawFront = onDrawFront
+                onDrawFront = onDrawFront,
+                backdropScale = backdropScale.coerceIn(0.05f, 1f)
             )
         )
 }
@@ -165,7 +176,8 @@ private class DrawBackdropElement(
     val onDrawBehind: (DrawScope.() -> Unit)?,
     val onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit,
     val onDrawSurface: (DrawScope.() -> Unit)?,
-    val onDrawFront: (DrawScope.() -> Unit)?
+    val onDrawFront: (DrawScope.() -> Unit)?,
+    val backdropScale: Float
 ) : ModifierNodeElement<DrawBackdropNode>() {
 
     override fun create(): DrawBackdropNode {
@@ -178,7 +190,8 @@ private class DrawBackdropElement(
             onDrawBehind = onDrawBehind,
             onDrawBackdrop = onDrawBackdrop,
             onDrawSurface = onDrawSurface,
-            onDrawFront = onDrawFront
+            onDrawFront = onDrawFront,
+            backdropScale = backdropScale
         )
     }
 
@@ -195,6 +208,7 @@ private class DrawBackdropElement(
         node.onDrawBackdrop = onDrawBackdrop
         node.onDrawSurface = onDrawSurface
         node.onDrawFront = onDrawFront
+        node.backdropScale = backdropScale
         node.invalidateDrawCache()
     }
 
@@ -224,6 +238,7 @@ private class DrawBackdropElement(
         if (onDrawBackdrop != other.onDrawBackdrop) return false
         if (onDrawSurface != other.onDrawSurface) return false
         if (onDrawFront != other.onDrawFront) return false
+        if (backdropScale != other.backdropScale) return false
 
         return true
     }
@@ -238,6 +253,7 @@ private class DrawBackdropElement(
         result = 31 * result + onDrawBackdrop.hashCode()
         result = 31 * result + (onDrawSurface?.hashCode() ?: 0)
         result = 31 * result + (onDrawFront?.hashCode() ?: 0)
+        result = 31 * result + backdropScale.hashCode()
         return result
     }
 }
@@ -251,7 +267,8 @@ private class DrawBackdropNode(
     var onDrawBehind: (DrawScope.() -> Unit)?,
     var onDrawBackdrop: DrawScope.(drawBackdrop: DrawScope.() -> Unit) -> Unit,
     var onDrawSurface: (DrawScope.() -> Unit)?,
-    var onDrawFront: (DrawScope.() -> Unit)?
+    var onDrawFront: (DrawScope.() -> Unit)?,
+    var backdropScale: Float
 ) : LayoutModifierNode, DrawModifierNode, GlobalPositionAwareModifierNode, ObserverModifierNode, Modifier.Node() {
 
     private val effectScope =
@@ -265,7 +282,8 @@ private class DrawBackdropNode(
     private val layoutLayerBlock: GraphicsLayerScope.() -> Unit = {
         clip = true
         shape = shapeProvider.shape
-        compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Offscreen
+        // Auto spares an opaque surface a buffer of its own; one is still used when alpha needs it.
+        compositingStrategy = androidx.compose.ui.graphics.CompositingStrategy.Auto
     }
 
     private var layoutCoordinates: LayoutCoordinates? by mutableStateOf(null, neverEqualPolicy())
@@ -275,18 +293,26 @@ private class DrawBackdropNode(
     private val recordBackdropBlock: (DrawScope.() -> Unit) = {
         val canvas = drawContext.canvas
         val padding = padding
+        val scale = backdropScale
+        val density: androidx.compose.ui.unit.Density = this
 
         if (padding != 0f) {
             canvas.translate(padding, padding)
         }
+        if (scale != 1f) {
+            canvas.scale(scale, scale)
+        }
         onDrawBackdrop {
             with(backdrop) {
                 drawBackdrop(
-                    density = effectScope,
+                    density = density,
                     coordinates = layoutCoordinates,
                     layerBlock = layerBlock
                 )
             }
+        }
+        if (scale != 1f) {
+            canvas.scale(1f / scale, 1f / scale)
         }
         if (padding != 0f) {
             canvas.translate(-padding, -padding)
@@ -297,13 +323,14 @@ private class DrawBackdropNode(
         val layer = graphicsLayer
         if (layer != null) {
             val padding = padding
+            val scale = backdropScale
 
             recordLayer(
                 this@DrawBackdropNode,
                 layer,
                 size = IntSize(
-                    size.width.toInt() + padding.toInt() * 2,
-                    size.height.toInt() + padding.toInt() * 2
+                    (ceil(size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
+                    (ceil(size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
                 ),
                 block = recordBackdropBlock
             )
@@ -311,7 +338,14 @@ private class DrawBackdropNode(
             layer.topLeft =
                 if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt())
                 else IntOffset.Zero
-            drawLayer(layer)
+            if (scale != 1f) {
+                // The small capture is stretched back over the surface; its blur hides the stretch.
+                scale(1f / scale, pivot = Offset.Zero) {
+                    drawLayer(layer)
+                }
+            } else {
+                drawLayer(layer)
+            }
         }
     }
 
@@ -326,7 +360,7 @@ private class DrawBackdropNode(
     }
 
     override fun ContentDrawScope.draw() {
-        if (effectScope.update(this)) {
+        if (effectScope.update(this, backdropScale)) {
             updateEffects()
         }
 
@@ -376,6 +410,7 @@ private class DrawBackdropNode(
 
         effectScope.apply(effects)
         graphicsLayer?.renderEffect = effectScope.renderEffect
+        graphicsLayer?.colorFilter = effectScope.compositeColorFilter
         padding = effectScope.padding
     }
 

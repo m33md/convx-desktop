@@ -196,7 +196,7 @@ private fun SampleLyrics(selected: LyricsStyle, position: LyricsPosition, accent
         LyricsPosition.Center -> TextAlign.Center
         LyricsPosition.Right -> TextAlign.End
     }
-    val fill = selected in setOf(LyricsStyle.Flamingo, LyricsStyle.Karaoke, LyricsStyle.KaraokeApple, LyricsStyle.Apple, LyricsStyle.AppleV2, LyricsStyle.ChordSync)
+    val fill = selected in setOf(LyricsStyle.Flamingo, LyricsStyle.Karaoke, LyricsStyle.KaraokeApple, LyricsStyle.Apple, LyricsStyle.AppleV2, LyricsStyle.ChordSync, LyricsStyle.LyricsV2)
     val ground = Color(0xFF111217)
     Box(
         Modifier

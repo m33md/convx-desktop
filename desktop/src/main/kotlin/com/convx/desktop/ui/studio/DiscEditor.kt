@@ -77,6 +77,7 @@ import com.convx.desktop.data.DiscLayer
 import com.convx.desktop.data.DiscPresets
 import com.convx.desktop.data.Library
 import com.convx.desktop.data.LayerKind
+import com.convx.desktop.data.SampleAssetPrefix
 import com.convx.desktop.data.TextPath
 import com.convx.desktop.data.newLayerId
 import com.convx.desktop.ui.components.AppMenu
@@ -178,20 +179,44 @@ object DiscEditor {
         isOpen = true
     }
 
-    /** A new design from [preset], its text naming the playlist it's for. */
+    /** A new design from [preset], named after the playlist it's for. */
     fun openPreset(preset: DiscPresets.Preset, forPlaylist: String? = null) {
-        val playlist = forPlaylist?.let { Library.playlist(it) }
-        open(DiscPresets.start(preset, playlist?.name, playlist?.songs?.map { it.title }.orEmpty()), forPlaylist)
+        open(DiscPresets.start(preset, forPlaylist?.let { Library.playlist(it) }?.name), forPlaylist)
         dirty = true
+        coversInto(preset)
     }
 
-    /** The playlist's own design if it has one, or a new one with its name on it. */
+    /**
+     * Swaps a preset's sample pictures for the playlist's own song covers once they're fetched, so a
+     * cover collage shows its songs. The sample pictures stand in until then.
+     */
+    private fun coversInto(preset: DiscPresets.Preset) {
+        val playlist = playlistId?.let { Library.playlist(it) } ?: return
+        if (!DiscPresets.usesCovers(preset)) return
+        val urls = playlist.songs.mapNotNull { it.thumbnail }.distinct().take(9)
+        if (urls.isEmpty()) return
+        val id = design.id
+        AppScope.launch(Dispatchers.Main) {
+            val covers = withContext(Dispatchers.IO) { urls.mapNotNull { url -> runCatching { importCoverPicture(url) }.getOrNull() } }
+            if (covers.isEmpty() || !isOpen || design.id != id) return@launch
+            design = design.copy(
+                layers = design.layers.map { layer ->
+                    val n = layer.asset?.takeIf { it.startsWith(SampleAssetPrefix) }?.removePrefix(SampleAssetPrefix)?.toIntOrNull()
+                    if (n == null) layer else layer.copy(asset = covers[n % covers.size])
+                },
+            )
+        }
+    }
+
+    /** The playlist's own design if it has one, or a new one for it. */
     fun openFor(playlistId: String) {
         val linked = DiscDesigns.get(Library.playlist(playlistId)?.design)
         if (linked != null) {
             open(linked, playlistId)
         } else {
-            openPreset(DiscPresets.of("afro-night") ?: DiscPresets.all.first(), playlistId)
+            // A playlist with covers starts as a ring of them; one without, as a holographic CD.
+            val covers = Library.playlist(playlistId)?.songs.orEmpty().any { it.thumbnail != null }
+            openPreset(DiscPresets.of(if (covers) "cover-collage" else "holographic") ?: DiscPresets.all.first(), playlistId)
         }
     }
 
@@ -320,9 +345,13 @@ object DiscEditor {
         dirty = true
     }
 
-    fun add(layer: DiscLayer) {
-        commit(design.copy(layers = design.layers + layer))
-        selectedId = layer.id
+    fun add(layer: DiscLayer) = addAll(listOf(layer))
+
+    /** Several new layers on top in one undo step, the last of them selected. */
+    fun addAll(layers: List<DiscLayer>) {
+        if (layers.isEmpty()) return
+        commit(design.copy(layers = design.layers + layers))
+        selectedId = layers.last().id
         picker = null
         painting = false
     }
@@ -469,12 +498,12 @@ object DiscEditor {
         commit(design.copy(layers = layers))
     }
 
-    /** Swaps the whole design for [preset]'s, keeping its name and the playlist's name in its text. */
+    /** Swaps the whole design for [preset]'s, keeping its name. */
     fun usePreset(preset: DiscPresets.Preset) {
-        val playlist = playlistId?.let { Library.playlist(it) }
-        val fresh = DiscPresets.start(preset, playlist?.name ?: design.name, playlist?.songs?.map { it.title }.orEmpty())
+        val fresh = DiscPresets.start(preset)
         commit(fresh.copy(id = design.id, name = design.name, createdAt = design.createdAt))
         selectedId = null
+        coversInto(preset)
     }
 
     private fun nudge(dx: Float, dy: Float) {
@@ -560,20 +589,20 @@ private fun EditorTopBar() {
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        IconButton("arrow_back", DiscEditor::close, tooltip = "Back to Disc Studio (Esc)")
+        IconButton("arrow_back", DiscEditor::close)
         Spacer(Modifier.width(4.dp))
         NameField(Modifier.widthIn(min = 120.dp, max = 320.dp))
         if (DiscEditor.dirty) {
             Text("Not saved", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel)
         }
         Spacer(Modifier.weight(1f))
-        IconButton("replay", DiscEditor::undo, enabled = DiscEditor.canUndo, tooltip = "Undo (Ctrl+Z)")
-        IconButton("redo", DiscEditor::redo, enabled = DiscEditor.canRedo, tooltip = "Redo (Ctrl+Y)")
+        IconButton("replay", DiscEditor::undo, enabled = DiscEditor.canUndo)
+        IconButton("redo", DiscEditor::redo, enabled = DiscEditor.canRedo)
         Spacer(Modifier.width(6.dp))
-        IconButton("refresh", { DiscEditor.spinning = !DiscEditor.spinning }, active = DiscEditor.spinning, activeTint = accent, tooltip = "Spin it (Space)")
-        IconButton("disc_case", { DiscEditor.asCover = !DiscEditor.asCover }, active = DiscEditor.asCover, activeTint = accent, tooltip = "See it as the playlist cover")
-        IconButton("image", { DiscEditor.exportImage() }, tooltip = "Save as picture")
-        IconButton("ios_share", { DiscEditor.export() }, tooltip = "Share as a .convxdisc file")
+        IconButton("refresh", { DiscEditor.spinning = !DiscEditor.spinning }, active = DiscEditor.spinning, activeTint = accent)
+        IconButton("disc_case", { DiscEditor.asCover = !DiscEditor.asCover }, active = DiscEditor.asCover, activeTint = accent)
+        IconButton("image", { DiscEditor.exportImage() })
+        IconButton("ios_share", { DiscEditor.export() })
         Spacer(Modifier.width(6.dp))
         Box {
             val target = DiscEditor.playlistId?.let { id -> library.localPlaylists.firstOrNull { it.id == id } }
@@ -595,7 +624,7 @@ private fun EditorTopBar() {
             }
         }
         if (DiscEditor.playlistId != null) {
-            IconButton("more_horiz", { playlistMenu.expanded = true }, tooltip = "Use on another playlist")
+            IconButton("more_horiz", { playlistMenu.expanded = true })
         }
         PillButton(if (DiscEditor.saving) "Saving…" else "Save", { DiscEditor.save() }, accent = accent, icon = "check")
     }

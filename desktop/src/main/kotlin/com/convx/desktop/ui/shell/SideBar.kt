@@ -5,6 +5,22 @@
 
 package com.convx.desktop.ui.shell
 
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.keyframes
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.util.lerp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.animateDpAsState
@@ -79,6 +95,7 @@ import com.convx.desktop.integrations.spotify.SpotifyApi
 import com.convx.desktop.integrations.spotify.SpotifyMatcher
 import com.convx.desktop.integrations.spotify.SpotifyPlaylist
 import com.convx.desktop.player.PlayerController
+import com.convx.desktop.ui.components.pressable
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.Artwork
 import com.convx.desktop.ui.components.ConvxIcon
@@ -87,7 +104,6 @@ import com.convx.desktop.ui.components.MenuDivider
 import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.components.MosaicArt
 import com.convx.desktop.ui.components.Overlays
-import com.convx.desktop.ui.components.Tooltip
 import com.convx.desktop.ui.components.onSecondaryClick
 import com.convx.desktop.ui.components.openAtProvider
 import com.convx.desktop.ui.components.rememberListReorder
@@ -96,10 +112,8 @@ import com.convx.desktop.ui.components.reorderGestures
 import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.ui.glass.GlassShapes
 import com.convx.desktop.ui.glass.liquidGlass
-import com.convx.desktop.ui.glass.onSelected
-import com.convx.desktop.ui.glass.rememberInteractiveHighlight
-import com.convx.desktop.ui.glass.rememberSymbolBounce
 import com.convx.desktop.ui.screens.SpotifyGreen
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
 import com.music.innertube.YouTube
@@ -134,7 +148,10 @@ val DownloadsGradient = listOf(Color(0xFF30D158), Color(0xFF0A84FF))
 
 private val RowHeight = 36.dp
 private val RailRowHeight = 44.dp
-private val ArtSize = 24.dp
+
+/** Your playlists sit a little taller than the places above them, so their covers can be seen. */
+private val PlaylistRowHeight = 44.dp
+private val PlaylistArtSize = 32.dp
 private val RailArtSize = 32.dp
 private val RowShape = RoundedCornerShape(10.dp)
 
@@ -292,10 +309,8 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
     val settings by AppSettings.state.collectAsState()
     val library by Library.state.collectAsState()
     val player by PlayerController.state.collectAsState()
-    val panelWidth by animateDpAsState(if (collapsed) SideBarCollapsedWidth else SideBarWidth, spring(0.9f, 400f))
+    val panelWidth by animateDpAsState(if (collapsed) SideBarCollapsedWidth else SideBarWidth, ConvxMotion.appear())
     val shape = if (collapsed) GlassShapes.Capsule else GlassShapes.Panel
-    // Measured against the whole panel, so a small radius keeps the glow to about one row.
-    val glow = rememberInteractiveHighlight(radiusScale = 0.3f)
 
     val spotify by SpotifyAccount.state.collectAsState()
     var spotifyLists by remember { mutableStateOf<List<SpotifyPlaylist>?>(null) }
@@ -463,29 +478,33 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
                     // macOS: the system's material is the window itself (MacWindow), so the rows sit right on it.
                     Modifier
                 } else {
-                    Modifier
-                        .liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
-                        .then(glow.modifier)
-                        .then(glow.gestureModifier)
+                    Modifier.liquidGlass(shape, GlassConfig.SidePanel, highlightAlpha = 0.3f)
                 },
             ),
     ) {
         if (macNative) Spacer(Modifier.weight(1f))
         if (!macNative) Box(Modifier.weight(1f).fillMaxWidth()) {
+            val scope = rememberCoroutineScope()
+            val spot = remember(scope) { SelectionSpot(scope) }
             LazyColumn(
                 state = listState,
-                modifier = Modifier.fillMaxSize().fadingEdge(12.dp).reorderGestures(reorder),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .fadingEdge(12.dp)
+                    .onGloballyPositioned { spot.list = it }
+                    .drawBehind { with(spot) { draw() } }
+                    .reorderGestures(reorder),
                 contentPadding = PaddingValues(start = 8.dp, end = if (collapsed) 8.dp else 10.dp, top = 10.dp, bottom = 12.dp),
             ) {
-                items(places, key = { "nav:${it.key}" }) { NavRow(it, collapsed) }
+                items(places, key = { "nav:${it.key}" }) { NavRow(it, collapsed, spot) }
                 if (libraryItems.isNotEmpty()) {
                     item(key = "heading:library") { Heading("Library", collapsed) }
-                    items(libraryItems, key = { "nav:${it.key}" }) { NavRow(it, collapsed) }
+                    items(libraryItems, key = { "nav:${it.key}" }) { NavRow(it, collapsed, spot) }
                 }
                 item(key = "heading:playlists") {
-                    Heading("Playlists", collapsed) { HeadingButton("add", "New playlist") { create() } }
+                    Heading("Playlists", collapsed) { HeadingButton("add") { create() } }
                 }
-                item(key = "nav:all-playlists") { NavRow(allPlaylists, collapsed) }
+                item(key = "nav:all-playlists") { NavRow(allPlaylists, collapsed, spot) }
                 items(rows, key = { it.key }) { entry ->
                     val held = reorder.held == entry.key
                     Box(
@@ -510,6 +529,7 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
                             playing = player.queueTitle != null && player.queueTitle == entry.title && player.current != null,
                             isPlaying = player.isPlaying,
                             onClick = { navigator.navigate(entry.screen) },
+                            spot = spot,
                         )
                     }
                 }
@@ -550,72 +570,157 @@ private fun Heading(title: String, collapsed: Boolean, action: (@Composable () -
 }
 
 @Composable
-private fun HeadingButton(icon: String, tooltip: String, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    Tooltip(tooltip) {
-        Box(
-            Modifier
-                .size(26.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            ConvxIcon(icon, tint = Color.White.copy(alpha = if (hovered) 0.9f else 0.6f), size = 16.dp)
-        }
+private fun HeadingButton(icon: String, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .pressable(onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon(icon, tint = Color.White.copy(alpha = 0.6f), size = 16.dp)
     }
 }
 
-/** A row's wash: lit where you are, faint under the pointer. */
-private fun rowWash(selected: Boolean, hovered: Boolean): Color = when {
-    selected -> Color.White.copy(alpha = 0.12f)
+/**
+ * A row's wash: lit where you are, faint under the pointer. In the list the lit one is
+ * [SelectionSpot]'s, which [glides] from row to row, so the row itself only shows the hover.
+ */
+private fun rowWash(selected: Boolean, hovered: Boolean, glides: Boolean = false): Color = when {
+    selected && glides -> Color.Transparent
+    selected -> SelectedWash
     hovered -> Color.White.copy(alpha = 0.06f)
     else -> Color.Transparent
 }
 
+private val SelectedWash = Color.White.copy(alpha = 0.12f)
+
+/**
+ * The side bar's selection as one wash that glides to the page you pick, stretching a little on
+ * the way. Rows report where they are while selected, so it scrolls with them.
+ */
+private class SelectionSpot(private val scope: CoroutineScope) {
+    /** The list it draws behind. */
+    var list: LayoutCoordinates? = null
+    private var rect by mutableStateOf<Rect?>(null)
+    private var key: String? = null
+    private var from: Rect? = null
+    private var left: Rect? = null
+    private var leftKey: String? = null
+    private var leftAt = 0L
+    private val progress = Animatable(1f)
+    private val stretch = Animatable(1f)
+
+    fun place(key: String, row: LayoutCoordinates) {
+        val list = list ?: return
+        if (!list.isAttached || !row.isAttached) return
+        // Two rows can stand for one page; the first keeps it.
+        if (this.key != null && this.key != key) return
+        val bounds = list.localBoundingBoxOf(row, clipBounds = false)
+        if (this.key == null) {
+            this.key = key
+            val previous = left
+            // Only straight from the page just left; a row that scrolled away long ago starts fresh.
+            if (previous != null && leftKey != key && System.nanoTime() - leftAt < GlideWindowNanos) glide(previous, bounds)
+        }
+        rect = bounds
+    }
+
+    fun leave(key: String) {
+        if (this.key != key) return
+        left = currentRect() ?: rect
+        leftKey = key
+        leftAt = System.nanoTime()
+        this.key = null
+        rect = null
+    }
+
+    private fun currentRect(): Rect? {
+        val to = rect ?: return null
+        val start = from ?: return to
+        val p = progress.value
+        return Rect(lerp(start.left, to.left, p), lerp(start.top, to.top, p), lerp(start.right, to.right, p), lerp(start.bottom, to.bottom, p))
+    }
+
+    private fun glide(start: Rect, to: Rect) {
+        from = start
+        val far = (kotlin.math.abs(to.top - start.top) / GlideFarPx).coerceAtMost(1f)
+        // Started in place, so the first frame already draws it where it was.
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            progress.snapTo(0f)
+            progress.animateTo(1f, ConvxMotion.glide())
+            from = null
+        }
+        scope.launch(start = CoroutineStart.UNDISPATCHED) {
+            stretch.snapTo(1f)
+            stretch.animateTo(1f, keyframes {
+                durationMillis = 300
+                1f + 0.22f * far at 105 using FastOutSlowInEasing
+            })
+        }
+    }
+
+    fun DrawScope.draw() {
+        val r = currentRect() ?: return
+        val height = r.height * stretch.value
+        drawRoundRect(
+            SelectedWash,
+            topLeft = Offset(r.left, r.center.y - height / 2f),
+            size = Size(r.width, height),
+            cornerRadius = CornerRadius(10.dp.toPx()),
+        )
+    }
+
+    private companion object {
+        const val GlideWindowNanos = 250_000_000L
+        const val GlideFarPx = 180f
+    }
+}
+
+/** Tells [spot] where this row is while it's the selected one. */
 @Composable
-private fun NavRow(item: NavItem, collapsed: Boolean) {
+private fun Modifier.selectionSpot(key: String, selected: Boolean, spot: SelectionSpot?): Modifier {
+    if (spot == null) return this
+    DisposableEffect(key, selected) { onDispose { if (selected) spot.leave(key) } }
+    return if (selected) onGloballyPositioned { spot.place(key, it) } else this
+}
+
+@Composable
+private fun NavRow(item: NavItem, collapsed: Boolean, spot: SelectionSpot? = null) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
-    val bounce = rememberSymbolBounce().onSelected(item.selected)
-    val row = @Composable {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .height(if (collapsed) RailRowHeight else RowHeight)
-                .clip(RowShape)
-                .background(rowWash(item.selected, hovered))
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interactionSource = interaction, indication = null, onClick = item.onClick)
-                .padding(horizontal = if (collapsed) 0.dp else 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
-        ) {
-            ConvxIcon(
-                item.icon,
-                tint = if (item.selected) accent else Color.White.copy(alpha = 0.78f),
-                size = if (collapsed) 22.dp else 19.dp,
-                contentDescription = item.label,
-                modifier = bounce.modifier,
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .height(if (collapsed) RailRowHeight else RowHeight)
+            .selectionSpot("nav:${item.key}", item.selected, spot)
+            .clip(RowShape)
+            .background(rowWash(item.selected, hovered, spot != null))
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interactionSource = interaction, indication = null, onClick = item.onClick)
+            .padding(horizontal = if (collapsed) 0.dp else 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+    ) {
+        ConvxIcon(
+            item.icon,
+            tint = if (item.selected) accent else Color.White.copy(alpha = 0.78f),
+            size = if (collapsed) 22.dp else 19.dp,
+            contentDescription = item.label,
+        )
+        if (!collapsed) {
+            Spacer(Modifier.width(12.dp))
+            Text(
+                item.label,
+                style = rowText(if (item.selected) FontWeight.SemiBold else FontWeight.Medium),
+                color = if (item.selected) Color.White else Color.White.copy(alpha = 0.9f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
             )
-            if (!collapsed) {
-                Spacer(Modifier.width(12.dp))
-                Text(
-                    item.label,
-                    style = rowText(if (item.selected) FontWeight.SemiBold else FontWeight.Medium),
-                    color = if (item.selected) Color.White else Color.White.copy(alpha = 0.9f),
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-            }
         }
     }
-    if (collapsed) Tooltip(item.label) { row() } else row()
 }
 
 @Composable
@@ -627,48 +732,47 @@ private fun PlaylistRow(
     playing: Boolean,
     isPlaying: Boolean,
     onClick: () -> Unit,
+    spot: SelectionSpot? = null,
 ) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
     val menu = rememberMenuAnchor()
-    val row = @Composable {
-        Box(Modifier.onSecondaryClick(menu.openAtProvider())) {
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .height(if (collapsed) RailRowHeight else RowHeight)
-                    .clip(RowShape)
-                    .background(rowWash(selected, hovered))
-                    .hoverable(interaction)
-                    .pointerHoverIcon(PointerIcon.Hand)
-                    .clickable(interactionSource = interaction, indication = null, onClick = onClick)
-                    .padding(horizontal = if (collapsed) 0.dp else 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
-            ) {
-                EntryArt(entry, if (collapsed) RailArtSize else ArtSize)
-                if (!collapsed) {
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        entry.title,
-                        style = rowText(if (selected) FontWeight.SemiBold else FontWeight.Medium),
-                        color = if (playing) accent else if (selected) Color.White else Color.White.copy(alpha = 0.9f),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f),
-                    )
-                    when {
-                        playing -> ConvxIcon(if (isPlaying) "volume_up" else "volume_mute", tint = accent, size = 15.dp)
-                        entry.kind.spotify -> ConvxIcon("spotify", tint = SpotifyGreen, size = 12.dp)
-                        pinned -> ConvxIcon("ic_push_pin", tint = Color.White.copy(alpha = 0.4f), size = 12.dp, modifier = Modifier.graphicsLayer { rotationZ = 45f })
-                    }
+    Box(Modifier.onSecondaryClick(menu.openAtProvider())) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .height(if (collapsed) RailRowHeight else PlaylistRowHeight)
+                .selectionSpot(entry.key, selected, spot)
+                .clip(RowShape)
+                .background(rowWash(selected, hovered, spot != null))
+                .hoverable(interaction)
+                .pointerHoverIcon(PointerIcon.Hand)
+                .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+                .padding(horizontal = if (collapsed) 0.dp else 7.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+        ) {
+            EntryArt(entry, if (collapsed) RailArtSize else PlaylistArtSize)
+            if (!collapsed) {
+                Spacer(Modifier.width(10.dp))
+                Text(
+                    entry.title,
+                    style = rowText(if (selected) FontWeight.SemiBold else FontWeight.Medium),
+                    color = if (playing) accent else if (selected) Color.White else Color.White.copy(alpha = 0.9f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                when {
+                    playing -> ConvxIcon(if (isPlaying) "volume_up" else "volume_mute", tint = accent, size = 15.dp)
+                    entry.kind.spotify -> ConvxIcon("spotify", tint = SpotifyGreen, size = 12.dp)
+                    pinned -> ConvxIcon("ic_push_pin", tint = Color.White.copy(alpha = 0.4f), size = 12.dp, modifier = Modifier.graphicsLayer { rotationZ = 45f })
                 }
             }
-            AppMenu(menu) { EntryMenu(entry, pinned) { menu.expanded = false } }
         }
+        AppMenu(menu) { EntryMenu(entry, pinned) { menu.expanded = false } }
     }
-    if (collapsed) Tooltip(entry.title) { row() } else row()
 }
 
 /** You at the foot of the side bar, as Apple Music's account: your profile, and Settings beside it. */
@@ -699,38 +803,35 @@ private fun AccountRow(collapsed: Boolean) {
             NavRow(NavItem("settings", "Settings", "settings", screen == Screen.Settings) { navigator.navigate(Screen.Settings) }, collapsed = true)
         }
         Box {
-            val row = @Composable {
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(if (collapsed) RailRowHeight + 4.dp else 52.dp)
-                        .clip(RowShape)
-                        .background(rowWash(screen == Screen.Profile, hovered))
-                        .hoverable(interaction)
-                        .pointerHoverIcon(PointerIcon.Hand)
-                        .clickable(interactionSource = interaction, indication = null) { open() }
-                        .padding(horizontal = if (collapsed) 0.dp else 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
-                ) {
-                    Avatar(identity.picture, 32.dp)
-                    if (!collapsed) {
-                        Spacer(Modifier.width(10.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text(title, style = rowText(FontWeight.SemiBold), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(
-                                identity.source?.let { "Signed in with $it" } ?: "Accounts and settings",
-                                style = TextStyle(fontFamily = ConvxType.family, fontSize = 12.sp, lineHeight = 16.sp),
-                                color = Color.White.copy(alpha = 0.55f),
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                        SettingsButton(screen == Screen.Settings, accent) { navigator.navigate(Screen.Settings) }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(if (collapsed) RailRowHeight + 4.dp else 52.dp)
+                    .clip(RowShape)
+                    .background(rowWash(screen == Screen.Profile, hovered))
+                    .hoverable(interaction)
+                    .pointerHoverIcon(PointerIcon.Hand)
+                    .clickable(interactionSource = interaction, indication = null) { open() }
+                    .padding(horizontal = if (collapsed) 0.dp else 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = if (collapsed) Arrangement.Center else Arrangement.Start,
+            ) {
+                Avatar(identity.picture, 32.dp)
+                if (!collapsed) {
+                    Spacer(Modifier.width(10.dp))
+                    Column(Modifier.weight(1f)) {
+                        Text(title, style = rowText(FontWeight.SemiBold), color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Text(
+                            identity.source?.let { "Signed in with $it" } ?: "Accounts and settings",
+                            style = TextStyle(fontFamily = ConvxType.family, fontSize = 12.sp, lineHeight = 16.sp),
+                            color = Color.White.copy(alpha = 0.55f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
                     }
+                    SettingsButton(screen == Screen.Settings, accent) { navigator.navigate(Screen.Settings) }
                 }
             }
-            if (collapsed) Tooltip(title) { row() } else row()
             AppMenu(popup) { SettingsPopup { popup.expanded = false } }
         }
     }
@@ -749,21 +850,14 @@ private fun Avatar(picture: String?, size: Dp) {
 
 @Composable
 private fun SettingsButton(lit: Boolean, accent: Color, onClick: () -> Unit) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    Tooltip("Settings") {
-        Box(
-            Modifier
-                .size(32.dp)
-                .clip(CircleShape)
-                .background(Color.White.copy(alpha = if (hovered) 0.12f else 0f))
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interactionSource = interaction, indication = null, onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) {
-            ConvxIcon("settings", tint = if (lit) accent else Color.White.copy(alpha = if (hovered) 0.9f else 0.65f), size = 18.dp)
-        }
+    Box(
+        Modifier
+            .size(32.dp)
+            .clip(CircleShape)
+            .pressable(onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon("settings", tint = if (lit) accent else Color.White.copy(alpha = 0.65f), size = 18.dp)
     }
 }
 

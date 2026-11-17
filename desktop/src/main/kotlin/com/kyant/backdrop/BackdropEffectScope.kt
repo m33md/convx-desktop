@@ -12,6 +12,7 @@
 package com.kyant.backdrop
 
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.RenderEffect
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -29,6 +30,14 @@ sealed interface BackdropEffectScope : Density, RuntimeShaderCache {
     var padding: Float
 
     var renderEffect: RenderEffect?
+
+    /**
+     * A colour transform applied when the recorded layer is composited, rather than as another
+     * link in [renderEffect]'s chain. Each link is its own render pass, and a colour matrix is
+     * linear: it commutes with the blur's weighted average and with the lens's warp, so the
+     * pixels are the same either way, one pass cheaper.
+     */
+    var compositeColorFilter: ColorFilter?
 }
 
 internal abstract class BackdropEffectScopeImpl : BackdropEffectScope, RuntimeShaderCache {
@@ -39,6 +48,7 @@ internal abstract class BackdropEffectScopeImpl : BackdropEffectScope, RuntimeSh
     override var layoutDirection: LayoutDirection = LayoutDirection.Ltr
     override var padding: Float = 0f
     override var renderEffect: RenderEffect? = null
+    override var compositeColorFilter: ColorFilter? = null
 
     private val runtimeShaderCache = RuntimeShaderCacheImpl()
 
@@ -46,10 +56,15 @@ internal abstract class BackdropEffectScopeImpl : BackdropEffectScope, RuntimeSh
         return runtimeShaderCache.obtainRuntimeShader(key, string)
     }
 
-    fun update(scope: DrawScope): Boolean {
-        val newDensity = scope.density
+    /**
+     * [contentScale] is the resolution the backdrop layer is recorded at: the effects work on
+     * that smaller pixel grid, so the size and the density they see shrink with it and shader
+     * geometry (the lens's size and corner radii) lands where the surface is.
+     */
+    fun update(scope: DrawScope, contentScale: Float = 1f): Boolean {
+        val newDensity = scope.density * contentScale
         val newFontScale = scope.fontScale
-        val newSize = scope.size
+        val newSize = if (contentScale != 1f) scope.size * contentScale else scope.size
         val newLayoutDirection = scope.layoutDirection
 
         val changed = newDensity != density ||
@@ -70,6 +85,7 @@ internal abstract class BackdropEffectScopeImpl : BackdropEffectScope, RuntimeSh
     fun apply(effects: BackdropEffectScope.() -> Unit) {
         padding = 0f
         renderEffect = null
+        compositeColorFilter = null
         effects()
     }
 
@@ -80,6 +96,7 @@ internal abstract class BackdropEffectScopeImpl : BackdropEffectScope, RuntimeSh
         layoutDirection = LayoutDirection.Ltr
         padding = 0f
         renderEffect = null
+        compositeColorFilter = null
         runtimeShaderCache.clear()
     }
 }

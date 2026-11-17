@@ -66,6 +66,7 @@ import com.convx.desktop.core.AppScope
 import com.convx.desktop.data.BrushStroke
 import com.convx.desktop.data.BrushTip
 import com.convx.desktop.data.DiscArt
+import com.convx.desktop.data.DiscCollage
 import com.convx.desktop.data.DiscDesign
 import com.convx.desktop.data.DiscDesigns
 import com.convx.desktop.data.DiscFont
@@ -104,6 +105,7 @@ import com.convx.desktop.ui.components.artworkUrl
 import com.convx.desktop.ui.glass.GlassSlider
 import com.convx.desktop.ui.glass.GlassSwitch
 import com.convx.desktop.ui.screens.settings.pickFile
+import com.convx.desktop.ui.screens.settings.pickFiles
 import com.convx.desktop.ui.shell.UiState
 import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxType
@@ -278,13 +280,13 @@ private fun ColorRow(label: String, colors: List<Long>, min: Int = 1, max: Int =
                 }
             }
             if (colors.size < max) {
-                SmallRound("add", "Add a colour") {
+                SmallRound("add") {
                     DiscEditor.keepUndo()
                     onChange(colors + (colors.lastOrNull() ?: 0xFFFFFFFF))
                 }
             }
             if (colors.size > min) {
-                SmallRound("remove", "Take the last colour off") {
+                SmallRound("remove") {
                     DiscEditor.keepUndo()
                     onChange(colors.dropLast(1))
                 }
@@ -294,13 +296,11 @@ private fun ColorRow(label: String, colors: List<Long>, min: Int = 1, max: Int =
 }
 
 @Composable
-private fun SmallRound(icon: String, tip: String, onClick: () -> Unit) {
-    Tooltip(tip) {
-        Box(
-            Modifier.size(30.dp).clip(CircleShape).background(FieldBg).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick),
-            contentAlignment = Alignment.Center,
-        ) { ConvxIcon(icon, tint = Color.White, size = 16.dp) }
-    }
+private fun SmallRound(icon: String, onClick: () -> Unit) {
+    Box(
+        Modifier.size(30.dp).clip(CircleShape).background(FieldBg).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) { ConvxIcon(icon, tint = Color.White, size = 16.dp) }
 }
 
 /**
@@ -440,11 +440,9 @@ internal fun ToolsPanel(modifier: Modifier) {
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             DiscPresets.ordered.forEach { preset ->
-                Tooltip(preset.title) {
-                    Box(Modifier.clip(SmallShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.usePreset(preset) }) {
-                        // The same picture the Disc Studio page shows, so each preset is drawn and kept once.
-                        DiscThumb("${DiscThumbs.presetKey(preset)}@${DiscThumbs.CardPixels}", 70.dp) { DiscPresets.start(preset) }
-                    }
+                Box(Modifier.clip(SmallShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.usePreset(preset) }) {
+                    // The same picture the Disc Studio page shows, so each preset is drawn and kept once.
+                    DiscThumb("${DiscThumbs.presetKey(preset)}@${DiscThumbs.CardPixels}", 70.dp) { DiscPresets.start(preset) }
                 }
             }
         }
@@ -502,6 +500,13 @@ private fun newPattern(pattern: PatternKind): DiscLayer = DiscLayer(
         PatternKind.TERRAZZO -> listOf(0xFFE76F51, 0xFF2A9D8F, 0xFFE9C46A, 0xFF264653, 0xFFF4A261)
         PatternKind.LEOPARD -> listOf(0xFF2B1A0E, 0xFFB5651D, 0xFFD9A54A)
         PatternKind.STICKERS -> listOf(0xFFFFD43B, 0xFFFA2D48, 0xFF33D1FF)
+        PatternKind.GLITTER -> listOf(0xFFFFB6D9, 0xFFE6E6F0, 0xFFC9B6FF)
+        PatternKind.SWIRL -> listOf(0xFF2B1A0C, 0xFFE0A33A, 0xFFF4E3B0, 0xFF5E7A3A, 0xFF8C2F1C)
+        PatternKind.WATERCOLOR -> listOf(0xFF1E3F7A, 0xFFDDE6F2)
+        PatternKind.SMOKE -> listOf(0x00000000, 0xDDECECF2)
+        PatternKind.NEBULA -> listOf(0xFF07061A, 0xFF4B1E7A, 0xFF1E5FAE, 0xFFFF9AD5)
+        PatternKind.CANVAS -> listOf(0xFFB9A57F)
+        PatternKind.DENIM -> listOf(0xFF1F3560, 0xFFD6DEEB)
         else -> listOf(0xFFFFFFFF)
     },
     outline = pattern == PatternKind.STICKERS,
@@ -555,6 +560,29 @@ private fun newShape(kind: ShapeKind): DiscLayer {
         ShapeKind.WAVE -> base.copy(scale = 0.05f, aspect = 6f, amount = 0.15f, density = 0.3f)
         ShapeKind.ZIGZAG -> base.copy(scale = 0.05f, aspect = 6f, amount = 0.15f, density = 0.3f)
         ShapeKind.SPIRAL -> base.copy(scale = 0.18f, amount = 0.1f, density = 0.35f)
+        ShapeKind.FLOWER -> base.copy(scale = 0.17f, colors = listOf(0xFFFF8FB8))
+        ShapeKind.DAISY -> base.copy(scale = 0.17f, colors = listOf(0xFFF6F3EA, 0xFFE6B229))
+        ShapeKind.CLOUD -> base.copy(scale = 0.16f, aspect = 1.8f, colors = listOf(0xFFFFFFFF))
+        ShapeKind.BOLT -> base.copy(scale = 0.17f, colors = listOf(0xFFFFD43B))
+        ShapeKind.MOON -> base.copy(scale = 0.15f, colors = listOf(0xFFFFF1C1))
+        ShapeKind.SUN -> base.copy(scale = 0.17f, colors = listOf(0xFFFFB627))
+        ShapeKind.SPARKLE -> base.copy(scale = 0.15f, colors = listOf(0xFFFFFFFF))
+        ShapeKind.DIAMOND -> base.copy(scale = 0.12f)
+        ShapeKind.RING -> base.copy(scale = 0.18f, amount = 0.2f)
+        ShapeKind.ASTERISK -> base.copy(scale = 0.14f, amount = 0.18f)
+        ShapeKind.DROP -> base.copy(scale = 0.14f, colors = listOf(0xFF6FB6FF))
+        ShapeKind.ARCH -> base.copy(scale = 0.18f)
+        ShapeKind.HALF_CIRCLE -> base.copy(scale = 0.18f)
+        ShapeKind.QUARTER -> base.copy(scale = 0.18f)
+        ShapeKind.PILL -> base.copy(scale = 0.08f, aspect = 3f)
+        ShapeKind.TICKET -> base.copy(scale = 0.12f, aspect = 2f, colors = listOf(0xFFF3EEE3), shadow = true)
+        ShapeKind.SCALLOP -> base.copy(scale = 0.18f, colors = listOf(0xFFFF8FB8))
+        ShapeKind.SQUIGGLE -> base.copy(scale = 0.06f, aspect = 5f, amount = 0.2f)
+        ShapeKind.MOUNTAINS -> base.copy(scale = 0.32f, aspect = 2f, colors = listOf(0xFF4A4E57, 0xFFF2EEE6))
+        ShapeKind.PINE -> base.copy(scale = 0.14f, aspect = 0.6f, colors = listOf(0xFF2F5D3A, 0xFF4A3424))
+        ShapeKind.BIRD -> base.copy(scale = 0.04f, aspect = 1.8f, amount = 0.08f)
+        ShapeKind.CASSETTE -> base.copy(scale = 0.16f, aspect = 1.55f, colors = listOf(0xFF1C2A5C, 0xFFF4F1EA), shadow = true)
+        ShapeKind.TONEARM -> base.copy(x = 0.42f, y = -0.2f, scale = 0.42f, aspect = 1.45f, rotation = -14f, colors = listOf(0xFFE3E7EF, 0xFF1A2A4E), shadow = true)
     }
 }
 
@@ -567,24 +595,24 @@ private fun ShapePicker() {
                     val shape = newShape(kind)
                     shape.copy(
                         x = 0f, y = 0f, shadow = false,
-                        colors = listOf(
-                            when (kind) {
-                                ShapeKind.TAPE -> 0xFFF4D58D
-                                ShapeKind.SCRAP -> 0xFFF3EEE3
-                                ShapeKind.STAR, ShapeKind.BURST -> 0xFFFFD43B
-                                ShapeKind.HEART -> 0xFFFA2D48
-                                else -> 0xFFFFFFFF
-                            },
-                        ),
+                        // Shapes with colours of their own keep them; the rest show white.
+                        colors = when (kind) {
+                            ShapeKind.TAPE -> listOf(0xFFF4D58D)
+                            ShapeKind.SCRAP -> listOf(0xFFF3EEE3)
+                            ShapeKind.STAR, ShapeKind.BURST -> listOf(0xFFFFD43B)
+                            ShapeKind.HEART -> listOf(0xFFFA2D48)
+                            ShapeKind.FLOWER, ShapeKind.DAISY, ShapeKind.BOLT, ShapeKind.MOON, ShapeKind.SUN, ShapeKind.DROP, ShapeKind.TICKET,
+                            ShapeKind.SCALLOP, ShapeKind.MOUNTAINS, ShapeKind.CASSETTE, ShapeKind.TONEARM -> shape.colors
+                            ShapeKind.PINE -> listOf(0xFF5FA36E, 0xFF8A6A4A)
+                            else -> listOf(0xFFFFFFFF)
+                        },
                         scale = 0.6f / kotlin.math.max(1f, shape.aspect),
                         amount = if (kind.lines || shape.outline) 0.7f else shape.amount,
                         rotation = if (kind == ShapeKind.TAPE) -18f else 0f,
                     )
                 }
-                Tooltip(kind.label) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(newShape(kind)) }) {
-                        LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
-                    }
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(newShape(kind)) }) {
+                    LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
                 }
             }
         }
@@ -632,10 +660,8 @@ private fun PatternPicker(onPick: (PatternKind) -> Unit) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             PatternKind.entries.forEach { pattern ->
                 val sample = remember(pattern) { newPattern(pattern).copy(seed = 3) }
-                Tooltip(pattern.label) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(pattern) }) {
-                        LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
-                    }
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(pattern) }) {
+                    LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
                 }
             }
         }
@@ -648,10 +674,8 @@ private fun StickerPicker(onPick: (String) -> Unit) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             DiscSticker.entries.forEach { sticker ->
                 val sample = remember(sticker) { newSticker(sticker.id).copy(x = 0f, y = 0f, scale = 0.62f, shadow = false) }
-                Tooltip(sticker.label) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(sticker.id) }) {
-                        LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
-                    }
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { onPick(sticker.id) }) {
+                    LayerPreview(sample, 46.dp, background = Color(0xFF3A3A40))
                 }
             }
         }
@@ -721,30 +745,28 @@ private fun LibraryTile(sticker: StickerLibrary.Sticker, onClick: () -> Unit) {
             if (sticker.source.tinted) StickerLibrary.path(sticker) != null else StickerLibrary.picture(sticker) != null
         }
     }.value
-    Tooltip(sticker.label) {
-        Canvas(
-            Modifier
-                .size(40.dp)
-                .clip(SmallShape)
-                .background(if (hovered) Color.White.copy(alpha = 0.14f) else Color.Transparent)
-                .hoverable(interaction)
-                .pointerHoverIcon(PointerIcon.Hand)
-                .clickable(interaction, null, onClick = onClick),
-        ) {
-            if (!ready) return@Canvas
-            val half = size.minDimension * 0.36f
-            drawIntoCanvas { canvas ->
-                val native = canvas.nativeCanvas
-                native.save()
-                native.translate(size.width / 2f, size.height / 2f)
-                native.scale(half, half)
-                if (sticker.source.tinted) {
-                    StickerLibrary.path(sticker)?.let { native.drawPath(it, org.jetbrains.skia.Paint().apply { isAntiAlias = true; color = org.jetbrains.skia.Color.WHITE }) }
-                } else {
-                    StickerLibrary.picture(sticker)?.let { native.drawPicture(it, null, null) }
-                }
-                native.restore()
+    Canvas(
+        Modifier
+            .size(40.dp)
+            .clip(SmallShape)
+            .background(if (hovered) Color.White.copy(alpha = 0.14f) else Color.Transparent)
+            .hoverable(interaction)
+            .pointerHoverIcon(PointerIcon.Hand)
+            .clickable(interaction, null, onClick = onClick),
+    ) {
+        if (!ready) return@Canvas
+        val half = size.minDimension * 0.36f
+        drawIntoCanvas { canvas ->
+            val native = canvas.nativeCanvas
+            native.save()
+            native.translate(size.width / 2f, size.height / 2f)
+            native.scale(half, half)
+            if (sticker.source.tinted) {
+                StickerLibrary.path(sticker)?.let { native.drawPath(it, org.jetbrains.skia.Paint().apply { isAntiAlias = true; color = org.jetbrains.skia.Color.WHITE }) }
+            } else {
+                StickerLibrary.picture(sticker)?.let { native.drawPicture(it, null, null) }
             }
+            native.restore()
         }
     }
 }
@@ -974,16 +996,50 @@ private fun FillPicker() {
             DiscLayer(kind = LayerKind.FILL, name = "Ocean", fill = FillKind.LINEAR, rotation = 45f, colors = listOf(0xFF0F2027, 0xFF2C5364, 0xFF33D1FF)),
             DiscLayer(kind = LayerKind.FILL, name = "Chrome", fill = FillKind.SWEEP, colors = listOf(0xFFCFD9DF, 0xFFF5F7FA, 0xFFA1C4FD, 0xFFE2D1F9)),
         )
+        val finishes = FinishKinds.map { newFinish(it) } + newFinish(FillKind.HOLO).copy(name = "Dark holographic", colors = listOf(0xFF2A2A30))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             fills.forEach { fill ->
+                Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(fill.copy(id = com.convx.desktop.data.newLayerId())) }) {
+                    LayerPreview(fill, 46.dp)
+                }
+            }
+        }
+        Text("Finishes", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel, modifier = Modifier.padding(top = 10.dp, bottom = 6.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            finishes.forEach { fill ->
                 Tooltip(fill.name) {
-                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(fill.copy(id = com.convx.desktop.data.newLayerId())) }) {
+                    Box(Modifier.clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable { DiscEditor.add(fill.copy(id = com.convx.desktop.data.newLayerId(), seed = Random.nextInt(1000))) }) {
                         LayerPreview(fill, 46.dp)
                     }
                 }
             }
         }
     }
+}
+
+private val FinishKinds = listOf(FillKind.HOLO, FillKind.PEARL, FillKind.CHROME, FillKind.MESH)
+
+/** A finish fill as it starts: holographic silver, pastel pearl, pale-sky chrome, a sunset aura. */
+private fun newFinish(kind: FillKind): DiscLayer = DiscLayer(
+    kind = LayerKind.FILL,
+    name = kind.label,
+    fill = kind,
+    colors = finishColors(kind),
+    density = when (kind) {
+        FillKind.CHROME -> 0.6f
+        FillKind.MESH -> 0.45f
+        else -> 0.35f
+    },
+    amount = 0.6f,
+    seed = 3,
+)
+
+private fun finishColors(kind: FillKind): List<Long> = when (kind) {
+    FillKind.HOLO -> listOf(0xFFC4C7D2)
+    FillKind.PEARL -> listOf(0xFFF7E1EC, 0xFFE4DDF7, 0xFFDCEBF7, 0xFFF6F0E2)
+    FillKind.CHROME -> listOf(0xFFCFE0FF, 0xFF1C1D22)
+    FillKind.MESH -> listOf(0xFFFF8FB8, 0xFFFFD08A, 0xFF8BB8FF, 0xFFC4A6FF, 0xFFFFF4E6)
+    else -> listOf(0xFFFA2D48)
 }
 
 @Composable
@@ -1012,7 +1068,61 @@ private fun ImagePicker() {
                 }
             }
         }
+        CollageMaker(covers)
     }
+}
+
+/** Many pictures laid out at once (a ring of prints, a scatter, a tiled picture disc, a pile, a spiral), each its own layer after. */
+@Composable
+private fun CollageMaker(covers: List<String>) {
+    var layout by remember { mutableStateOf(DiscCollage.Layout.RING) }
+    var frame by remember { mutableStateOf(ImageFrame.PRINT) }
+    var busy by remember { mutableStateOf(false) }
+    Spacer(Modifier.height(12.dp))
+    Text("Photo collage", style = ConvxType.SubheadStrong, color = Color.White)
+    Text("Lays out many pictures in one go. Each is a layer of its own after, to move, turn or swap.", style = ConvxType.Caption, color = ConvxColors.TertiaryLabel)
+    Spacer(Modifier.height(6.dp))
+    Choices(DiscCollage.Layout.entries, layout, { it.label }) { layout = it }
+    if (layout != DiscCollage.Layout.GRID) {
+        Text("Frame", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel, modifier = Modifier.padding(top = 4.dp))
+        Choices(CollageFrames, frame, { it.label }) { frame = it }
+    }
+    fun make(load: suspend () -> List<String>) {
+        if (busy) return
+        busy = true
+        AppScope.launch(Dispatchers.Main) {
+            runCatching { withContext(Dispatchers.IO) { load() } }
+                .onSuccess { assets -> if (assets.isNotEmpty()) DiscEditor.addAll(collageLayers(assets, layout, frame)) }
+                .onFailure { Overlays.toast(it.message ?: "Couldn't make the collage", "error") }
+            busy = false
+        }
+    }
+    if (covers.isNotEmpty()) {
+        PickerRow(if (busy) "Laying out the covers…" else "Use this playlist's covers", icon = "grid_view") {
+            make { covers.take(12).mapNotNull { url -> runCatching { importCoverPicture(url) }.getOrNull() } }
+        }
+        Spacer(Modifier.height(6.dp))
+    }
+    PickerRow(if (busy && covers.isEmpty()) "Laying out the pictures…" else "Pictures from your PC…") {
+        val files = pickFiles("Pictures for the collage", DiscDesigns.ImageExtensions).take(24)
+        if (files.isNotEmpty()) make { files.map { DiscDesigns.importImage(it) } }
+    }
+}
+
+private val CollageFrames = listOf(ImageFrame.PRINT, ImageFrame.PHOTO, ImageFrame.STICKER, ImageFrame.SQUARE, ImageFrame.ROUNDED, ImageFrame.CIRCLE)
+
+/** The collage's layers, kept off a record's label or a CD's hole. */
+private fun collageLayers(assets: List<String>, layout: DiscCollage.Layout, frame: ImageFrame): List<DiscLayer> {
+    val design = DiscEditor.design
+    val inner = if (design.format == DiscFormat.VINYL) design.label + 0.02f else 0.36f
+    return DiscCollage.layers(assets, layout, frame, Random.nextInt(1000), inner = inner.coerceAtMost(0.7f))
+}
+
+/** A song cover fetched and kept as a design picture; the asset's name. */
+internal suspend fun importCoverPicture(url: String): String {
+    val bitmap = ImageCache.load(artworkUrl(url, 600) ?: url) ?: error("Couldn't load that cover")
+    val bytes = SkiaImage.makeFromBitmap(bitmap.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes ?: error("Couldn't read that cover")
+    return DiscDesigns.importImage(bytes, "png")
 }
 
 private fun newImage(asset: String, frame: ImageFrame): DiscLayer {
@@ -1039,13 +1149,7 @@ private fun addImageFromPc(onLabel: Boolean = false) {
 
 private fun addImageFromUrl(url: String, onLabel: Boolean = false) {
     AppScope.launch(Dispatchers.Main) {
-        val asset = withContext(Dispatchers.IO) {
-            runCatching {
-                val bitmap = ImageCache.load(artworkUrl(url, 600) ?: url) ?: error("Couldn't load that cover")
-                val bytes = SkiaImage.makeFromBitmap(bitmap.asSkiaBitmap()).encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes ?: error("Couldn't read that cover")
-                DiscDesigns.importImage(bytes, "png")
-            }
-        }
+        val asset = withContext(Dispatchers.IO) { runCatching { importCoverPicture(url) } }
         asset.onSuccess { DiscEditor.add(if (onLabel) labelImage(it) else newImage(it, ImageFrame.PHOTO)) }
             .onFailure { Overlays.toast(it.message ?: "Couldn't add that cover", "error") }
     }
@@ -1106,10 +1210,10 @@ private fun LayersList() {
     val selected = DiscEditor.selected
     if (selected != null) {
         Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-            IconButton("expand_less", { DiscEditor.move(selected.id, 1) }, size = 32.dp, iconSize = 18.dp, tooltip = "Bring forward")
-            IconButton("expand_more", { DiscEditor.move(selected.id, -1) }, size = 32.dp, iconSize = 18.dp, tooltip = "Send backward")
-            IconButton("content_copy", { DiscEditor.duplicate() }, size = 32.dp, iconSize = 17.dp, tooltip = "Duplicate (Ctrl+D)")
-            IconButton("delete", { DiscEditor.delete() }, size = 32.dp, iconSize = 17.dp, tint = Color(0xFFFF453A), tooltip = "Delete (Del)")
+            IconButton("expand_less", { DiscEditor.move(selected.id, 1) }, size = 32.dp, iconSize = 18.dp)
+            IconButton("expand_more", { DiscEditor.move(selected.id, -1) }, size = 32.dp, iconSize = 18.dp)
+            IconButton("content_copy", { DiscEditor.duplicate() }, size = 32.dp, iconSize = 17.dp)
+            IconButton("delete", { DiscEditor.delete() }, size = 32.dp, iconSize = 17.dp, tint = Color(0xFFFF453A))
         }
     }
 }
@@ -1141,6 +1245,10 @@ private fun LayerRow(layer: DiscLayer?, selected: Boolean) {
             Text(if (DiscEditor.design.format == DiscFormat.CD) "The CD" else "The record", style = ConvxType.Subhead, color = Color.White, modifier = Modifier.weight(1f))
             return@Row
         }
+        // A layer clipped to the one below sits indented under it, with a bent arrow.
+        if (layer.clip) {
+            Text("↳", style = ConvxType.Subhead, color = Color.White.copy(alpha = 0.5f), modifier = Modifier.padding(start = 4.dp, end = 6.dp))
+        }
         ConvxIcon(layer.kind.icon, tint = Color.White.copy(alpha = if (layer.visible) 0.8f else 0.35f), size = 18.dp)
         Spacer(Modifier.width(10.dp))
         Text(
@@ -1152,27 +1260,23 @@ private fun LayerRow(layer: DiscLayer?, selected: Boolean) {
             modifier = Modifier.weight(1f),
         )
         if (layer.effects.isNotEmpty()) {
-            Tooltip(layer.effects.joinToString(", ") { it.kind.label }) {
-                ConvxIcon("sparks", tint = Color.White.copy(alpha = 0.45f), size = 14.dp, modifier = Modifier.padding(horizontal = 4.dp))
-            }
+            ConvxIcon("sparks", tint = Color.White.copy(alpha = 0.45f), size = 14.dp, modifier = Modifier.padding(horizontal = 4.dp))
         }
         if (hovered || layer.locked) {
-            RowIcon("lock", if (layer.locked) "Unlock" else "Lock", if (layer.locked) 0.9f else 0.4f) {
+            RowIcon("lock", if (layer.locked) 0.9f else 0.4f) {
                 DiscEditor.commitLayer(layer.id) { it.copy(locked = !it.locked) }
             }
         }
-        RowIcon(if (layer.visible) "eye" else "hide_image", if (layer.visible) "Hide" else "Show") {
+        RowIcon(if (layer.visible) "eye" else "hide_image") {
             DiscEditor.commitLayer(layer.id) { it.copy(visible = !it.visible) }
         }
     }
 }
 
 @Composable
-private fun RowIcon(icon: String, tip: String, alpha: Float = 0.75f, onClick: () -> Unit) {
-    Tooltip(tip) {
-        Box(Modifier.size(28.dp).clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
-            ConvxIcon(icon, tint = Color.White.copy(alpha = alpha), size = 15.dp)
-        }
+private fun RowIcon(icon: String, alpha: Float = 0.75f, onClick: () -> Unit) {
+    Box(Modifier.size(28.dp).clip(CircleShape).pointerHoverIcon(PointerIcon.Hand).clickable(onClick = onClick), contentAlignment = Alignment.Center) {
+        ConvxIcon(icon, tint = Color.White.copy(alpha = alpha), size = 15.dp)
     }
 }
 
@@ -1200,7 +1304,7 @@ private fun DiscProperties(design: DiscDesign) {
     } else {
         PropSwitch("Clear middle", design.clearHub) { on -> DiscEditor.change { it.copy(clearHub = on) } }
     }
-    PropSlider(if (design.format == DiscFormat.VINYL) "Label size" else "Middle size", design.label, 0.2f..0.7f, percent(design.label)) {
+    PropSlider(if (design.format == DiscFormat.VINYL) "Label size" else "Middle size", design.label, 0.2f..if (design.format == DiscFormat.VINYL) 0.95f else 0.7f, percent(design.label)) {
         DiscEditor.live(DiscEditor.design.copy(label = it))
     }
     PropSlider(if (design.format == DiscFormat.CD) "Rainbow shine" else "Shine", design.sheen, 0f..1f, percent(design.sheen)) {
@@ -1243,9 +1347,30 @@ private fun LayerProperties(layer: DiscLayer) {
 
     when (layer.kind) {
         LayerKind.FILL -> {
-            Choices(FillKind.entries, layer.fill, { it.label }) { kind -> commit { it.copy(fill = kind, colors = if (kind != FillKind.SOLID && it.colors.size < 2) it.colors + 0xFF111113 else it.colors) } }
-            ColorRow("Colours", layer.colors, max = if (layer.fill == FillKind.SOLID) 1 else 6) { colors -> live { it.copy(colors = colors) } }
-            if (layer.fill != FillKind.SOLID) {
+            Choices(FillKind.entries, layer.fill, { it.label }) { kind ->
+                commit {
+                    val colors = when {
+                        kind.finish && !it.fill.finish -> finishColors(kind)
+                        kind != FillKind.SOLID && it.colors.size < 2 -> it.colors + 0xFF111113
+                        else -> it.colors
+                    }
+                    it.copy(fill = kind, colors = colors, density = if (kind.finish && !it.fill.finish) newFinish(kind).density else it.density)
+                }
+            }
+            val (colorsLabel, most) = when (layer.fill) {
+                FillKind.SOLID -> "Colour" to 1
+                FillKind.HOLO -> "Metal, then ribbon colours" to 5
+                FillKind.PEARL -> "Colours (none: rainbow)" to 4
+                FillKind.CHROME -> "Sky and ground" to 2
+                else -> "Colours" to 6
+            }
+            ColorRow(colorsLabel, layer.colors, max = most) { colors -> live { it.copy(colors = colors) } }
+            if (layer.fill.finish) {
+                PropSlider(if (layer.fill == FillKind.MESH) "Spread" else "Waves", layer.density, 0f..1f, percent(layer.density)) { v -> live { it.copy(density = v) } }
+                if (layer.fill == FillKind.HOLO) PropSlider("Shine", layer.amount, 0f..1f, percent(layer.amount)) { v -> live { it.copy(amount = v) } }
+                PropSlider("Angle", ((layer.rotation % 360f) + 360f) % 360f, 0f..360f, "${layer.rotation.roundToInt()}°") { v -> live { it.copy(rotation = v) } }
+                PickerRow("Shuffle") { commit { it.copy(seed = Random.nextInt(100_000)) } }
+            } else if (layer.fill != FillKind.SOLID) {
                 PropSlider("Angle", ((layer.rotation % 360f) + 360f) % 360f, 0f..360f, "${layer.rotation.roundToInt()}°") { v -> live { it.copy(rotation = v) } }
                 PropSlider("Spread", layer.scale, 0.2f..3f, percent(layer.scale)) { v -> live { it.copy(scale = v) } }
             }
@@ -1335,8 +1460,14 @@ private fun LayerProperties(layer: DiscLayer) {
             if (strokes > 0) PickerRow("Take back the last stroke", icon = "replay") { commit { it.copy(strokes = it.strokes.dropLast(1)) } }
         }
         LayerKind.SHAPE -> {
-            Choices(ShapeKind.entries, layer.shape, { it.label }) { kind -> commit { it.copy(shape = kind, name = kind.label) } }
-            ColorRow("Colour", layer.colors.take(1), max = 1) { colors -> live { it.copy(colors = colors) } }
+            Choices(ShapeKind.entries, layer.shape, { it.label }) { kind ->
+                commit { it.copy(shape = kind, name = kind.label, colors = if (kind.twoColors && it.colors.size < 2) newShape(kind).colors else it.colors) }
+            }
+            if (layer.shape.twoColors) {
+                ColorRow("Colours", layer.colors.take(2), min = 2, max = 2) { colors -> live { it.copy(colors = colors) } }
+            } else {
+                ColorRow("Colour", layer.colors.take(1), max = 1) { colors -> live { it.copy(colors = colors) } }
+            }
             if (layer.shape.outlinable) PropSwitch("Outline only", layer.outline) { on -> commit { it.copy(outline = on) } }
             val outlined = layer.outline && layer.shape.outlinable
             if (layer.shape.lines || outlined) {
@@ -1367,6 +1498,14 @@ private fun LayerProperties(layer: DiscLayer) {
     Text("Blend", style = ConvxType.Subhead, color = Color.White, modifier = Modifier.padding(top = 4.dp))
     Choices(LayerBlend.entries, layer.blend, { it.label }) { blend -> commit { it.copy(blend = blend) } }
     PropSwitch("Drop shadow", layer.shadow) { on -> commit { it.copy(shadow = on) } }
+    if (DiscEditor.design.layers.firstOrNull()?.id != layer.id) {
+        PropSwitch("Clip to the layer below", layer.clip) { on -> commit { it.copy(clip = on) } }
+        Text(
+            "Shows only inside the layer under it: fabric in a patch, a photo in a star, foil in your text.",
+            style = ConvxType.Caption,
+            color = ConvxColors.TertiaryLabel,
+        )
+    }
 
     EffectsSection(layer)
 }
@@ -1391,14 +1530,14 @@ private fun EffectsSection(layer: DiscLayer) {
                     Text(effect.kind.tip, style = ConvxType.Caption, color = ConvxColors.TertiaryLabel, maxLines = 2)
                 }
                 if (index > 0) {
-                    SmallRound("expand_less", "Apply earlier") {
+                    SmallRound("expand_less") {
                         DiscEditor.commitLayer(id) { l ->
                             l.copy(effects = l.effects.toMutableList().also { it.add(index - 1, it.removeAt(index)) })
                         }
                     }
                     Spacer(Modifier.width(4.dp))
                 }
-                SmallRound("close", "Remove") {
+                SmallRound("close") {
                     DiscEditor.commitLayer(id) { l -> l.copy(effects = l.effects.filterIndexed { i, _ -> i != index }) }
                 }
             }
@@ -1499,13 +1638,16 @@ private fun strengthLabel(kind: EffectKind) = when (kind) {
     EffectKind.INK -> "Roughness"
     EffectKind.SKETCH -> "Detail"
     EffectKind.CUT_WHITE, EffectKind.CUT_BLACK -> "How much goes"
-    EffectKind.SOFT_EDGES -> "Width"
+    EffectKind.SOFT_EDGES, EffectKind.OUTLINE -> "Width"
+    EffectKind.RECOLOR -> "How much"
     else -> "Strength"
 }
 
 private fun colorLabel(kind: EffectKind) = when (kind) {
     EffectKind.GLOW -> "Halo colour"
     EffectKind.HALFTONE -> "Ink"
+    EffectKind.OUTLINE -> "Border colour"
+    EffectKind.RECOLOR -> "Colour"
     else -> "Line colour"
 }
 

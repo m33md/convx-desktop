@@ -15,9 +15,6 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -56,11 +53,20 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.theme.ConvxColors
+import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxShapes
 import com.convx.desktop.ui.theme.ConvxType
 import kotlinx.coroutines.delay
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.scaleOut
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.Dp
+import kotlinx.coroutines.launch
 
-/** App-wide modal dialog and toast host, drawn by the shell above everything else. */
+/** App-wide modal dialog and notices, drawn by the shell above everything else. */
 object Overlays {
     var dialog by mutableStateOf<(@Composable () -> Unit)?>(null)
         private set
@@ -193,10 +199,30 @@ fun DialogCard(title: String, content: @Composable () -> Unit) {
     }
 }
 
+/**
+ * Dialogs, then notices. Notices rise out from behind the bottom bar: [noticeLine] is the bar's
+ * top edge above the window's bottom, and they stay hidden below it. With no bar to hide behind,
+ * [clipNotices] is false and they rise and fade in where they stand. [noticeStart] and
+ * [noticeEnd] centre them over the bar between the side panels.
+ */
 @Composable
-fun OverlayHost() {
+fun OverlayHost(
+    noticeLine: Dp = 0.dp,
+    clipNotices: Boolean = false,
+    noticeStart: Dp = 0.dp,
+    noticeEnd: Dp = 0.dp,
+    glassNotices: Boolean = true,
+) {
     val dialog = Overlays.dialog
-    AnimatedVisibility(dialog != null, enter = fadeIn(), exit = fadeOut()) {
+    // What the dialog showed, kept on screen while it leaves.
+    var shown by remember { mutableStateOf<(@Composable () -> Unit)?>(null) }
+    if (dialog != null) shown = dialog
+    // The page dims while the dialog springs up from a little smaller; closing, it shrinks a touch as it fades.
+    AnimatedVisibility(
+        dialog != null,
+        enter = fadeIn(tween(220, easing = LinearOutSlowInEasing)),
+        exit = fadeOut(tween(200)),
+    ) {
         Box(
             Modifier
                 .fillMaxSize()
@@ -204,51 +230,98 @@ fun OverlayHost() {
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { Overlays.dismissDialog() },
             contentAlignment = Alignment.Center,
         ) {
-            dialog?.invoke()
+            Box(
+                Modifier.animateEnterExit(
+                    enter = scaleIn(ConvxMotion.dialog(), initialScale = 0.86f) + fadeIn(tween(120)),
+                    exit = scaleOut(tween(150, easing = ConvxMotion.ExitEasing), targetScale = 0.95f) +
+                        fadeOut(tween(150, easing = ConvxMotion.ExitEasing)),
+                ),
+            ) {
+                shown?.invoke()
+            }
         }
     }
-    Box(Modifier.fillMaxSize().padding(bottom = 112.dp), contentAlignment = Alignment.BottomCenter) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .padding(start = noticeStart, end = noticeEnd, bottom = noticeLine)
+            .then(if (clipNotices) Modifier.clipToBounds() else Modifier),
+        contentAlignment = Alignment.BottomCenter,
+    ) {
+        Column(
+            Modifier.padding(bottom = NoticeGap),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
             for (toast in Overlays.toasts) {
-                androidx.compose.runtime.key(toast.id) { ToastView(toast) }
+                androidx.compose.runtime.key(toast.id) { NoticeView(toast, glassNotices) }
             }
         }
     }
 }
 
+/** How far above the bar a notice rests. */
+private val NoticeGap = 36.dp
+
+/** Menu glass, a little lighter: a notice is short and sits over the page only for a moment. */
+private val NoticeGlass = MenuGlass.copy(surfaceOpacity = 0.72f)
+
 @Composable
-private fun ToastView(toast: Overlays.Toast) {
-    var visible by remember { mutableStateOf(false) }
+private fun NoticeView(toast: Overlays.Toast, glass: Boolean) {
+    // 0 is tucked under the line it rises from, 1 is in place; the spring carries it a touch past.
+    val rise = remember { Animatable(0f) }
+    val opacity = remember { Animatable(0f) }
+    var leaving by remember { mutableStateOf(false) }
     LaunchedEffect(toast.id) {
-        visible = true
+        launch { opacity.animateTo(1f, tween(120)) }
+        launch { rise.animateTo(1f, ConvxMotion.notice()) }
         delay(if (toast.action != null) 4000 else 2600)
-        visible = false
-        delay(300)
+        leaving = true
+    }
+    // It sinks back the way it came.
+    LaunchedEffect(leaving) {
+        if (!leaving) return@LaunchedEffect
+        launch { opacity.animateTo(0f, tween(240, easing = ConvxMotion.ExitEasing)) }
+        rise.animateTo(0f, tween(240, easing = ConvxMotion.ExitEasing))
         Overlays.toasts.remove(toast)
     }
-    AnimatedVisibility(visible, enter = slideInVertically { it / 2 } + fadeIn(), exit = fadeOut()) {
-        Row(
-            Modifier
-                .shadow(16.dp, ConvxShapes.Capsule)
-                .clip(ConvxShapes.Capsule)
-                .background(Color.White)
-                .padding(horizontal = 18.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            if (toast.icon != null) ConvxIcon(toast.icon, tint = Color.Black, size = 18.dp)
-            Text(toast.text, style = ConvxType.SubheadStrong, color = Color.Black)
-            if (toast.action != null) {
-                Text(
-                    toast.action,
-                    style = ConvxType.SubheadStrong,
-                    color = Color(0xFFFF453A),
-                    modifier = Modifier.padding(start = 6.dp).pressable({
-                        toast.onAction?.invoke()
-                        visible = false
-                    }),
-                )
+    val backdrop = if (glass) LocalMenuBackdrop.current else null
+    val gap = NoticeGap
+    Row(
+        Modifier
+            .graphicsLayer {
+                val p = rise.value
+                translationY = (1f - p) * (size.height + gap.toPx())
+                val scale = 0.82f + 0.18f * p
+                scaleX = scale
+                scaleY = scale
+                alpha = opacity.value
             }
+            .shadow(16.dp, ConvxShapes.Capsule)
+            .clip(ConvxShapes.Capsule)
+            .then(
+                if (backdrop != null) {
+                    Modifier.liquidGlass(ConvxShapes.Capsule, NoticeGlass, highlightAlpha = 0.24f, outerShadow = false, backdrop = backdrop)
+                } else {
+                    Modifier.background(Color(0xFF2C2C2E)).glassRim(ConvxShapes.Capsule, 0.12f)
+                },
+            )
+            .padding(horizontal = 18.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        if (toast.icon != null) ConvxIcon(toast.icon, tint = Color.White, size = 18.dp)
+        Text(toast.text, style = ConvxType.SubheadStrong, color = Color.White)
+        if (toast.action != null) {
+            Text(
+                toast.action,
+                style = ConvxType.SubheadStrong,
+                color = Color(0xFFFF453A),
+                modifier = Modifier.padding(start = 6.dp).pressable({
+                    toast.onAction?.invoke()
+                    leaving = true
+                }),
+            )
         }
     }
 }

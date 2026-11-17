@@ -175,7 +175,7 @@ fun SongRow(
             .background(if (hovered || rowMenu.expanded || buttonMenu.expanded) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
             .onSecondaryClick(rowMenu.openAtProvider())
-            .pressable(onPlay, interaction = interaction, pressScale = 0.995f),
+            .pressable(onPlay, interaction = interaction),
     ) {
         Row(
             Modifier.fillMaxWidth().height(if (showArtwork) 58.dp else 50.dp).padding(horizontal = 12.dp),
@@ -254,7 +254,7 @@ fun SongRow(
                         size = 30.dp,
                         iconSize = 17.dp,
                         tint = if (liked) accent else ConvxColors.SecondaryLabel,
-                        tooltip = if (liked) "Remove from Liked Songs" else "Add to Liked Songs",
+                        iconModifier = Modifier.likePop(liked),
                     )
                 }
             }
@@ -267,7 +267,7 @@ fun SongRow(
             )
             Box(Modifier.width(40.dp), contentAlignment = Alignment.Center) {
                 if (hovered || buttonMenu.expanded) {
-                    IconButton("more_horiz", { buttonMenu.expanded = true }, size = 30.dp, iconSize = 18.dp, tooltip = "More options")
+                    IconButton("more_horiz", { buttonMenu.expanded = true }, size = 30.dp, iconSize = 18.dp)
                 }
                 AppMenu(buttonMenu) {
                     SongMenuContent(song, { buttonMenu.expanded = false }, menuExtra)
@@ -319,7 +319,7 @@ fun LinkText(
         modifier = modifier
             .hoverable(interaction)
             .pointerHoverIcon(PointerIcon.Hand)
-            .pressable(onClick, interaction = interaction, pressScale = 1f),
+            .pressable(onClick, interaction = interaction),
     )
 }
 
@@ -348,7 +348,7 @@ fun CompactSongRow(
             .background(if (hovered || menu.expanded) Color.White.copy(alpha = 0.07f) else Color.Transparent)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable(onPlay, interaction = interaction, pressScale = 0.99f),
+            .pressable(onPlay, interaction = interaction),
     ) {
         Row(Modifier.fillMaxWidth().padding(6.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(52.dp)) {
@@ -418,18 +418,19 @@ fun ItemCard(
     val isCurrent = item is SongItem && playback.currentId == item.id
     Box(
         modifier
+            .riseIn()
             .width(width)
             .clip(ConvxShapes.Card)
-            .background(if (hovered || menu.expanded) Color.White.copy(alpha = 0.06f) else Color.Transparent)
+            .background(if (menu.expanded) Color.White.copy(alpha = 0.06f) else Color.Transparent)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable(onClick ?: { ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.98f),
+            .pressable(onClick ?: { ItemActions.open(item, navigator) }, interaction = interaction),
     ) {
         Column(Modifier.padding(10.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
                 Artwork(
                     item.thumbnail,
-                    Modifier.fillMaxSize().shadow(if (hovered) 14.dp else 6.dp, shape),
+                    Modifier.fillMaxSize(),
                     size = 400,
                     shape = shape,
                     placeholderIcon = if (isArtist) "person" else "music_note",
@@ -499,19 +500,15 @@ fun TopPickCard(item: YTItem, modifier: Modifier = Modifier, onClick: (() -> Uni
     }
     Box(
         modifier
+            .riseIn()
             .width(242.dp)
             .height(323.dp)
-            .graphicsLayer {
-                val s = if (hovered) 1.015f else 1f
-                scaleX = s
-                scaleY = s
-            }
             .shadow(20.dp, shape, ambientColor = Color.Black.copy(alpha = 0.3f), spotColor = Color.Black.copy(alpha = 0.3f))
             .clip(shape)
             .background(ConvxColors.CardSecondary)
             .hoverable(interaction)
             .onSecondaryClick(menu.openAtProvider())
-            .pressable(onClick ?: { ItemActions.open(item, navigator) }, interaction = interaction, pressScale = 0.98f),
+            .pressable(onClick ?: { ItemActions.open(item, navigator) }, interaction = interaction),
     ) {
         val bitmap = image
         if (bitmap != null) {

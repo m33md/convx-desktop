@@ -7,6 +7,7 @@ package com.convx.desktop.data
 
 import kotlinx.serialization.Serializable
 import java.util.UUID
+import kotlin.random.Random
 
 /*
  * A disc someone designed in Disc Studio: a CD or a vinyl record, its print built from layers
@@ -47,7 +48,24 @@ enum class LayerBlend(val label: String) {
 enum class LayerArea(val label: String) { DISC("Whole disc"), MIDDLE("Middle"), RING("Outer ring") }
 
 @Serializable
-enum class FillKind(val label: String) { SOLID("Solid"), LINEAR("Linear"), RADIAL("Radial"), SWEEP("Sweep") }
+enum class FillKind(val label: String) {
+    SOLID("Solid"),
+    LINEAR("Linear"),
+    RADIAL("Radial"),
+    SWEEP("Sweep"),
+    /** Rainbow ribbons over metal: the first colour is the metal, any others tint the ribbons. */
+    HOLO("Holographic"),
+    /** Soap-bubble pastels; two or more colours steer them. */
+    PEARL("Pearl"),
+    /** A bent mirror: the first colour is the sky it reflects, the second the ground. */
+    CHROME("Liquid chrome"),
+    /** Soft pools of every colour melting together. */
+    MESH("Mesh gradient"),
+    ;
+
+    /** Drawn by a finish shader, which reads the layer's waves and shuffle too. */
+    val finish: Boolean get() = this == HOLO || this == PEARL || this == CHROME || this == MESH
+}
 
 @Serializable
 enum class ImageLook(val label: String) {
@@ -58,6 +76,8 @@ enum class ImageLook(val label: String) {
     VINTAGE("Vintage"),
     GLOW("Glow"),
     INVERT("Invert"),
+    /** The picture in rainbow foil, its darks kept. */
+    HOLO("Holo"),
 }
 
 @Serializable
@@ -66,7 +86,12 @@ enum class ImageFrame(val label: String) {
     WHOLE("Whole picture"),
     SQUARE("Square"),
     CIRCLE("Circle"),
-    PHOTO("Photo print"),
+    /** A thin white border all round, as a print from a photo lab. */
+    PRINT("Photo print"),
+    PHOTO("Polaroid"),
+    ROUNDED("Rounded"),
+    /** Cut round with a white border and rounded corners, like a sticker. */
+    STICKER("Sticker"),
 }
 
 @Serializable
@@ -116,6 +141,14 @@ enum class PatternKind(val label: String) {
     LEOPARD("Leopard"),
     /** The layer's sticker, over and over. */
     STICKERS("Sticker pattern"),
+    GLITTER("Glitter"),
+    PRISM("Prism foil"),
+    SWIRL("Paint swirl"),
+    WATERCOLOR("Watercolour"),
+    SMOKE("Smoke"),
+    NEBULA("Nebula"),
+    CANVAS("Canvas"),
+    DENIM("Denim"),
 }
 
 /** Lines and cut-outs for collages, sized by the layer's scale and stretched by its aspect. */
@@ -143,17 +176,46 @@ enum class ShapeKind(val label: String) {
     WAVE("Wavy line"),
     ZIGZAG("Zigzag"),
     SPIRAL("Spiral"),
+    FLOWER("Flower"),
+    DAISY("Daisy"),
+    CLOUD("Cloud"),
+    BOLT("Lightning"),
+    MOON("Moon"),
+    SUN("Sun"),
+    SPARKLE("Sparkle"),
+    DIAMOND("Diamond"),
+    RING("Ring"),
+    ASTERISK("Asterisk"),
+    DROP("Drop"),
+    ARCH("Arch"),
+    HALF_CIRCLE("Half circle"),
+    QUARTER("Quarter circle"),
+    PILL("Pill"),
+    TICKET("Ticket"),
+    SCALLOP("Scalloped"),
+    SQUIGGLE("Squiggle"),
+    MOUNTAINS("Mountains"),
+    PINE("Pine tree"),
+    BIRD("Bird"),
+    CASSETTE("Cassette"),
+    TONEARM("Tonearm"),
     ;
 
     /** Drawn with lines whether or not the layer is outlined. */
-    val lines: Boolean get() = this == LINE || this == CROSSHAIR || this == CORNERS || this == RULER || this == WAVE || this == ZIGZAG || this == SPIRAL
+    val lines: Boolean get() = this == LINE || this == CROSSHAIR || this == CORNERS || this == RULER || this == WAVE || this == ZIGZAG || this == SPIRAL ||
+        this == ASTERISK || this == SQUIGGLE || this == BIRD || this == RING
 
     /** Can be a filled shape or just its outline. */
     val outlinable: Boolean get() = this == BOX || this == CIRCLE || this == BADGE || this == BLOB || this == TRIANGLE || this == STAR ||
-        this == HEART || this == HEXAGON || this == CROSS || this == ARROW || this == SPEECH || this == BURST
+        this == HEART || this == HEXAGON || this == CROSS || this == ARROW || this == SPEECH || this == BURST || this == FLOWER || this == CLOUD ||
+        this == BOLT || this == MOON || this == SUN || this == SPARKLE || this == DIAMOND || this == DROP || this == ARCH || this == HALF_CIRCLE ||
+        this == QUARTER || this == PILL || this == TICKET || this == SCALLOP
 
     /** Drawn from the layer's seed, so Shuffle gives a new one. */
-    val shuffles: Boolean get() = this == BLOB || this == BARCODE || this == TAPE || this == SCRAP
+    val shuffles: Boolean get() = this == BLOB || this == BARCODE || this == TAPE || this == SCRAP || this == SQUIGGLE || this == MOUNTAINS || this == CLOUD
+
+    /** Takes a second colour: the snow on mountains, a daisy's middle, a cassette's label, a tonearm's metal. */
+    val twoColors: Boolean get() = this == MOUNTAINS || this == DAISY || this == CASSETTE || this == TONEARM || this == PINE
 }
 
 /**
@@ -174,6 +236,10 @@ enum class EffectKind(val label: String, val tip: String, val colored: Boolean =
     CUT_WHITE("Cut out white", "White and light parts turn see-through, so the disc shows there"),
     CUT_BLACK("Cut out black", "Black and dark parts turn see-through"),
     SOFT_EDGES("Soft edges", "Its edges fade into the disc"),
+    FOIL("Holo foil", "Printed in rainbow foil that shifts across it"),
+    CHROME("Chrome", "Printed in polished liquid metal"),
+    OUTLINE("Outline", "A border round its shape, like a die-cut sticker", colored = true),
+    RECOLOR("Recolour", "All one colour, its light and dark kept", colored = true),
 }
 
 @Serializable
@@ -188,6 +254,8 @@ data class LayerEffect(
             EffectKind.GLOW -> 0xFFFF6FB5
             EffectKind.HALFTONE -> 0xFF15151A
             EffectKind.SKETCH -> 0xFFFFFFFF
+            EffectKind.OUTLINE -> 0xFFFFFFFF
+            EffectKind.RECOLOR -> 0xFF2E4A8C
             else -> 0xFFFFFFFF
         }
     }
@@ -238,6 +306,12 @@ enum class DiscSticker(val id: String, val label: String) {
 }
 
 const val EmojiStickerPrefix = "emoji:"
+
+/**
+ * A picture Convx paints itself (an "album cover" of shapes and colour, numbered), for designs that
+ * show how photos sit before any are added. A preset started for a playlist swaps them for its songs' covers.
+ */
+const val SampleAssetPrefix = "sample:"
 
 /** A sticker from the bundled library ([com.convx.desktop.data.StickerLibrary]): "icon:", its set and its name. */
 const val LibraryStickerPrefix = "icon:"
@@ -318,6 +392,8 @@ data class DiscLayer(
     val effects: List<LayerEffect> = emptyList(),
     /** Brush: what was painted, oldest first. */
     val strokes: List<BrushStroke> = emptyList(),
+    /** Shows only where the layer under it is, as a clipping mask: a pattern inside a shape, a picture inside text. */
+    val clip: Boolean = false,
 ) {
     /** Whether the layer is placed somewhere (and can be picked and dragged) rather than covering the disc. */
     val placed: Boolean get() = kind == LayerKind.IMAGE || kind == LayerKind.STICKER || kind == LayerKind.SHAPE || kind == LayerKind.PAINT ||
@@ -359,7 +435,7 @@ data class DiscDesign(
     fun layer(id: String?): DiscLayer? = layers.firstOrNull { it.id == id }
 
     /** The images it uses, which travel with it when it's shared. */
-    val assets: Set<String> get() = layers.mapNotNullTo(LinkedHashSet()) { it.asset }
+    val assets: Set<String> get() = layers.mapNotNullTo(LinkedHashSet()) { it.asset?.takeUnless { a -> a.startsWith(SampleAssetPrefix) } }
 
     companion object {
         const val CdSilver = 0xFFC9CACF
@@ -370,8 +446,9 @@ data class DiscDesign(
 fun newLayerId(): String = UUID.randomUUID().toString().take(12)
 
 /**
- * Ready-made designs to start from. "{name}" in a text layer becomes the playlist's name when a
- * design is started for a playlist.
+ * Ready-made designs to start from. They carry no words of their own beyond what's part of the
+ * art, and each part is a layer of its own, so any of them can be pulled apart and made into
+ * something else.
  */
 object DiscPresets {
     class Preset(val key: String, val title: String, val make: () -> DiscDesign)
@@ -446,138 +523,312 @@ object DiscPresets {
     private fun sticker(id: String, color: Long, x: Float, y: Float, scale: Float, rotation: Float = 0f, outline: Boolean = true, shadow: Boolean = true) =
         DiscLayer(kind = LayerKind.STICKER, name = DiscSticker.of(id)?.label ?: "Sticker", sticker = id, colors = listOf(color), x = x, y = y, scale = scale, rotation = rotation, outline = outline, shadow = shadow)
 
+    private fun image(asset: String, x: Float, y: Float, scale: Float, frame: ImageFrame = ImageFrame.PRINT, rotation: Float = 0f, shadow: Boolean = true) =
+        DiscLayer(kind = LayerKind.IMAGE, name = "Photo", asset = asset, frame = frame, x = x, y = y, scale = scale, rotation = rotation, shadow = shadow, amount = 1f)
+
+    private fun library(name: String, x: Float, y: Float, scale: Float, rotation: Float = 0f, outline: Boolean = false, shadow: Boolean = false, effects: List<LayerEffect> = emptyList()) =
+        DiscLayer(
+            kind = LayerKind.STICKER, name = name.replace('-', ' ').replaceFirstChar { it.uppercase() }, sticker = "${LibraryStickerPrefix}emoji:$name",
+            x = x, y = y, scale = scale, rotation = rotation, outline = outline, shadow = shadow, effects = effects,
+        )
+
+    /**
+     * Daisies painted with the ink brush, a layer each: a ring of tapering white petals round a
+     * yellow middle, seen a little from the side, on a curving stem with a leaf. ([x], [y], size)
+     * each, top to bottom, so each flower covers the stems of the ones above it.
+     */
+    private fun daisies(flowers: List<Triple<Float, Float, Float>>, seed: Int): List<DiscLayer> {
+        val random = Random(seed)
+        fun line(vararg xy: Float) = xy.toList()
+        fun curve(x0: Float, y0: Float, x1: Float, y1: Float, bend: Float, n: Int = 8): List<Float> {
+            val out = ArrayList<Float>()
+            val nx = -(y1 - y0)
+            val ny = x1 - x0
+            for (i in 0..n) {
+                val t = i / n.toFloat()
+                val b = kotlin.math.sin(t * Math.PI).toFloat() * bend
+                out += x0 + (x1 - x0) * t + nx * b
+                out += y0 + (y1 - y0) * t + ny * b
+            }
+            return out
+        }
+        // Each flower is drawn round its own middle, so the layer moves, turns and scales about it.
+        return flowers.mapIndexed { n, (fx, fy, s) ->
+            val strokes = ArrayList<BrushStroke>()
+            val ex = s * (0.3f + random.nextFloat() * 0.6f)
+            val ey = s * 3.2f
+            strokes += BrushStroke(BrushTip.INK, 0xFF55633F, s * 0.1f, 1f, curve(0f, s * 0.2f, ex, ey, 0.12f), random.nextInt(999))
+            val lx = ex * 0.5f
+            val ly = s * 1.6f
+            strokes += BrushStroke(BrushTip.INK, 0xFF6B7A4C, s * 0.2f, 0.95f, curve(lx, ly, lx - s * 0.8f, ly - s * 0.25f, -0.25f, 6), random.nextInt(999))
+            val tilt = (random.nextFloat() - 0.5f) * 0.9f
+            val squash = 0.62f + random.nextFloat() * 0.25f
+            val petals = 13 + random.nextInt(4)
+            val ct = kotlin.math.cos(tilt)
+            val st = kotlin.math.sin(tilt)
+            fun at(a: Float, d: Float): Pair<Float, Float> {
+                val px = kotlin.math.cos(a) * d
+                val py = kotlin.math.sin(a) * d * squash
+                return (px * ct - py * st) to (px * st + py * ct)
+            }
+            // The back petals first, a little greyer, then the front ones over them.
+            for (pass in 0..1) for (k in 0 until petals) {
+                val a = (k * 2 * Math.PI / petals).toFloat() + random.nextFloat() * 0.18f
+                val front = kotlin.math.sin(a) > 0
+                if ((pass == 1) != front) continue
+                val len = s * (0.82f + random.nextFloat() * 0.22f)
+                val (x0, y0) = at(a, s * 0.16f)
+                val (xm, ym) = at(a + (random.nextFloat() - 0.5f) * 0.12f, len * 0.55f)
+                val (x1, y1) = at(a + (random.nextFloat() - 0.5f) * 0.18f, len)
+                val shade = if (front) 0xFFF6F3EA else 0xFFD9D6CC
+                strokes += BrushStroke(BrushTip.INK, shade, s * 0.24f, 1f, line(x0, y0, (x0 + xm) / 2, (y0 + ym) / 2, xm, ym, (xm + x1) / 2, (ym + y1) / 2, x1, y1), random.nextInt(999))
+                // A thin stroke of shadow down one side of the petal.
+                if (random.nextFloat() < 0.6f) strokes += BrushStroke(BrushTip.PEN, 0x55A9A397, s * 0.025f, 1f, line(x0, y0, xm, ym), 0)
+            }
+            // The middle: a dome of yellow, darker underneath, a dab of light on top.
+            val (cx0, cy0) = at(Math.PI.toFloat(), s * 0.14f)
+            val (cx1, cy1) = at(0f, s * 0.14f)
+            strokes += BrushStroke(BrushTip.INK, 0xFFE6B229, s * 0.34f, 1f, line(cx0, cy0, 0f, s * 0.02f, cx1, cy1), random.nextInt(999))
+            strokes += BrushStroke(BrushTip.INK, 0xFFC0661C, s * 0.12f, 0.85f, curve(cx0 + s * 0.04f, cy0 + s * 0.08f, cx1, cy1 + s * 0.06f, 0.25f, 5), random.nextInt(999))
+            strokes += BrushStroke(BrushTip.PEN, 0xCCFFF2B0, s * 0.06f, 1f, line(-s * 0.06f, -s * 0.06f, s * 0.02f, -s * 0.08f), 0)
+            // Centred on what's painted, as a brush layer painted by hand is, so its box fits it.
+            val flower = DiscLayer(kind = LayerKind.PAINT, name = "Daisy ${n + 1}", strokes = strokes)
+            val box = DiscArt.paintBounds(flower)
+            val mx = box?.let { (it[0] + it[2]) / 2f } ?: 0f
+            val my = box?.let { (it[1] + it[3]) / 2f } ?: 0f
+            flower.copy(
+                x = fx + mx,
+                y = fy + my,
+                strokes = strokes.map { stroke -> stroke.copy(points = stroke.points.mapIndexed { i, v -> v - if (i % 2 == 0) mx else my }) },
+            )
+        }
+    }
+
+    private val Cream = 0xFFF1EADB
+
     val all: List<Preset> = listOf(
         Preset("blank-cd", "Blank CD") { DiscDesign(name = "My CD", format = DiscFormat.CD) },
         Preset("blank-vinyl", "Blank vinyl") {
             DiscDesign(
                 name = "My record", format = DiscFormat.VINYL,
-                layers = listOf(text("{name}", 0xFFFFFFFF, TextPath.ARC_TOP, scale = 0.28f, radius = 0.25f, area = LayerArea.MIDDLE, name = "Title")),
             )
         },
-        Preset("afro-night", "Repeat type") {
+        Preset("holographic", "Holographic") {
             DiscDesign(
-                name = "Afro Night", format = DiscFormat.CD,
+                name = "Holographic", format = DiscFormat.CD, sheen = 0.5f,
+                layers = listOf(fill(0xFFC4C7D2, kind = FillKind.HOLO, name = "Holographic").copy(density = 0.35f, seed = 4, amount = 0.6f)),
+            )
+        },
+        Preset("cover-collage", "Cover collage") {
+            DiscDesign(
+                name = "Collage", format = DiscFormat.CD, sheen = 0.4f,
+                layers = listOf(fill(0xFFF1EFEA, name = "White")) +
+                    DiscCollage.layers(List(9) { DiscSamples.id(it) }, DiscCollage.Layout.RING, ImageFrame.PRINT, seed = 3) +
+                    listOf(
+                        shape(ShapeKind.PILL, 0xFFF2C230, -0.6f, 0.62f, 0.035f, aspect = 2.2f, rotation = 24f),
+                        shape(ShapeKind.CIRCLE, 0xFF161618, -0.77f, 0.42f, 0.03f),
+                    ),
+            )
+        },
+        Preset("big-number", "Big number") {
+            DiscDesign(
+                name = "Big number", format = DiscFormat.VINYL, labelColor = 0x00000000, grooves = 0.85f, sheen = 0.9f, lightAngle = -30f,
                 layers = listOf(
-                    fill(0xFFF2C230, name = "Yellow"),
-                    text("{name}", 0xFF3A2410, TextPath.REPEAT, scale = 0.62f, rotation = -8f, outline = true, name = "Repeated name"),
-                    text("{name}", 0xFFFFFFFF, scale = 0.62f, y = 0.6f, rotation = -8f, shadow = true, name = "Name"),
+                    text("72", Cream, scale = 2.9f, x = -0.02f, y = 0.16f, spacing = -0.06f, font = DiscFont.SF_BOLD, name = "Number"),
+                    shape(ShapeKind.BARCODE, Cream, -0.42f, -0.62f, 0.075f, aspect = 2.6f, seed = 7),
+                    text("SIDE A", Cream, TextPath.ARC_BOTTOM, scale = 0.07f, radius = 0.86f, spacing = 0.5f, font = DiscFont.SF_BOLD, name = "Side"),
                 ),
             )
         },
-        Preset("peach-stars", "Peach stars") {
+        Preset("big-label", "Big label") {
+            val ink = 0xFF221E1A
             DiscDesign(
-                name = "Peach stars", format = DiscFormat.CD,
+                name = "Big label", format = DiscFormat.VINYL, labelColor = 0xFFEFE8D8, label = 0.93f, grooves = 0.8f, sheen = 0.8f, lightAngle = -30f,
                 layers = listOf(
-                    fill(0xFFFFC7A1, 0xFFFF8A65, 0xFFE0533D, kind = FillKind.RADIAL, name = "Peach glow"),
-                    pattern(PatternKind.SPARKLES, 0xFFFFFFFF, density = 0.45f, amount = 0.6f, seed = 3),
-                    pattern(PatternKind.STARS, 0xFFFFF4E8, density = 0.35f, amount = 0.35f, seed = 7, opacity = 0.9f),
+                    library("black-cat", 0.36f, 0.32f, 0.36f, rotation = -10f, effects = listOf(fx(EffectKind.RECOLOR, 0.95f, 0xFF3A2E24))),
+                    text("A", ink, scale = 0.36f, y = -0.7f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Side"),
+                    text("MADE IN DISC STUDIO  ·  ALL SONGS CHOSEN BY YOU  ·  PLAY IT LOUD, PLAY IT OFTEN  ·  ", ink, TextPath.CIRCLE, scale = 0.075f, radius = 0.86f, spacing = 0.12f, font = DiscFont.SF, area = LayerArea.MIDDLE, name = "Round the edge"),
+                    text("convx", 0xFFD4363F, scale = 0.42f, x = -0.32f, y = 0.5f, rotation = -8f, font = DiscFont.SCRIPT, area = LayerArea.MIDDLE, name = "Label name"),
+                    text("DISC STUDIO", 0xFFD4363F, scale = 0.06f, x = -0.3f, y = 0.64f, spacing = 0.3f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Label line"),
                 ),
             )
         },
-        Preset("pixel-heat", "Pixel mosaic") {
+        Preset("paint-swirl", "Paint swirl") {
+            val gold = 0xFFE7C35A
             DiscDesign(
-                name = "Pixel heat", format = DiscFormat.CD,
-                layers = listOf(pattern(PatternKind.PIXELS, 0xFF2B0A0A, 0xFF8C1C13, 0xFFBC4B51, 0xFFF4A259, 0xFFFFF1C1, density = 0.35f, seed = 11)),
-            )
-        },
-        Preset("prism", "Prism") {
-            DiscDesign(
-                name = "Prism", format = DiscFormat.CD, sheen = 1f,
+                name = "Paint swirl", format = DiscFormat.VINYL, labelColor = 0xFF8EA9D6, label = 0.31f, grooves = 0.6f, sheen = 1f, lightAngle = -30f,
                 layers = listOf(
-                    fill(0xFF8EC5FC, 0xFFE0C3FC, 0xFFFFC3A0, 0xFFA1FFCE, kind = FillKind.SWEEP, opacity = 0.85f, blend = LayerBlend.MULTIPLY, name = "Rainbow"),
-                    pattern(PatternKind.RINGS, 0xFFFFFFFF, density = 0.7f, amount = 0.2f, opacity = 0.25f, blend = LayerBlend.SCREEN),
+                    pattern(PatternKind.SWIRL, 0xFF2B1A0C, 0xFFE0A33A, 0xFFF4E3B0, 0xFF5E7A3A, 0xFF8C2F1C, density = 0.55f, amount = 0.45f, seed = 5, area = LayerArea.RING),
+                    shape(ShapeKind.RING, gold, 0f, 0f, 0.29f, line = 0.06f, area = LayerArea.MIDDLE),
+                    text("SIDE A  ·  STEREO", gold, TextPath.ARC_BOTTOM, scale = 0.05f, radius = 0.235f, spacing = 0.2f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Side"),
                 ),
             )
         },
-        Preset("sunburst", "Sunburst") {
+        Preset("painted-daisies", "Painted daisies") {
+            val ink = 0xFF2A1408
             DiscDesign(
-                name = "Sunburst", format = DiscFormat.CD,
-                layers = listOf(
-                    fill(0xFFFFC371),
-                    pattern(PatternKind.RAYS, 0xFFFF5F6D, density = 0.45f),
-                    sticker(DiscSticker.SMILE.id, 0xFFFFE14D, 0.52f, -0.42f, 0.3f, rotation = 12f),
-                    sticker(DiscSticker.STAR.id, 0xFFFFFFFF, -0.58f, 0.4f, 0.22f, rotation = -10f),
+                name = "Daisies", format = DiscFormat.VINYL, labelColor = 0xFFF07A1F, label = 0.34f, grooves = 0.85f, sheen = 1f, lightAngle = -35f,
+                layers = daisies(listOf(Triple(0.38f, -0.68f, 0.17f), Triple(0.7f, -0.42f, 0.16f), Triple(0.5f, -0.12f, 0.15f), Triple(0.74f, 0.2f, 0.17f), Triple(0.42f, 0.56f, 0.16f)), seed = 11) + listOf(
+                    pattern(PatternKind.RAYS, 0xFFC4520C, density = 0.55f, amount = 0.25f, opacity = 0.5f, area = LayerArea.MIDDLE).copy(y = -0.03f),
+                    text("SIDE A  ·  33⅓", ink, scale = 0.045f, y = 0.13f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Details"),
                 ),
             )
         },
-        Preset("halftone-pop", "Halftone pop") {
+        Preset("mountain-grooves", "Mountains") {
+            val dark = 0xFF1E2023
+            val rust = 0xFFB4513A
             DiscDesign(
-                name = "Pop", format = DiscFormat.CD,
+                name = "Mountains", format = DiscFormat.VINYL, base = 0xFFEDE6D6, labelColor = rust, label = 0.3f, grooves = 0.9f, sheen = 0.7f, lightAngle = -40f,
                 layers = listOf(
-                    fill(0xFF1E90FF),
-                    pattern(PatternKind.HALFTONE, 0xFFFF2E88, density = 0.6f, amount = 0.7f),
-                    text("POP!", 0xFFFFE14D, scale = 0.9f, y = 0.55f, rotation = -10f, shadow = true, font = DiscFont.IMPACT, name = "Title"),
+                    shape(ShapeKind.MOUNTAINS, 0xFF5C5F65, 0.22f, 0.22f, 0.4f, aspect = 2.1f, seed = 7).copy(colors = listOf(0xFF5C5F65, 0xFFEDE6D6)),
+                    shape(ShapeKind.MOUNTAINS, dark, -0.12f, 0.44f, 0.44f, aspect = 2.3f, seed = 3).copy(colors = listOf(dark, 0xFFEDE6D6)),
+                    shape(ShapeKind.BOX, dark, 0f, 0.93f, 0.1f, aspect = 10f),
+                ) + listOf(
+                    Triple(-0.62f, 0.66f, 0.1f), Triple(-0.48f, 0.74f, 0.13f), Triple(-0.3f, 0.7f, 0.09f), Triple(-0.12f, 0.78f, 0.12f),
+                    Triple(0.08f, 0.72f, 0.1f), Triple(0.26f, 0.8f, 0.13f), Triple(0.44f, 0.7f, 0.11f), Triple(0.6f, 0.62f, 0.12f),
+                ).mapIndexed { i, (x, y, size) ->
+                    shape(ShapeKind.PINE, if (i % 3 == 1) 0xFF6A6D72 else 0xFFEDE6D6, x, y, size, aspect = 0.55f).copy(colors = listOf(if (i % 3 == 1) 0xFF6A6D72 else 0xFFEDE6D6, dark))
+                } + listOf(
+                    shape(ShapeKind.CLOUD, dark, -0.48f, -0.52f, 0.13f, aspect = 1.9f, outline = true, line = 0.18f, seed = 2),
+                    shape(ShapeKind.CLOUD, dark, -0.7f, -0.25f, 0.09f, aspect = 2.2f, outline = true, line = 0.15f, seed = 5),
+                    shape(ShapeKind.BIRD, rust, -0.15f, -0.62f, 0.018f, aspect = 1.8f, line = 0.06f),
+                    shape(ShapeKind.BIRD, rust, 0.05f, -0.7f, 0.014f, aspect = 1.8f, line = 0.05f),
+                    shape(ShapeKind.BIRD, rust, 0.55f, -0.55f, 0.02f, aspect = 1.8f, line = 0.06f),
+                    shape(ShapeKind.BIRD, rust, -0.3f, -0.15f, 0.014f, aspect = 1.8f, line = 0.05f),
+                    pattern(PatternKind.GRAIN, 0xFFFFFFFF, amount = 0.3f, blend = LayerBlend.OVERLAY, seed = 4),
                 ),
             )
         },
-        Preset("love-letter", "Love letter") {
+        Preset("patch-collage", "Patch collage") {
+            val navy = 0xFF2E4A8C
             DiscDesign(
-                name = "Love letter", format = DiscFormat.CD,
+                name = "Patches", format = DiscFormat.VINYL, labelColor = 0xFF3E6ED6, label = 0.3f, grooves = 0.8f, sheen = 1f, lightAngle = -30f,
                 layers = listOf(
-                    fill(0xFFFFD1DC, 0xFFFF8FAB, kind = FillKind.LINEAR, rotation = 60f),
-                    pattern(PatternKind.HEARTS, 0xFFFF4D6D, 0xFFFFFFFF, density = 0.4f, amount = 0.45f, seed = 5),
-                    text("{name}", 0xFF8A1538, TextPath.ARC_BOTTOM, scale = 0.3f, radius = 0.82f, font = DiscFont.SCRIPT, name = "Name"),
+                    shape(ShapeKind.STAR, 0xFFFFFFFF, 0.42f, 0.42f, 0.4f, rotation = -14f, shadow = true).copy(name = "Patch"),
+                    pattern(PatternKind.DENIM, 0xFF1F3560, 0xFFD6DEEB, density = 0.5f, amount = 0.5f, seed = 2).copy(clip = true),
+                    pattern(PatternKind.STARS, 0xFFDDE3EE, density = 0.2f, amount = 0.45f, seed = 6, opacity = 0.8f).copy(clip = true),
+                    shape(ShapeKind.STAR, 0xCCE9DFC6, 0.42f, 0.42f, 0.355f, rotation = -14f, outline = true, line = 0.025f).copy(name = "Stitches"),
+                    library("kiss-mark", -0.5f, -0.42f, 0.24f, rotation = -14f, effects = listOf(fx(EffectKind.RECOLOR, 1f, navy), fx(EffectKind.OUTLINE, 0.25f))),
+                    library("ribbon", -0.02f, -0.72f, 0.15f, rotation = 8f, effects = listOf(fx(EffectKind.RECOLOR, 1f, navy), fx(EffectKind.OUTLINE, 0.25f))),
+                    shape(ShapeKind.STAR, 0xFFC3CBDD, 0.52f, -0.42f, 0.24f, rotation = 12f, shadow = true),
+                    shape(ShapeKind.SPIRAL, navy, 0.52f, -0.4f, 0.23f, line = 0.3f, echoes = 0.7f).copy(clip = true),
+                    library("pool-8-ball", -0.74f, 0.1f, 0.13f, effects = listOf(fx(EffectKind.RECOLOR, 1f, navy), fx(EffectKind.OUTLINE, 0.25f))),
+                    shape(ShapeKind.CASSETTE, 0xFF1C2A5C, -0.4f, 0.55f, 0.2f, aspect = 1.55f, rotation = -10f, shadow = true).copy(colors = listOf(0xFF1C2A5C, 0xFFF4F1EA)),
+                    shape(ShapeKind.SPARKLE, 0xFFDDE3EE, 0.06f, 0.78f, 0.07f, rotation = -8f),
+                    shape(ShapeKind.STAR, navy, 0.84f, -0.06f, 0.07f, rotation = 10f),
                 ),
             )
         },
-        Preset("y2k", "Chrome Y2K") {
+        Preset("blue-watercolour", "Blue watercolour") {
+            val ink = 0xFF2A4C8F
             DiscDesign(
-                name = "Y2K", format = DiscFormat.CD, sheen = 1f,
+                name = "Blue", format = DiscFormat.VINYL, base = 0xFF1E3F7A, labelColor = 0xFFE7DFCB, label = 0.33f, grooves = 0.85f, sheen = 0.8f, lightAngle = -30f,
                 layers = listOf(
-                    fill(0xFFCFD9DF, 0xFFF5F7FA, 0xFFA1C4FD, 0xFFC2E9FB, 0xFFE2D1F9, kind = FillKind.SWEEP, name = "Chrome"),
-                    pattern(PatternKind.SPARKLES, 0xFFFFFFFF, density = 0.3f, amount = 0.8f, seed = 2),
-                    text("{name}", 0xFF26324D, TextPath.CIRCLE, scale = 0.22f, radius = 0.86f, spacing = 0.1f, font = DiscFont.SF_BOLD, name = "Around"),
+                    pattern(PatternKind.WATERCOLOR, 0xFF173A78, 0xFF8AA6D6, density = 0.55f, amount = 0.45f, seed = 8, area = LayerArea.RING),
+                    pattern(PatternKind.WATERCOLOR, 0xFF5E7DB8, 0xFFE7DFCB, density = 0.2f, amount = 0.7f, seed = 3, opacity = 0.35f, blend = LayerBlend.MULTIPLY, area = LayerArea.MIDDLE),
+                    shape(ShapeKind.CROSSHAIR, ink, 0f, 0.0f, 0.13f, aspect = 1.6f, line = 0.05f, area = LayerArea.MIDDLE),
+                    text("SIDE A  ·  33⅓ RPM", ink, scale = 0.04f, y = 0.17f, spacing = 0.15f, font = DiscFont.MONO, area = LayerArea.MIDDLE, name = "Details"),
+                    shape(ShapeKind.TONEARM, 0xFFE3E7EF, 0.44f, -0.2f, 0.42f, aspect = 1.45f, rotation = -14f, shadow = true).copy(colors = listOf(0xFFE3E7EF, 0xFF1A2A4E)),
+                    pattern(PatternKind.GRAIN, 0xFFFFFFFF, amount = 0.25f, blend = LayerBlend.OVERLAY, seed = 3),
                 ),
             )
         },
-        Preset("midnight-vinyl", "Midnight vinyl") {
+        Preset("big-letter", "Big letter") {
+            val ink = 0xFF2A1B10
             DiscDesign(
-                name = "Midnight", format = DiscFormat.VINYL, labelColor = 0xFFFA2D48,
+                name = "Big letter", format = DiscFormat.CD, sheen = 0.3f,
                 layers = listOf(
-                    text("{name}", 0xFFFFFFFF, TextPath.ARC_TOP, scale = 0.26f, radius = 0.25f, area = LayerArea.MIDDLE, name = "Title"),
-                    text("SIDE A  ·  33⅓ RPM", 0xCCFFFFFF, TextPath.ARC_BOTTOM, scale = 0.12f, radius = 0.27f, spacing = 0.15f, font = DiscFont.SF, area = LayerArea.MIDDLE, name = "Side"),
-                    sticker(DiscSticker.STAR.id, 0xFFFFFFFF, 0f, 0.11f, 0.045f, outline = false, shadow = false),
+                    pattern(PatternKind.CANVAS, 0xFF8C7656, density = 0.75f, amount = 0.45f, seed = 4),
+                    text("M", ink, scale = 1.8f, y = -0.6f, font = DiscFont.BLACKLETTER, effects = listOf(fx(EffectKind.INK, 0.35f)), name = "Letter"),
+                    shape(ShapeKind.DIAMOND, ink, -0.66f, 0f, 0.045f),
+                    shape(ShapeKind.DIAMOND, ink, 0.66f, 0f, 0.045f),
+                    shape(ShapeKind.LINE, ink, 0f, 0.64f, 0.02f, aspect = 9f, line = 0.06f),
+                    shape(ShapeKind.DIAMOND, ink, 0f, 0.64f, 0.035f),
                 ),
             )
         },
-        Preset("splatter", "Splatter vinyl") {
+        Preset("liquid-chrome", "Liquid chrome") {
             DiscDesign(
-                name = "Splatter", format = DiscFormat.VINYL, base = 0xFFF2EBDD, labelColor = 0xFF151515, grooves = 0.55f,
+                name = "Chrome", format = DiscFormat.CD, sheen = 0.4f,
                 layers = listOf(
-                    pattern(PatternKind.SPLATTER, 0xFFFA2D48, 0xFF151515, density = 0.55f, amount = 0.6f, seed = 9, area = LayerArea.RING),
-                    text("{name}", 0xFFF2EBDD, scale = 0.22f, area = LayerArea.MIDDLE, y = -0.12f, name = "Title"),
+                    fill(0xFFCFE0FF, 0xFF1C1D22, kind = FillKind.CHROME, name = "Chrome").copy(density = 0.6f, seed = 6),
                 ),
             )
         },
-        Preset("marble", "Marble vinyl") {
+        Preset("aura", "Aura") {
             DiscDesign(
-                name = "Marble", format = DiscFormat.VINYL, base = 0xFF4B1D7A, labelColor = 0xFFF4EEFF, grooves = 0.5f,
+                name = "Aura", format = DiscFormat.CD, sheen = 0.4f,
                 layers = listOf(
-                    pattern(PatternKind.MARBLE, 0xFF4B1D7A, 0xFFE0B0FF, density = 0.5f, amount = 0.5f, seed = 4, area = LayerArea.RING),
-                    text("{name}", 0xFF4B1D7A, TextPath.ARC_TOP, scale = 0.24f, radius = 0.24f, font = DiscFont.OUTFIT, area = LayerArea.MIDDLE, name = "Title"),
+                    fill(0xFFFF8FB8, 0xFFFFD08A, 0xFF8BB8FF, 0xFFC4A6FF, 0xFFFFF4E6, kind = FillKind.MESH, name = "Aura").copy(density = 0.45f, seed = 2),
+                    pattern(PatternKind.GRAIN, 0xFFFFFFFF, amount = 0.35f, blend = LayerBlend.OVERLAY, seed = 3),
+                    text("SIDE A", 0xFF2A2433, TextPath.ARC_TOP, scale = 0.06f, radius = 0.86f, spacing = 0.5f, font = DiscFont.MONO, name = "Side"),
                 ),
             )
         },
-        Preset("checker-vinyl", "Checker picture disc") {
+        Preset("y2k-foil", "Y2K foil") {
+            val foil = listOf(fx(EffectKind.FOIL, 1f))
             DiscDesign(
-                name = "Checker", format = DiscFormat.VINYL, labelColor = 0xFFFFE14D, grooves = 0.45f,
+                name = "Y2K", format = DiscFormat.CD, sheen = 0.4f,
                 layers = listOf(
-                    pattern(PatternKind.CHECKER, 0xFF141414, 0xFFF1F1F1, density = 0.4f, area = LayerArea.RING),
-                    text("{name}", 0xFF141414, scale = 0.2f, y = -0.12f, area = LayerArea.MIDDLE, name = "Title"),
+                    fill(0xFF0D0D10, name = "Black"),
+                    pattern(PatternKind.HUD, 0xFFFFFFFF, density = 0.35f, amount = 0.15f, seed = 2, opacity = 0.45f),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, -0.5f, -0.45f, 0.22f, effects = foil),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.56f, -0.36f, 0.12f, effects = foil),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.44f, 0.5f, 0.16f, effects = foil),
+                    shape(ShapeKind.STAR, 0xFFFFFFFF, -0.62f, 0.32f, 0.09f, rotation = -12f, effects = foil),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.1f, -0.74f, 0.07f, effects = foil),
                 ),
             )
         },
-        Preset("sticker-bomb", "Sticker bomb") {
+        Preset("pearl", "Pearl") {
             DiscDesign(
-                name = "Sticker bomb", format = DiscFormat.CD,
+                name = "Pearl", format = DiscFormat.CD, sheen = 0.4f,
                 layers = listOf(
-                    fill(0xFF101014),
-                    pattern(PatternKind.CONFETTI, 0xFFFA2D48, 0xFF33D1FF, 0xFFFFE14D, 0xFFFFFFFF, density = 0.35f, amount = 0.4f, seed = 21),
-                    sticker(DiscSticker.HEART.id, 0xFFFA2D48, -0.5f, -0.45f, 0.26f, rotation = -14f),
-                    sticker(DiscSticker.BOLT.id, 0xFFFFE14D, 0.55f, -0.38f, 0.24f, rotation = 10f),
-                    sticker(DiscSticker.CHERRY.id, 0xFFE0263A, 0.48f, 0.52f, 0.26f, rotation = -6f),
-                    sticker(DiscSticker.FLOWER.id, 0xFF9B7BFF, -0.55f, 0.5f, 0.24f, rotation = 18f),
-                    sticker(DiscSticker.CROWN.id, 0xFFFFC233, 0f, 0.74f, 0.2f),
+                    fill(0xFFF7E1EC, 0xFFE4DDF7, 0xFFDCEBF7, 0xFFF6F0E2, kind = FillKind.PEARL, name = "Pearl").copy(density = 0.35f, seed = 7),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.55f, -0.5f, 0.12f, shadow = true),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.7f, -0.28f, 0.06f),
+                ),
+            )
+        },
+        Preset("prism-foil", "Prism foil") {
+            DiscDesign(
+                name = "Prism", format = DiscFormat.CD, sheen = 0.4f,
+                layers = listOf(
+                    pattern(PatternKind.PRISM, 0xFFFFFFFF, density = 0.7f, amount = 0.45f, seed = 5),
+                ),
+            )
+        },
+        Preset("galaxy", "Galaxy") {
+            DiscDesign(
+                name = "Galaxy", format = DiscFormat.CD, sheen = 0.4f,
+                layers = listOf(
+                    pattern(PatternKind.NEBULA, 0xFF07061A, 0xFF4B1E7A, 0xFF1E5FAE, 0xFFFF9AD5, amount = 0.45f, seed = 2),
+                    pattern(PatternKind.SPARKLES, 0xFFFFFFFF, density = 0.12f, amount = 0.25f, seed = 9),
+                ),
+            )
+        },
+        Preset("glitter", "Glitter") {
+            DiscDesign(
+                name = "Glitter", format = DiscFormat.CD, sheen = 0.4f,
+                layers = listOf(
+                    pattern(PatternKind.GLITTER, 0xFFFFB6D9, 0xFFE6E6F0, 0xFFC9B6FF, density = 0.6f, amount = 0.4f, seed = 3),
+                ),
+            )
+        },
+        Preset("holo-vinyl", "Holo vinyl") {
+            DiscDesign(
+                name = "Holo vinyl", format = DiscFormat.VINYL, base = 0xFF1B1B20, labelColor = 0xFF0F0F12, label = 0.3f, grooves = 0.7f, sheen = 0.9f, lightAngle = -30f,
+                layers = listOf(
+                    fill(0xFF2A2A30, kind = FillKind.HOLO, area = LayerArea.RING, name = "Holographic").copy(density = 0.55f, seed = 9, amount = 0.5f),
+                ),
+            )
+        },
+        Preset("smoke-vinyl", "Smoke vinyl") {
+            DiscDesign(
+                name = "Smoke", format = DiscFormat.VINYL, base = 0xCC2E2E36, labelColor = 0xFFF4F1EA, label = 0.3f, grooves = 0.6f, sheen = 1f, lightAngle = -30f,
+                layers = listOf(
+                    pattern(PatternKind.SMOKE, 0x00000000, 0xDDECECF2, amount = 0.45f, seed = 4, area = LayerArea.RING),
+                    text("SIDE A  ·  33⅓", 0xFF15151A, scale = 0.04f, y = 0.1f, spacing = 0.2f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Side"),
                 ),
             )
         },
@@ -588,7 +839,7 @@ object DiscPresets {
                     fill(0xFFF1EBDD, name = "Paper"),
                     shape(ShapeKind.BOX, 0xFF808080, -0.24f, -0.3f, 0.4f, aspect = 1.3f, rotation = -3f, effects = listOf(fx(EffectKind.HALFTONE, 0.35f, 0xFF3E7B39))).copy(name = "Green dots"),
                     shape(ShapeKind.SCRAP, 0xFFFBF9F4, 0.36f, 0.3f, 0.27f, aspect = 1.25f, rotation = 6f, shadow = true, seed = 4),
-                    text("{name}", Ink, scale = 0.5f, x = -0.12f, y = 0.5f, rotation = -4f, font = DiscFont.BLACKLETTER, effects = listOf(fx(EffectKind.SMEAR, 0.45f)), name = "Title"),
+                    text("Mixtape", Ink, scale = 0.5f, x = -0.12f, y = 0.5f, rotation = -4f, font = DiscFont.BLACKLETTER, effects = listOf(fx(EffectKind.SMEAR, 0.45f)), name = "Title"),
                     text("SIDE A  /  33⅓\nVOL. 01\nPRINTED ON PAPER", Ink, scale = 0.06f, x = 0.36f, y = 0.3f, rotation = 6f, font = DiscFont.MONO, align = TextAlignment.LEFT, name = "Caption"),
                     shape(ShapeKind.BOX, Ink, 0.4f, -0.46f, 0.12f, aspect = 1.7f, outline = true, line = 0.05f, echoes = 0.25f),
                     shape(ShapeKind.BADGE, Ink, -0.66f, 0.12f, 0.09f, rotation = 20f),
@@ -607,20 +858,7 @@ object DiscPresets {
                     shape(ShapeKind.BOX, 0xFFC8261E, 0.5f, -0.42f, 0.1f, effects = listOf(fx(EffectKind.INK, 0.3f))).copy(name = "Seal"),
                     text("夜", 0xFFF4EDE0, scale = 0.42f, x = 0.5f, y = -0.42f, font = DiscFont.INK_BRUSH, name = "Seal mark"),
                     text("夜间音乐", 0xFF3A3A3A, TextPath.VERTICAL, scale = 0.15f, x = -0.6f, y = -0.2f, font = DiscFont.INK_BRUSH, name = "Vertical"),
-                    text("{name}", 0xFF3A3A3A, TextPath.ARC_TOP, scale = 0.12f, radius = 0.84f, spacing = 0.2f, font = DiscFont.MONO, name = "Name"),
                     pattern(PatternKind.GRAIN, 0xFFFFFFFF, amount = 0.25f, blend = LayerBlend.OVERLAY, seed = 3),
-                ),
-            )
-        },
-        Preset("bloom-stars", "Bloom stars") {
-            DiscDesign(
-                name = "Bloom", format = DiscFormat.CD, sheen = 0.6f,
-                layers = listOf(
-                    fill(0xFF3A6DF0, 0xFF13296E, 0xFF070F2E, kind = FillKind.RADIAL, name = "Night blue"),
-                    pattern(PatternKind.SPARKLES, 0xFFFFFFFF, density = 0.25f, amount = 0.35f, seed = 4, effects = listOf(fx(EffectKind.BLOOM, 0.6f))),
-                    pattern(PatternKind.STARS, 0xFFFFF4C2, density = 0.18f, amount = 0.2f, seed = 9, effects = listOf(fx(EffectKind.BLOOM, 0.4f))),
-                    text("{name}", 0xFFFFFFFF, scale = 0.42f, y = 0.56f, font = DiscFont.SF_BOLD, effects = listOf(fx(EffectKind.GLOW, 0.3f, 0xFF4F86FF)), name = "Title"),
-                    pattern(PatternKind.GRAIN, 0xFFFFFFFF, amount = 0.25f, blend = LayerBlend.OVERLAY, seed = 5),
                 ),
             )
         },
@@ -631,7 +869,6 @@ object DiscPresets {
                     fill(0xFF0D1426, 0xFF1C2B4A, kind = FillKind.LINEAR, rotation = 90f, name = "Night"),
                     pattern(PatternKind.STREAKS, 0xFFFFC27A, 0xFFFFFFFF, 0xFF7FC8FF, density = 0.4f, amount = 0.45f, seed = 12, blend = LayerBlend.SCREEN, effects = listOf(fx(EffectKind.BLOOM, 0.5f))),
                     pattern(PatternKind.HUD, 0xFFFFFFFF, density = 0.4f, amount = 0.15f, seed = 2, opacity = 0.7f),
-                    text("{name}", 0xFFFFFFFF, scale = 0.3f, y = 0.62f, spacing = 0.12f, font = DiscFont.MONO, effects = listOf(fx(EffectKind.GLITCH, 0.3f)), name = "Title"),
                     pattern(PatternKind.GRAIN, 0xFFFFFFFF, amount = 0.4f, blend = LayerBlend.OVERLAY, seed = 6),
                 ),
             )
@@ -644,7 +881,7 @@ object DiscPresets {
                     pattern(PatternKind.SCREEN_TONE, 0xFF1B3B8F, density = 0.78f, amount = 0.3f, opacity = 0.6f, area = LayerArea.RING),
                     shape(ShapeKind.LINE, 0xFFE0262E, 0f, 0f, 0.05f, aspect = 19f, rotation = 62f, line = 0.08f),
                     text("夜间音乐", Ink, TextPath.VERTICAL, scale = 0.2f, x = 0.6f, y = -0.05f, font = DiscFont.INK_BRUSH, name = "Vertical"),
-                    text("{name}", 0xFFE0262E, scale = 0.32f, y = -0.56f, font = DiscFont.IMPACT, name = "Title"),
+                    text("ドン!", 0xFFE0262E, scale = 0.5f, x = -0.1f, y = -0.56f, rotation = -8f, font = DiscFont.IMPACT, name = "Sound"),
                     text("1. SIDE A\n2. SIDE B\n3. BONUS", Ink, scale = 0.065f, x = -0.42f, y = 0.48f, font = DiscFont.MONO, align = TextAlignment.LEFT, name = "Caption"),
                     shape(ShapeKind.BARCODE, Ink, -0.52f, -0.08f, 0.06f, aspect = 1.9f, rotation = 90f, seed = 5),
                     shape(ShapeKind.CORNERS, Ink, 0.12f, 0.42f, 0.16f, aspect = 1.4f, line = 0.06f),
@@ -655,8 +892,6 @@ object DiscPresets {
             DiscDesign(
                 name = "Moss", format = DiscFormat.VINYL, base = 0xFF4E8F2A, labelColor = 0xFFD9E3A8, grooves = 0.75f, sheen = 1f, lightAngle = -40f,
                 layers = listOf(
-                    text("{name}", 0xFF1D2A12, scale = 0.42f, y = -0.1f, font = DiscFont.CHILLAX_BOLD, area = LayerArea.MIDDLE, name = "Title"),
-                    text("{tracks}", 0xFF1D2A12, scale = 0.05f, y = 0.16f, font = DiscFont.MONO, align = TextAlignment.LEFT, area = LayerArea.MIDDLE, name = "Tracklist"),
                     text("SIDE A", 0xFF1D2A12, TextPath.ARC_TOP, scale = 0.06f, radius = 0.3f, spacing = 0.3f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Side"),
                 ),
             )
@@ -664,10 +899,6 @@ object DiscPresets {
         Preset("cream-vinyl", "Cream vinyl") {
             DiscDesign(
                 name = "Cream", format = DiscFormat.VINYL, base = 0xFFEDE6D6, labelColor = 0xFF151515, grooves = 0.3f, sheen = 1f, lightAngle = -40f,
-                layers = listOf(
-                    text("{name}", 0xFFF4F1EA, scale = 0.3f, y = -0.1f, rotation = -5f, font = DiscFont.MARKER, area = LayerArea.MIDDLE, effects = listOf(fx(EffectKind.INK, 0.35f)), name = "Title"),
-                    text("{tracks}", 0xFFF4F1EA, scale = 0.045f, y = 0.16f, font = DiscFont.MONO, align = TextAlignment.LEFT, area = LayerArea.MIDDLE, name = "Tracklist"),
-                ),
             )
         },
         Preset("marble-grey", "Grey marble vinyl") {
@@ -676,8 +907,6 @@ object DiscPresets {
                 layers = listOf(
                     pattern(PatternKind.MARBLE, 0xFF8F939C, 0xFFDADDE3, 0xFF41444C, density = 0.45f, amount = 0.4f, seed = 6, area = LayerArea.RING),
                     pattern(PatternKind.RAYS, 0xFF2A2A2E, density = 0.7f, amount = 0.15f, opacity = 0.18f, area = LayerArea.MIDDLE),
-                    text("{name}  ✦  {name}", 0xFF2A2A2E, TextPath.CIRCLE, scale = 0.08f, radius = 0.31f, spacing = 0.15f, font = DiscFont.SERIF, area = LayerArea.MIDDLE, name = "Around"),
-                    text("{name}", 0xFF2A2A2E, scale = 0.16f, y = -0.09f, font = DiscFont.BLACKLETTER, area = LayerArea.MIDDLE, name = "Title"),
                 ),
             )
         },
@@ -685,10 +914,192 @@ object DiscPresets {
             DiscDesign(
                 name = "Classic", format = DiscFormat.VINYL, labelColor = 0xFF111113, grooves = 0.8f, sheen = 0.9f, lightAngle = -40f,
                 layers = listOf(
-                    text("{name}", 0xFFEDEDED, TextPath.ARC_TOP, scale = 0.14f, radius = 0.27f, spacing = 0.06f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Title"),
-                    text("{tracks}", 0xFFCFCFCF, scale = 0.045f, y = 0.14f, font = DiscFont.MONO, align = TextAlignment.LEFT, area = LayerArea.MIDDLE, name = "Tracklist"),
                     text("33⅓", 0xFFCFCFCF, scale = 0.07f, x = -0.2f, y = -0.03f, font = DiscFont.SF, area = LayerArea.MIDDLE, name = "Speed"),
                     text("A", 0xFFCFCFCF, scale = 0.07f, x = 0.2f, y = -0.03f, font = DiscFont.SF_BOLD, area = LayerArea.MIDDLE, name = "Side"),
+                ),
+            )
+        },
+        Preset("picture-disc", "Picture disc") {
+            DiscDesign(
+                name = "Picture disc", format = DiscFormat.VINYL, labelColor = 0x00000000, grooves = 0.45f, sheen = 1f, lightAngle = -30f,
+                layers = DiscCollage.layers(List(12) { DiscSamples.id(it) }, DiscCollage.Layout.GRID, ImageFrame.SQUARE, seed = 2) + listOf(
+                    shape(ShapeKind.CIRCLE, 0xFFF4F1EA, 0f, 0f, 0.2f, shadow = true).copy(name = "Label"),
+                    shape(ShapeKind.RING, 0xFF15151A, 0f, 0f, 0.17f, line = 0.03f).copy(name = "Label ring"),
+                ),
+            )
+        },
+        Preset("polaroids", "Polaroids") {
+            val spots = DiscCollage.spots(DiscCollage.Layout.SCATTER, 7, seed = 6, inner = 0.3f)
+            DiscDesign(
+                name = "Polaroids", format = DiscFormat.CD, sheen = 0.35f,
+                layers = listOf(
+                    fill(0xFFD9C3A0, name = "Cork"),
+                    pattern(PatternKind.TERRAZZO, 0xFF8C6A45, 0xFFB98F5E, 0xFFEAD9BC, density = 0.9f, amount = 0.15f, seed = 3, opacity = 0.6f),
+                ) + DiscCollage.layers(List(7) { DiscSamples.id(it + 2) }, DiscCollage.Layout.SCATTER, ImageFrame.PHOTO, seed = 6, inner = 0.3f) +
+                    spots.take(4).mapIndexed { i, spot ->
+                        shape(ShapeKind.TAPE, if (i % 2 == 0) 0xCCF4D58D else 0xCCB9E0E8, spot.x, spot.y - spot.scale * 1.05f, 0.035f, aspect = 3f, rotation = spot.rotation + if (i % 2 == 0) 8f else -10f)
+                    },
+            )
+        },
+        Preset("cover-spiral", "Cover spiral") {
+            DiscDesign(
+                name = "Spiral", format = DiscFormat.VINYL, labelColor = 0xFFF2C230, label = 0.28f, grooves = 0.8f, sheen = 0.9f, lightAngle = -30f,
+                layers = DiscCollage.layers(List(12) { DiscSamples.id(it) }, DiscCollage.Layout.SPIRAL, ImageFrame.PRINT, seed = 1, inner = 0.28f, count = 16) + listOf(
+                    shape(ShapeKind.STAR, 0xFF15151A, 0f, 0f, 0.07f).copy(area = LayerArea.MIDDLE, name = "Star"),
+                ),
+            )
+        },
+        Preset("retro-sunset", "Retro sunset") {
+            val sea = 0xFF2C6E78
+            DiscDesign(
+                name = "Sunset", format = DiscFormat.CD, sheen = 0.35f, clearHub = false,
+                layers = listOf(
+                    fill(0xFFFFE6C2, 0xFFFFB98F, kind = FillKind.LINEAR, rotation = 90f, name = "Sky"),
+                    shape(ShapeKind.CIRCLE, 0xFFFF7A4D, 0f, -0.08f, 0.6f).copy(name = "Sun"),
+                    fill(0xFFFFD25A, 0xFFFF5E5B, kind = FillKind.LINEAR, rotation = 90f, name = "Sun colours").copy(clip = true),
+                    shape(ShapeKind.BOX, 0xFFFFCBA4, 0f, 0.08f, 0.018f, aspect = 40f).copy(clip = true, name = "Band 1"),
+                    shape(ShapeKind.BOX, 0xFFFFC79E, 0f, 0.2f, 0.03f, aspect = 25f).copy(clip = true, name = "Band 2"),
+                    shape(ShapeKind.BOX, 0xFFFFC298, 0f, 0.34f, 0.042f, aspect = 18f).copy(clip = true, name = "Band 3"),
+                    shape(ShapeKind.BOX, sea, 0f, 0.78f, 0.3f, aspect = 4f).copy(name = "Sea"),
+                    shape(ShapeKind.WAVE, 0xFF8FD3D0, -0.3f, 0.6f, 0.02f, aspect = 9f, line = 0.12f, echoes = 0.3f),
+                    shape(ShapeKind.WAVE, 0xFF8FD3D0, 0.32f, 0.72f, 0.02f, aspect = 8f, line = 0.12f, echoes = 0.3f),
+                    shape(ShapeKind.WAVE, 0xFF8FD3D0, -0.1f, 0.86f, 0.02f, aspect = 7f, line = 0.12f, echoes = 0.3f),
+                    shape(ShapeKind.BIRD, 0xFF6B2E3A, -0.5f, -0.52f, 0.022f, aspect = 1.8f, line = 0.06f),
+                    shape(ShapeKind.BIRD, 0xFF6B2E3A, -0.36f, -0.62f, 0.016f, aspect = 1.8f, line = 0.05f),
+                    pattern(PatternKind.GRAIN, 0xFFFFFFFF, amount = 0.3f, blend = LayerBlend.OVERLAY, seed = 2),
+                ),
+            )
+        },
+        Preset("cloud-nine", "Cloud nine") {
+            DiscDesign(
+                name = "Clouds", format = DiscFormat.CD, sheen = 0.4f,
+                layers = listOf(
+                    fill(0xFF9CC7FF, 0xFFFFCFE3, kind = FillKind.LINEAR, rotation = 90f, name = "Sky"),
+                    shape(ShapeKind.MOON, 0xFFFFF2B8, 0.52f, -0.5f, 0.13f, rotation = -20f, shadow = true),
+                    shape(ShapeKind.CLOUD, 0xFFFFFFFF, -0.42f, -0.5f, 0.17f, aspect = 1.8f, shadow = true, seed = 2),
+                    shape(ShapeKind.CLOUD, 0xFFFFFFFF, 0.5f, 0.12f, 0.2f, aspect = 1.9f, shadow = true, seed = 5),
+                    shape(ShapeKind.CLOUD, 0xFFFFFFFF, -0.48f, 0.42f, 0.15f, aspect = 2f, shadow = true, seed = 8),
+                    shape(ShapeKind.CLOUD, 0xFFFFFFFF, 0.12f, 0.72f, 0.12f, aspect = 2.2f, shadow = true, seed = 11),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, -0.08f, -0.74f, 0.07f),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.78f, -0.18f, 0.05f),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, -0.76f, -0.06f, 0.06f),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.62f, 0.56f, 0.045f),
+                ),
+            )
+        },
+        Preset("night-garden", "Night garden") {
+            val gold = 0xFFF2C94C
+            DiscDesign(
+                name = "Night garden", format = DiscFormat.VINYL, base = 0xFF16204A, labelColor = gold, label = 0.3f, grooves = 0.75f, sheen = 1f, lightAngle = -35f,
+                layers = listOf(
+                    pattern(PatternKind.STARS, 0xFFF7E3A1, 0xFFFFFFFF, density = 0.15f, amount = 0.2f, seed = 7, area = LayerArea.RING),
+                    shape(ShapeKind.MOON, 0xFFF7E3A1, -0.56f, -0.5f, 0.14f, rotation = -25f, effects = listOf(fx(EffectKind.GLOW, 0.5f, 0xFFF7E3A1))),
+                ) + listOf(
+                    Triple(-0.62f, 0.48f, 0.12f), Triple(-0.36f, 0.68f, 0.1f), Triple(-0.08f, 0.82f, 0.13f),
+                    Triple(0.24f, 0.74f, 0.11f), Triple(0.52f, 0.56f, 0.12f), Triple(0.72f, 0.28f, 0.09f),
+                ).mapIndexed { i, (x, y, size) ->
+                    shape(ShapeKind.DAISY, 0xFFFFFFFF, x, y, size, rotation = i * 23f, seed = i + 3).copy(colors = listOf(0xFFFFFFFF, gold), name = "Daisy ${i + 1}")
+                } + listOf(
+                    shape(ShapeKind.MOON, 0xFF16204A, 0f, 0f, 0.09f, rotation = -25f).copy(area = LayerArea.MIDDLE, name = "Label moon"),
+                ),
+            )
+        },
+        Preset("glitter-heart", "Glitter heart") {
+            DiscDesign(
+                name = "Heart", format = DiscFormat.CD, sheen = 0.4f,
+                layers = listOf(
+                    fill(0xFFFFD3E2, name = "Pink"),
+                    pattern(PatternKind.HEARTS, 0xFFFFB8CF, density = 0.35f, amount = 0.3f, seed = 4),
+                    shape(ShapeKind.HEART, 0xFFE8336B, 0f, 0.04f, 0.66f, shadow = true, effects = listOf(fx(EffectKind.OUTLINE, 0.35f))),
+                    pattern(PatternKind.GLITTER, 0xFFFF8FB8, 0xFFFFD1E2, 0xFFFFFFFF, density = 0.7f, amount = 0.4f, seed = 3, blend = LayerBlend.SCREEN).copy(clip = true),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, 0.52f, -0.56f, 0.1f),
+                    shape(ShapeKind.SPARKLE, 0xFFFFFFFF, -0.62f, 0.42f, 0.06f),
+                ),
+            )
+        },
+        Preset("checker-daisy", "Checker daisies") {
+            DiscDesign(
+                name = "Checker", format = DiscFormat.CD, sheen = 0.35f,
+                layers = listOf(
+                    pattern(PatternKind.CHECKER, 0xFFF7E8EE, 0xFFB7D9A6, density = 0.62f, rotation = 12f),
+                ) + listOf(
+                    Triple(-0.5f, -0.48f, 0.22f), Triple(0.5f, -0.42f, 0.17f), Triple(0.58f, 0.44f, 0.24f), Triple(-0.44f, 0.52f, 0.18f), Triple(0.04f, 0.8f, 0.12f),
+                ).mapIndexed { i, (x, y, size) ->
+                    shape(ShapeKind.DAISY, 0xFFFFFFFF, x, y, size, rotation = i * 31f, shadow = true, seed = i + 1).copy(colors = listOf(0xFFFFFFFF, 0xFFF6C437), name = "Daisy ${i + 1}")
+                },
+            )
+        },
+        Preset("memphis", "Memphis") {
+            DiscDesign(
+                name = "Memphis", format = DiscFormat.CD, sheen = 0.35f,
+                layers = listOf(
+                    fill(0xFFFFF4E0, name = "Cream"),
+                    pattern(PatternKind.DOTS, 0xFF1C1C22, density = 0.55f, amount = 0.12f, opacity = 0.5f),
+                    shape(ShapeKind.CIRCLE, 0xFFFF6F91, -0.48f, -0.42f, 0.24f),
+                    pattern(PatternKind.STRIPES, 0xFF1C1C22, density = 0.75f, amount = 0.3f, rotation = 45f).copy(clip = true),
+                    shape(ShapeKind.TRIANGLE, 0xFF3BB8C3, 0.5f, 0.42f, 0.2f, rotation = 16f, shadow = true),
+                    shape(ShapeKind.HALF_CIRCLE, 0xFFFFC542, 0.5f, -0.5f, 0.15f, rotation = -30f),
+                    shape(ShapeKind.SQUIGGLE, 0xFF1C1C22, -0.38f, 0.5f, 0.08f, aspect = 3.2f, line = 0.25f, seed = 3),
+                    shape(ShapeKind.ZIGZAG, 0xFF7A5CFA, 0.02f, -0.74f, 0.04f, aspect = 5f, line = 0.2f, echoes = 0.25f),
+                    shape(ShapeKind.CROSS, 0xFF1C1C22, -0.74f, 0.1f, 0.06f),
+                    shape(ShapeKind.RING, 0xFF7A5CFA, 0.12f, 0.74f, 0.08f, line = 0.25f),
+                    shape(ShapeKind.CIRCLE, 0xFF3BB8C3, 0.78f, 0.04f, 0.05f),
+                ),
+            )
+        },
+        Preset("sticker-bomb", "Sticker bomb") {
+            val die = listOf(fx(EffectKind.OUTLINE, 0.35f))
+            DiscDesign(
+                name = "Stickers", format = DiscFormat.CD, sheen = 0.35f,
+                layers = listOf(fill(0xFF1E1F26, name = "Black")) + listOf(
+                    "strawberry", "ringed-planet", "butterfly", "cherries", "sunflower", "rainbow",
+                    "headphone", "crown", "gem-stone", "mushroom", "lollipop", "four-leaf-clover",
+                ).mapIndexed { i, name ->
+                    // Round the disc, in and out by turns, close enough to overlap like a laptop lid.
+                    val a = Math.toRadians(-100.0 + i * 30.0 + (i * 37 % 11 - 5))
+                    val d = if (i % 2 == 0) 0.74f else 0.56f
+                    val size = 0.16f + (i * 53 % 7) * 0.008f
+                    library(name, (kotlin.math.cos(a) * d).toFloat(), (kotlin.math.sin(a) * d).toFloat(), size, rotation = (if (i % 2 == 0) -1 else 1) * (6f + (i * 7) % 18), shadow = true, effects = die)
+                },
+            )
+        },
+        Preset("contour-map", "Contour map") {
+            DiscDesign(
+                name = "Contours", format = DiscFormat.CD, sheen = 0.35f,
+                layers = listOf(
+                    fill(0xFFEFE9DC, name = "Paper"),
+                    pattern(PatternKind.CONTOURS, 0xFF8A9A70, 0xFFC28C5A, density = 0.85f, amount = 0.45f, seed = 9),
+                    shape(ShapeKind.DROP, 0xFFE0453A, 0.34f, -0.42f, 0.08f, rotation = 180f, shadow = true).copy(name = "Pin"),
+                    shape(ShapeKind.CIRCLE, 0xFFFFFFFF, 0.34f, -0.44f, 0.025f).copy(name = "Pin dot"),
+                    shape(ShapeKind.CROSSHAIR, 0xFF3D4A38, -0.5f, 0.42f, 0.09f, line = 0.06f),
+                    pattern(PatternKind.PAPER, 0xFFFFFFFF, density = 0.5f, amount = 0.5f, blend = LayerBlend.MULTIPLY),
+                ),
+            )
+        },
+        Preset("leopard-vinyl", "Leopard vinyl") {
+            DiscDesign(
+                name = "Leopard", format = DiscFormat.VINYL, base = 0xFFD9A35E, labelColor = 0xFFFF8FB8, label = 0.3f, grooves = 0.7f, sheen = 1f, lightAngle = -30f,
+                layers = listOf(
+                    pattern(PatternKind.LEOPARD, 0xFFD9A35E, 0xFF3A2414, 0xFF8A5A2E, density = 0.45f, amount = 0.5f, seed = 4, area = LayerArea.RING),
+                    shape(ShapeKind.HEART, 0xFF3A2414, 0f, 0f, 0.08f).copy(area = LayerArea.MIDDLE),
+                ),
+            )
+        },
+        Preset("sunburst", "Sunburst") {
+            DiscDesign(
+                name = "Sunburst", format = DiscFormat.VINYL, base = 0xFFF28A2E, labelColor = 0xFFFFE08A, label = 0.32f, grooves = 0.7f, sheen = 1f, lightAngle = -30f,
+                layers = listOf(
+                    pattern(PatternKind.RAYS, 0xFFFFB347, density = 0.35f, amount = 0.5f, area = LayerArea.RING),
+                    shape(ShapeKind.SUN, 0xFFF28A2E, 0f, 0f, 0.2f).copy(area = LayerArea.MIDDLE),
+                ),
+            )
+        },
+        Preset("terrazzo", "Terrazzo") {
+            DiscDesign(
+                name = "Terrazzo", format = DiscFormat.CD, sheen = 0.35f,
+                layers = listOf(
+                    fill(0xFFF3EEE6, name = "Stone"),
+                    pattern(PatternKind.TERRAZZO, 0xFFE07A5F, 0xFF3D405B, 0xFF81B29A, 0xFFF2CC8F, density = 0.45f, amount = 0.5f, seed = 5),
                 ),
             )
         },
@@ -696,10 +1107,12 @@ object DiscPresets {
 
     fun of(key: String) = all.firstOrNull { it.key == key }
 
-    /** The order presets are offered in: blanks, then collage and record looks, then the rest as listed. */
+    /** The order presets are offered in: blanks, then the newest looks, then the rest as listed. */
     private val Leading = listOf(
-        "blank-cd", "blank-vinyl", "zine", "ink-brush", "bloom-stars", "night-drive", "manga",
-        "moss-vinyl", "cream-vinyl", "marble-grey", "black-classic",
+        "blank-cd", "blank-vinyl", "holographic", "cover-collage", "big-number", "big-label", "paint-swirl", "painted-daisies",
+        "mountain-grooves", "patch-collage", "blue-watercolour", "big-letter", "picture-disc", "retro-sunset", "sticker-bomb",
+        "checker-daisy", "glitter-heart", "night-garden", "polaroids", "cloud-nine", "liquid-chrome", "memphis", "cover-spiral",
+        "aura", "y2k-foil", "contour-map", "sunburst", "leopard-vinyl", "terrazzo",
     )
 
     val ordered: List<Preset> by lazy { all.sortedBy { p -> Leading.indexOf(p.key).let { if (it < 0) Leading.size else it } } }
@@ -711,30 +1124,27 @@ object DiscPresets {
         titles.ifEmpty { SampleTracks }.take(6).mapIndexed { i, t -> "${i + 1}. ${if (t.length > 26) t.take(25) + "…" else t}" }.joinToString("\n")
 
     /**
-     * A fresh copy of [preset] with new ids, its "{name}" filled in with [playlistName] (or the
-     * preset's own name) and "{tracks}" with [tracks] numbered.
+     * A fresh copy of [preset] with new ids, named [playlistName] when it's for a playlist. Its
+     * sample pictures become [covers], in turn, when there are any.
      */
-    fun start(preset: Preset, playlistName: String? = null, tracks: List<String> = emptyList()): DiscDesign {
+    fun start(preset: Preset, playlistName: String? = null, covers: List<String> = emptyList()): DiscDesign {
         val design = preset.make()
-        val name = playlistName?.takeIf { it.isNotBlank() } ?: design.name
         val now = System.currentTimeMillis()
         return design.copy(
             id = UUID.randomUUID().toString(),
-            name = if (playlistName != null) name else design.name,
+            name = playlistName?.takeIf { it.isNotBlank() } ?: design.name,
             layers = design.layers.map { layer ->
-                // A name longer than the preset's own is set smaller, so it still fits where the preset put it.
-                val shrinks = "{name}" in layer.text && (layer.path == TextPath.STRAIGHT || layer.path == TextPath.ARC_TOP || layer.path == TextPath.ARC_BOTTOM)
-                val ratio = (design.name.length.coerceAtLeast(6).toFloat() / name.length).coerceIn(0.35f, 1f)
-                // Text on an arc has more room along the curve, so it gives up less.
-                val fit = when {
-                    !shrinks -> 1f
-                    layer.path == TextPath.STRAIGHT -> ratio
-                    else -> kotlin.math.sqrt(ratio)
+                val asset = layer.asset?.let { a ->
+                    val n = a.removePrefix(SampleAssetPrefix).toIntOrNull()
+                    if (a.startsWith(SampleAssetPrefix) && n != null && covers.isNotEmpty()) covers[n % covers.size] else a
                 }
-                layer.copy(id = newLayerId(), text = layer.text.replace("{name}", name).replace("{tracks}", tracklist(tracks)), scale = layer.scale * fit)
+                layer.copy(id = newLayerId(), asset = asset)
             },
             createdAt = now,
             updatedAt = now,
         )
     }
+
+    /** Whether [preset] has sample pictures that a playlist's covers can stand in for. */
+    fun usesCovers(preset: Preset): Boolean = preset.make().layers.any { it.asset?.startsWith(SampleAssetPrefix) == true }
 }

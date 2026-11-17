@@ -39,6 +39,7 @@ internal object WinProcess {
 
     private interface Psapi : StdCallLibrary {
         fun GetProcessMemoryInfo(process: WinNT.HANDLE, counters: MemoryCounters, size: Int): Boolean
+        fun EmptyWorkingSet(process: WinNT.HANDLE): Boolean
     }
 
     private interface NtDll : StdCallLibrary {
@@ -57,6 +58,15 @@ internal object WinProcess {
             if (!api.GetProcessMemoryInfo(Kernel32.INSTANCE.GetCurrentProcess(), counters, counters.size())) return null
             counters.WorkingSetSize to counters.PrivateUsage
         }.getOrNull()
+    }
+
+    /**
+     * Lets Windows take this process's memory out of RAM for other apps to use. Nothing is lost:
+     * each page comes back the moment it is touched, so this is for when Convx sits minimised.
+     */
+    fun releaseWorkingSet() {
+        val api = psapi ?: return
+        runCatching { api.EmptyWorkingSet(Kernel32.INSTANCE.GetCurrentProcess()) }
     }
 
     private const val PROCESS_QUERY_LIMITED_INFORMATION = 0x1000

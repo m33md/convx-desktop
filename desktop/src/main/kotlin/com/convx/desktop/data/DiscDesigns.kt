@@ -217,7 +217,7 @@ object DiscDesigns {
         return save(
             read.copy(
                 id = UUID.randomUUID().toString(),
-                layers = read.layers.map { layer -> layer.copy(id = newLayerId(), asset = layer.asset?.let { renamed[File(it).name] }) },
+                layers = read.layers.map { layer -> layer.copy(id = newLayerId(), asset = layer.asset?.let { if (it.startsWith(SampleAssetPrefix)) it else renamed[File(it).name] }) },
                 createdAt = now,
                 updatedAt = now,
             ),

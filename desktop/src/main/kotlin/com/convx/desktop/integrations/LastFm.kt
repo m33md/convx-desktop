@@ -203,7 +203,7 @@ object LastFm {
             val request = Request.Builder()
                 .url(Api)
                 .post(body)
-                .header("User-Agent", "Convx for Windows (https://github.com/cosmictaserdev-creator/Convx)")
+                .header("User-Agent", "Convx for ${com.convx.desktop.core.AppInfo.PLATFORM} (https://github.com/cosmictaserdev-creator/Convx)")
                 .build()
             Http.client.newCall(request).execute().use { response ->
                 val text = response.body?.string().orEmpty()

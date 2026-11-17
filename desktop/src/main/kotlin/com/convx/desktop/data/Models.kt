@@ -207,25 +207,29 @@ enum class LyricsStyle(val label: String) {
 enum class LyricsPosition(val label: String) { Left("Left"), Center("Center"), Right("Right") }
 
 /**
- * The phone's Liquid Glass dials (GlassEffectSettings), with its defaults. Colours stay fixed:
- * Convx is red on black, so only how the glass bends, blurs and catches light can change.
+ * The phone's Liquid Glass dials (GlassEffectSettings). Their defaults bend more than the phone's,
+ * with the depth effect on and only a touch of blur, as the pages under the glass here are mostly
+ * black and plain frost over them reads as a dark panel. Colours stay fixed: Convx is red on black, so only
+ * how the glass bends, blurs and catches light can change.
  */
 @Serializable
 data class GlassSettings(
-    /** dp of blur under the glass. */
-    val blurRadius: Float = 3f,
+    /** dp of blur under the glass: 1 of the slider's 20, 5%. */
+    val blurRadius: Float = 1f,
     /** 0..2; 1 leaves colours as they are, 2 is the phone's richer default. */
     val vibrancy: Float = 2f,
-    /** 0..1 of the lens' 48 dp: how far in from the edge the glass bends light. */
+    /** 0..1 of the lens' 48 dp: how far in from the edge the glass bends light. The phone's 60%. */
     val lensHeight: Float = 0.60f,
-    /** 0..1 of 48 dp: how strongly it bends it. */
+    /** 0..1 of 48 dp: how strongly it bends it. The phone's 69%. */
     val lensAmount: Float = 0.69f,
+    /** The colour fringe round the rim. Off, as on the phone. */
     val chromaticAberration: Boolean = false,
+    /** The whole surface bends as a lens, not just its rim. Off, as on the phone. */
     val depthEffect: Boolean = false,
     /** How much of the dark tint the glass carries. */
-    val surfaceOpacity: Float = 0.50f,
+    val surfaceOpacity: Float = 0.40f,
     /** The light rim along the glass' edge. */
-    val highlightOpacity: Float = 0.33f,
+    val highlightOpacity: Float = 0.55f,
 )
 
 /**
@@ -277,9 +281,9 @@ data class Settings(
     val lyricsProviders: List<String> = emptyList(),
     /** Sources switched off in Sources & priority. */
     val lyricsProvidersOff: List<String> = emptyList(),
-    // The phone's lyrics style and effects, with its defaults. The size is the full player's;
-    // the side panel scales it down. "default" font is the app's own.
-    val lyricsStyle: LyricsStyle = LyricsStyle.Flamingo,
+    // The phone's lyrics style and effects. Lyrics V2 (Fluid) is the default style; the rest are the
+    // phone's defaults. The size is the full player's; the side panel scales it down. "default" font is the app's own.
+    val lyricsStyle: LyricsStyle = LyricsStyle.LyricsV2,
     val lyricsPosition: LyricsPosition = LyricsPosition.Left,
     val lyricsAutoScroll: Boolean = true,
     val lyricsSwipeToChange: Boolean = false,
@@ -344,11 +348,15 @@ data class Settings(
     val discordButton2: Boolean = true,
     /** Blank for "Visit Convx". */
     val discordButton2Text: String = "",
-    /** A Discord application of your own to show the status under; blank uses the phone's ("Metrolist"). */
+    /** A Discord application of your own to show the status under; blank uses Convx's own ("Convx"). */
     val discordApplicationId: String = "",
     /** A Spotify app of your own (developer.spotify.com) to link with, instead of Spotify's shared desktop client. */
     val spotifyClientId: String = "",
     val glass: GlassSettings = GlassSettings(),
+    /** Which of the glass' defaults these settings have taken; see [AppSettings]. */
+    val glassDefaults: Int = 0,
+    /** Which default lyrics style these settings have taken; see [AppSettings]. */
+    val lyricsDefaults: Int = 0,
     // The phone's Layout & home page and its Arrange home feed, with its defaults.
     /** home, search or library: where Convx opens. */
     val defaultTab: String = "home",

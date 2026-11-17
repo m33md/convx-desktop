@@ -25,7 +25,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.dropShadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.shadow.Shadow
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -33,7 +32,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.LocalContentColor
-import com.convx.desktop.ui.components.Tooltip
 import com.kyant.backdrop.Backdrop
 
 /** A true circle: the phone keeps square glass round rather than giving it G2 corners. */
@@ -50,64 +48,50 @@ fun Modifier.chromeShadow(shape: Shape): Modifier = dropShadow(
 
 /**
  * The phone's GlassCircleButton: a round drop of liquid glass with its icon composited into the
- * material, the soft chrome shadow, the pointer's light, and the elastic stretch that swells it
- * under a press and pulls it after a drag.
+ * material and the soft chrome shadow. It holds still under a press.
  */
 @Composable
 fun GlassCircleButton(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     size: Dp = 44.dp,
-    tooltip: String? = null,
     enabled: Boolean = true,
     // Photos (the account picture) must not be added onto the glass: Plus would wash them out.
     applyAdditiveChrome: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val glow = rememberInteractiveHighlight()
     val interaction = remember { MutableInteractionSource() }
-    val button = @Composable {
-        Box(
-            modifier
-                .graphicsLayer(elasticStretch(glow))
-                .size(size)
-                .chromeShadow(GlassCircleShape)
-                .clip(GlassCircleShape)
-                .liquidGlass(GlassCircleShape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
-                .then(glow.modifier)
-                .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
-                .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-                .then(if (enabled) glow.gestureModifier else Modifier),
-            contentAlignment = Alignment.Center,
-        ) {
-            CompositionLocalProvider(LocalContentColor provides GlassTokens.Title) {
-                Box(Modifier.additiveChrome(applyAdditiveChrome), contentAlignment = Alignment.Center) { content() }
-            }
+    Box(
+        modifier
+            .size(size)
+            .chromeShadow(GlassCircleShape)
+            .clip(GlassCircleShape)
+            .liquidGlass(GlassCircleShape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
+            .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        CompositionLocalProvider(LocalContentColor provides GlassTokens.Title) {
+            Box(Modifier.additiveChrome(applyAdditiveChrome), contentAlignment = Alignment.Center) { content() }
         }
     }
-    if (tooltip != null) Tooltip(tooltip) { button() } else button()
 }
 
 /**
  * Any control made of the glass: the material, or [fill] for the white and red pills that keep
- * their paint, then the pointer's light and the swell and lean that answer hover and press, as on
- * GlassCircleButton. The motion is a couple of dp, so the target stays under the pointer. The
- * caller adds its own click handling after this.
+ * their paint. Like GlassCircleButton it holds still under the pointer. The caller adds its own
+ * click handling after this.
  */
 @Composable
 fun Modifier.glassControl(
     shape: CornerBasedShape,
-    glow: InteractiveHighlight = rememberInteractiveHighlight(),
     fill: Color? = null,
-    enabled: Boolean = true,
-    magnitude: Float = 1f,
     shadow: Boolean = false,
     highlightAlpha: Float = GlassTokens.PluckAlphaNeutral,
     /** The lit and dark rims; small discs among plain glyphs read cleaner without them. */
     rims: Boolean = true,
     backdrop: Backdrop? = LocalAppBackdrop.current,
 ): Modifier {
-    val stretch = remember(glow, magnitude) { elasticStretch(glow, magnitude) }
     val tuned = LocalGlassConfig.current
     val surface = if (fill != null) {
         Modifier.background(fill)
@@ -116,12 +100,9 @@ fun Modifier.glassControl(
         Modifier.liquidGlass(shape, if (backdrop == null) tuned.onPage() else tuned, highlightAlpha = highlightAlpha, applyEdgeEffects = rims, backdrop = backdrop)
     }
     return this
-        .graphicsLayer(stretch)
         .then(if (shadow) Modifier.chromeShadow(shape) else Modifier)
         .clip(shape)
         .then(surface)
-        .then(glow.modifier)
-        .then(if (enabled) glow.gestureModifier else Modifier)
 }
 
 

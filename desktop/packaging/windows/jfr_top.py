@@ -43,7 +43,7 @@ def main(path):
             v = e["values"]
             loads[thread_of(e)].append(float(v.get("user", 0)) + float(v.get("system", 0)))
     if loads:
-        print("\nThreads by CPU (share of one core, average):")
+        print("\nThreads by CPU (share of the whole processor, average):")
         for name, values in sorted(loads.items(), key=lambda kv: -sum(kv[1]) / len(kv[1]))[:15]:
             print(f"  {100 * sum(values) / len(values):6.2f}%  {name}")
 

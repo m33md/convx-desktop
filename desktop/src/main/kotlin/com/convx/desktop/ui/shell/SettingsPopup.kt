@@ -64,7 +64,7 @@ fun SettingsPopup(dismiss: () -> Unit) {
             Modifier.fillMaxWidth().pressable({
                 dismiss()
                 navigator.navigate(Screen.Profile)
-            }, pressScale = 0.99f).padding(horizontal = 14.dp, vertical = 8.dp),
+            }).padding(horizontal = 14.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             val picture = identity.picture
@@ -132,7 +132,7 @@ private const val PolicyUrl = "https://cosmictaser.de5.net"
 @Composable
 private fun PopupRow(title: String, icon: String, trailing: String? = null, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().pressable(onClick, pressScale = 0.99f).padding(horizontal = 14.dp, vertical = 10.dp),
+        Modifier.fillMaxWidth().pressable(onClick).padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ConvxIcon(icon, tint = Color.White, size = 18.dp)
@@ -145,7 +145,7 @@ private fun PopupRow(title: String, icon: String, trailing: String? = null, onCl
 @Composable
 private fun PopupSwitch(title: String, icon: String, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
-        Modifier.fillMaxWidth().pressable({ onChange(!checked) }, pressScale = 0.99f).padding(horizontal = 14.dp, vertical = 6.dp),
+        Modifier.fillMaxWidth().pressable({ onChange(!checked) }).padding(horizontal = 14.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ConvxIcon(icon, tint = Color.White, size = 18.dp)
@@ -157,5 +157,5 @@ private fun PopupSwitch(title: String, icon: String, checked: Boolean, onChange:
 
 @Composable
 private fun FooterLink(text: String, onClick: () -> Unit) {
-    Text(text, style = ConvxType.Footnote, color = ConvxColors.SecondaryLabel, modifier = Modifier.pressable(onClick, pressScale = 0.97f).padding(4.dp))
+    Text(text, style = ConvxType.Footnote, color = ConvxColors.SecondaryLabel, modifier = Modifier.pressable(onClick).padding(4.dp))
 }

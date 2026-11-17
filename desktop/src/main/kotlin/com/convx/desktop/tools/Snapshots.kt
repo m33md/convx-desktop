@@ -556,7 +556,7 @@ fun main(args: Array<String>) {
             }
             // Disc Studio: a design worn by the mix, the section page, and the editor on that design.
             val disc = com.convx.desktop.data.DiscDesigns.save(
-                com.convx.desktop.data.DiscPresets.start(com.convx.desktop.data.DiscPresets.of("afro-night")!!, "Late night drive"),
+                com.convx.desktop.data.DiscPresets.start(com.convx.desktop.data.DiscPresets.of("painted-daisies")!!, "Late night drive"),
             )
             com.convx.desktop.data.DiscDesigns.applyTo(disc, mix)
             shoot("27-disc-studio", seconds = 6) { navigator.navigate(Screen.DiscStudio) }

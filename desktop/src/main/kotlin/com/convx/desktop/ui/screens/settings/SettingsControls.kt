@@ -111,7 +111,6 @@ fun SegmentedButtons(
             if (i > 0) Box(Modifier.width(1.dp).fillMaxHeight().background(outline))
             val selected = isSelected(i)
             val interaction = remember { MutableInteractionSource() }
-            val hovered by interaction.collectIsHoveredAsState()
             Row(
                 Modifier
                     .weight(1f)
@@ -119,7 +118,6 @@ fun SegmentedButtons(
                     .background(
                         when {
                             selected -> accent.copy(alpha = 0.28f)
-                            hovered && enabled -> Color.White.copy(alpha = 0.06f)
                             else -> Color.Transparent
                         },
                     )

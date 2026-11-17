@@ -10,8 +10,6 @@ import com.convx.desktop.ui.glass.LocalMenuBackdrop
 import com.convx.desktop.ui.glass.MenuGlass
 import com.convx.desktop.ui.glass.glassControl
 import com.convx.desktop.ui.glass.liquidGlass
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.TooltipArea
 import androidx.compose.foundation.TooltipPlacement
 import androidx.compose.foundation.background
@@ -20,7 +18,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.hoverable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsHoveredAsState
-import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -42,12 +39,13 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.input.pointer.PointerEventType
+import androidx.compose.ui.input.pointer.PointerEventPass
+import androidx.compose.ui.input.pointer.PointerType
 import androidx.compose.ui.input.pointer.PointerIcon
 import androidx.compose.ui.input.pointer.isSecondaryPressed
 import androidx.compose.ui.input.pointer.pointerHoverIcon
@@ -67,36 +65,50 @@ import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxShapes
 import com.convx.desktop.ui.theme.ConvxType
 
-/** Hover + press feedback shared by every clickable surface: a hand cursor and a tiny squeeze. */
+/** What every clickable surface shares: a hand cursor, and no glow, bloom or squeeze. */
 @Composable
 fun Modifier.pressable(
     onClick: () -> Unit,
     enabled: Boolean = true,
     interaction: MutableInteractionSource = remember { MutableInteractionSource() },
-    pressScale: Float = 0.96f,
-): Modifier {
-    val pressed by interaction.collectIsPressedAsState()
-    val scale by animateFloatAsState(if (pressed && enabled) pressScale else 1f)
-    // The squeeze is drawn inside the hit area, so a press near the edge doesn't shrink out
-    // from under the pointer and cancel itself.
-    return this
-        .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
-        .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-        .scale(scale)
-}
+): Modifier = this
+    .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
+    .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
 
-/** Right-click (or the context-menu key path) reports where it happened. */
+/** Right-click, or a finger held still as on the phone, reports where it happened. */
 fun Modifier.onSecondaryClick(onClick: (Offset) -> Unit): Modifier = pointerInput(onClick) {
     awaitPointerEventScope {
         while (true) {
             val event = awaitPointerEvent()
-            if (event.type == PointerEventType.Press && event.buttons.isSecondaryPressed) {
-                event.changes.firstOrNull()?.let { onClick(it.position) }
+            if (event.type != PointerEventType.Press) continue
+            val down = event.changes.firstOrNull() ?: continue
+            if (event.buttons.isSecondaryPressed) {
+                onClick(down.position)
+                continue
             }
+            if (down.type != PointerType.Touch) continue
+            // Lifted, moved or taken by a scroll before the long-press time, it was a tap or a drag.
+            val heldStill = withTimeoutOrNull(viewConfiguration.longPressTimeoutMillis) {
+                var still = true
+                while (still) {
+                    val change = awaitPointerEvent().changes.firstOrNull { it.id == down.id }
+                    still = change != null && change.pressed && !change.isConsumed &&
+                        (change.position - down.position).getDistance() <= viewConfiguration.touchSlop
+                }
+                false
+            } ?: true
+            if (!heldStill) continue
+            onClick(down.position)
+            // The lift that follows belongs to the menu, not to a tap on what's under it.
+            do {
+                val next = awaitPointerEvent(PointerEventPass.Initial)
+                next.changes.forEach { it.consume() }
+            } while (next.changes.any { it.pressed })
         }
     }
 }
 
+/** Hover text that explains a word label (the audio quality badge, Disc Studio's effect chips). Icons show none. */
 @Composable
 fun Tooltip(text: String, content: @Composable () -> Unit) {
     TooltipArea(
@@ -175,62 +187,48 @@ fun IconButton(
     enabled: Boolean = true,
     active: Boolean = false,
     activeTint: Color = tint,
-    tooltip: String? = null,
     /** A player control draws the image picked for it in Player icons, if any. */
     slot: PlayerIconSlot? = null,
+    /** Motion for the glyph alone, such as the like's pop. */
+    iconModifier: Modifier = Modifier,
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val bg by animateColorAsState(
-        when {
-            filled -> Color.Transparent
-            hovered && enabled -> Color.White.copy(alpha = 0.08f)
-            else -> Color.Transparent
-        },
-    )
     val color = when {
         !enabled -> tint.copy(alpha = 0.3f)
         active -> activeTint
-        hovered -> tint
         else -> tint.copy(alpha = if (filled) 1f else 0.86f)
     }
-    val button = @Composable {
-        Box(
-            modifier
-                .size(size)
-                // The filled disc is a drop of the glass, with its light and swell; the plain glyph keeps the quiet wash.
-                .then(
-                    if (filled) {
-                        Modifier
-                            // No rims: these discs sit in rows of plain glyphs (the player's top row), where a ringed one looked out of place.
-                            .glassControl(GlassShapes.Capsule, enabled = enabled, rims = false)
-                            .hoverable(interaction)
-                            .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
-                            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
-                    } else {
-                        Modifier
-                            .clip(CircleShape)
-                            .background(bg)
-                            .hoverable(interaction)
-                            .pressable(onClick, enabled, interaction, pressScale = 0.9f)
-                    },
-                ),
-            contentAlignment = Alignment.Center,
-        ) {
-            if (slot != null) PlayerGlyph(slot, icon, color, iconSize) else ConvxIcon(icon, tint = color, size = iconSize)
-            if (active) {
-                Box(
+    Box(
+        modifier
+            .size(size)
+            // The filled disc is a drop of the glass; the plain glyph is just the glyph.
+            .then(
+                if (filled) {
                     Modifier
-                        .align(Alignment.BottomCenter)
-                        .padding(bottom = 2.dp)
-                        .size(4.dp)
+                        // No rims: these discs sit in rows of plain glyphs (the player's top row), where a ringed one looked out of place.
+                        .glassControl(GlassShapes.Capsule, rims = false)
+                        .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
+                        .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick)
+                } else {
+                    Modifier
                         .clip(CircleShape)
-                        .background(activeTint),
-                )
-            }
+                        .pressable(onClick, enabled, interaction)
+                },
+            ),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (slot != null) PlayerGlyph(slot, icon, color, iconSize, iconModifier) else ConvxIcon(icon, iconModifier, tint = color, size = iconSize)
+        if (active) {
+            Box(
+                Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 2.dp)
+                    .size(4.dp)
+                    .clip(CircleShape)
+                    .background(activeTint),
+            )
         }
     }
-    if (tooltip != null) Tooltip(tooltip) { button() } else button()
 }
 
 /** The big white disc with a black glyph: artist/album play buttons and the player bar. */
@@ -247,17 +245,12 @@ fun PlayButton(
     player: Boolean = false,
     ended: Boolean = false,
 ) {
-    val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
-    val scale by animateFloatAsState(if (hovered) 1.05f else 1f)
     Box(
         modifier
             .size(size)
-            .scale(scale)
             .clip(CircleShape)
             .background(color)
-            .hoverable(interaction)
-            .pressable(onClick, interaction = interaction, pressScale = 0.92f),
+            .pressable(onClick),
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
@@ -287,18 +280,12 @@ fun PillButton(
     contentPadding: PaddingValues = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
 ) {
     val interaction = remember { MutableInteractionSource() }
-    val hovered by interaction.collectIsHoveredAsState()
     // The quiet pill is the glass itself; the white and red ones keep their paint and move like it.
-    val fill = when {
-        accent != null -> if (hovered) accent.copy(alpha = 0.9f) else accent
-        filled -> if (hovered) Color.White.copy(alpha = 0.9f) else Color.White
-        else -> null
-    }
+    val fill = accent ?: if (filled) Color.White else null
     val fg = if (filled || accent != null) Color.Black.takeIf { accent == null } ?: Color.White else Color.White
     Row(
         modifier
             .glassControl(GlassShapes.Capsule, fill = fill)
-            .hoverable(interaction)
             .pointerHoverIcon(PointerIcon.Hand)
             .clickable(interactionSource = interaction, indication = null, onClick = onClick)
             .padding(contentPadding),
