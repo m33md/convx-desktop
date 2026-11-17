@@ -218,13 +218,13 @@ data class GlassSettings(
     val blurRadius: Float = 1f,
     /** 0..2; 1 leaves colours as they are, 2 is the phone's richer default. */
     val vibrancy: Float = 2f,
-    /** 0..1 of the lens' 48 dp: how far in from the edge the glass bends light. */
-    val lensHeight: Float = 0.70f,
-    /** 0..1 of 48 dp: how strongly it bends it. */
-    val lensAmount: Float = 0.85f,
+    /** 0..1 of the lens' 48 dp: how far in from the edge the glass bends light. The phone's 60%. */
+    val lensHeight: Float = 0.60f,
+    /** 0..1 of 48 dp: how strongly it bends it. The phone's 69%. */
+    val lensAmount: Float = 0.69f,
     val chromaticAberration: Boolean = true,
-    /** The whole surface bends as a lens, not just its rim. */
-    val depthEffect: Boolean = true,
+    /** The whole surface bends as a lens, not just its rim. Off, as on the phone. */
+    val depthEffect: Boolean = false,
     /** How much of the dark tint the glass carries. */
     val surfaceOpacity: Float = 0.40f,
     /** The light rim along the glass' edge. */
