@@ -48,7 +48,7 @@ jobs:
       # The installers' own number, which only goes up, so each one upgrades the Convx installed
       # before it. 1.1, because the 1.0 builds (up to 1.0.75) came from m33md/anything. People see
       # CONVX_VERSION instead (the Version step below).
-      CONVX_PACKAGE_VERSION: 1.1.${{ github.run_number }}
+      CONVX_PACKAGE_VERSION: 1.2.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v5
         with:

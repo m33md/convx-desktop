@@ -281,9 +281,9 @@ data class Settings(
     val lyricsProviders: List<String> = emptyList(),
     /** Sources switched off in Sources & priority. */
     val lyricsProvidersOff: List<String> = emptyList(),
-    // The phone's lyrics style and effects, with its defaults. The size is the full player's;
-    // the side panel scales it down. "default" font is the app's own.
-    val lyricsStyle: LyricsStyle = LyricsStyle.Flamingo,
+    // The phone's lyrics style and effects. Lyrics V2 (Fluid) is the default style; the rest are the
+    // phone's defaults. The size is the full player's; the side panel scales it down. "default" font is the app's own.
+    val lyricsStyle: LyricsStyle = LyricsStyle.LyricsV2,
     val lyricsPosition: LyricsPosition = LyricsPosition.Left,
     val lyricsAutoScroll: Boolean = true,
     val lyricsSwipeToChange: Boolean = false,
@@ -348,13 +348,15 @@ data class Settings(
     val discordButton2: Boolean = true,
     /** Blank for "Visit Convx". */
     val discordButton2Text: String = "",
-    /** A Discord application of your own to show the status under; blank uses the phone's ("Metrolist"). */
+    /** A Discord application of your own to show the status under; blank uses Convx's own ("Convx"). */
     val discordApplicationId: String = "",
     /** A Spotify app of your own (developer.spotify.com) to link with, instead of Spotify's shared desktop client. */
     val spotifyClientId: String = "",
     val glass: GlassSettings = GlassSettings(),
     /** Which of the glass' defaults these settings have taken; see [AppSettings]. */
     val glassDefaults: Int = 0,
+    /** Which default lyrics style these settings have taken; see [AppSettings]. */
+    val lyricsDefaults: Int = 0,
     // The phone's Layout & home page and its Arrange home feed, with its defaults.
     /** home, search or library: where Convx opens. */
     val defaultTab: String = "home",

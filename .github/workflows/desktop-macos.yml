@@ -44,7 +44,7 @@ jobs:
         working-directory: desktop
     env:
       # jpackage wants MAJOR.MINOR.PATCH with a MAJOR above 0; this only goes up, as the Windows one does.
-      CONVX_PACKAGE_VERSION: 1.1.${{ github.run_number }}
+      CONVX_PACKAGE_VERSION: 1.2.${{ github.run_number }}
     steps:
       - uses: actions/checkout@v5
         with:

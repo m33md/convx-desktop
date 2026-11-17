@@ -322,12 +322,25 @@ object AppSettings {
     /** Raised whenever the glass defaults change, so saved settings take them up once. */
     private const val GlassDefaults = 5
 
+    /** Raised whenever the default lyrics style changes, so saved settings take it up once. */
+    private const val LyricsDefaults = 1
+
     init {
         // Saved settings spell every value out, so new glass defaults reach them here: once, on the
         // first start of this version, every glass dial goes back to the default. Nothing else is touched,
         // and from then on the glass stays as it is set.
         if (store.value.glassDefaults < GlassDefaults) {
             store.update { it.copy(glassDefaults = GlassDefaults, glass = GlassSettings()) }
+        }
+        // Settings still on the earlier default style (Convx Lyrics) move to the default once; any
+        // other style someone picked stays.
+        if (store.value.lyricsDefaults < LyricsDefaults) {
+            store.update {
+                it.copy(
+                    lyricsDefaults = LyricsDefaults,
+                    lyricsStyle = if (it.lyricsStyle == LyricsStyle.Flamingo) Settings().lyricsStyle else it.lyricsStyle,
+                )
+            }
         }
     }
 

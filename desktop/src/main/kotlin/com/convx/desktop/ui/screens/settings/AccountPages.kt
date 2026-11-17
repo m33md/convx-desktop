@@ -315,15 +315,14 @@ fun DiscordSettings() {
     SectionGap()
     SettingsSection(
         "Name on Discord",
-        footer = "Discord shows the name of the Discord application a status belongs to. The phone's is registered as \"Metrolist\": " +
-            "the phone renames it through your Discord login, but the Discord app on a PC doesn't allow that. To read \"Convx\", make an " +
-            "application of your own: open discord.com/developers/applications, click New Application, name it Convx, " +
-            "optionally give it the Convx icon, then copy its Application ID here.",
+        footer = "Discord shows the name of the Discord application a status belongs to. Convx's own is named Convx, so your " +
+            "profile reads \"Listening to Convx\". To show another name, make an application at discord.com/developers/applications " +
+            "with that name and copy its Application ID here.",
     ) {
         val own = DiscordPresence.usesOwnApplication(settings)
         SettingsRow(
             "Discord application ID",
-            if (own) settings.discordApplicationId.trim() else "The phone's (shows as Metrolist)",
+            if (own) settings.discordApplicationId.trim() else "Convx's own (shows as Convx)",
             icon = "discord",
             tint = DiscordBlurple,
             onClick = {
@@ -338,7 +337,7 @@ fun DiscordSettings() {
                 }
             },
         ) {
-            if (own) PillButton("Use the phone's", { AppSettings.update { it.copy(discordApplicationId = "") } })
+            if (own) PillButton("Use Convx's", { AppSettings.update { it.copy(discordApplicationId = "") } })
         }
         RowDivider()
         LinkRow("Open the Discord Developer Portal", icon = "link", tint = SystemColors.Gray) {
@@ -385,8 +384,7 @@ private fun RichPresencePreview(look: DiscordPresence.Look) {
     val position by PlayerController.position.collectAsState()
     val song = player.current
     // What Discord's member list says: the artists or the song where Discord can show them, else the application's name.
-    val settings by AppSettings.state.collectAsState()
-    val name = if (DiscordPresence.usesOwnApplication(settings)) "Convx" else "Metrolist"
+    val name = "Convx"
     val verb = when (look.type) {
         "playing" -> "Playing $name"
         "watching" -> "Watching $name"

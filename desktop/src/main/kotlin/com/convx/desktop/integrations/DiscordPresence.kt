@@ -57,17 +57,16 @@ object DiscordPresence {
     private const val Tag = "Discord"
 
     /**
-     * The phone's Discord application (DiscordRPC.kt). Discord registered it under the name
-     * "Metrolist", which the phone hides by renaming the activity through its login; through the
-     * Discord app the name can't be changed, so Settings can point at an application of your own.
+     * Convx's own Discord application, registered under the name "Convx", which is the name Discord
+     * shows: "Listening to Convx". Settings can point at another application instead.
      */
-    private const val ApplicationId = "1411019391843172514"
+    private const val ApplicationId = "1572329076000297041"
 
-    /** The application the status is shown under: one set in Settings, else the phone's. */
+    /** The application the status is shown under: one set in Settings, else Convx's. */
     fun applicationId(settings: Settings = AppSettings.value): String =
         settings.discordApplicationId.trim().takeIf { it.matches(Regex("\\d{17,20}")) } ?: ApplicationId
 
-    /** Whether the status goes under an application set in Settings rather than the phone's "Metrolist". */
+    /** Whether the status goes under an application set in Settings rather than Convx's own. */
     fun usesOwnApplication(settings: Settings = AppSettings.value) = applicationId(settings) != ApplicationId
     private const val ProjectUrl = "https://github.com/cosmictaserdev-creator/Convx"
 

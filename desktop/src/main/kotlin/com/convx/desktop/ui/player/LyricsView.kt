@@ -154,7 +154,8 @@ private const val Feather = 0.3f
 internal const val FollowPauseMs = 2_000L
 
 /**
- * The phone's lyrics, in the style chosen under Lyrics style. Flamingo, its default: lines wait
+ * The phone's lyrics, in the style chosen under Lyrics style (Lyrics V2 (Fluid) by default, one
+ * of the list styles in [StyledLyrics]). Flamingo, shown as Convx Lyrics: lines wait
  * at a fifth of white; the line being sung fills letter by letter, each letter glowing while it
  * fills and each word rising a little as it is sung; a sung line stays lit. The current line
  * sits on a faint glass strip, the view keeps it centred, and an instrumental break counts down
