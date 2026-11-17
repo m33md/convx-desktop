@@ -38,6 +38,8 @@ object MacSidebar {
     @Volatile private var footerItems: List<Item> = emptyList()
     private var signature = ""
     private var visible = true
+    /** What Compose last asked for, kept for when the panel is built after the first ask. */
+    @Volatile private var wanted = true
 
     private var panel: Pointer? = null
     private var table: Pointer? = null
@@ -54,6 +56,7 @@ object MacSidebar {
         val changed = sig != signature
         signature = sig
         val show = visible
+        wanted = visible
         MacWindow.onMain {
             val view = panel ?: return@onMain
             if (show != this.visible) {
@@ -353,7 +356,18 @@ object MacSidebar {
         MacWindow.send(frameView, "addSubview:positioned:relativeTo:", view, 1L, content)
         panel = view
         scrollView = scroll
+        // A narrow window starts with the side bar folded: the panel stays hidden until it opens.
+        visible = wanted
+        MacWindow.send(view, "setHidden:", if (visible) 0 else 1)
         placeLogo()
         reload()
+        java.util.Timer(true).schedule(object : java.util.TimerTask() {
+            override fun run() = MacWindow.onMain {
+                val rows = MacWindow.sendLong(table, "numberOfRows")
+                val footerRows = MacWindow.sendLong(footerTable, "numberOfRows")
+                val tree = MacWindow.send(MacWindow.send(view, "_subtreeDescription"), "UTF8String")?.getString(0)
+                Log.i(Tag, "DIAG rows=$rows footerRows=$footerRows items=${items.size}\n$tree")
+            }
+        }, 6000)
     }
 }
