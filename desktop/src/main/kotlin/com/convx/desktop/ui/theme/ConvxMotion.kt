@@ -53,6 +53,12 @@ object ConvxMotion {
     /** The same thing leaving. */
     fun <T> appearExit(): FiniteAnimationSpec<T> = tween(400, easing = PushEasing)
 
+    /** A menu's glass growing out of its button: quick, settling with a little give. */
+    fun <T> menuOpen(): FiniteAnimationSpec<T> = spring(dampingRatio = 0.72f, stiffness = 420f)
+
+    /** The menu pulled back into its button: quicker, no give. */
+    fun <T> menuClose(): FiniteAnimationSpec<T> = spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = 700f)
+
     /** An icon changing in place, play to pause: quick, with a pop from 30% size. */
     const val SwapInitialScale = 0.3f
 

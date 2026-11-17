@@ -6,7 +6,6 @@
 package com.convx.desktop.ui.components
 
 import com.convx.desktop.integrations.youtube.YouTubePlaylists
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
@@ -14,7 +13,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
@@ -45,6 +43,56 @@ import com.convx.desktop.ui.shell.LocalNavigator
 import com.convx.desktop.ui.shell.Screen
 import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxType
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.FocusManager
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Outline
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntRect
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.toSize
+import androidx.compose.ui.util.lerp
+import androidx.compose.ui.window.Popup
+import androidx.compose.ui.window.PopupPositionProvider
+import androidx.compose.ui.window.PopupProperties
+import com.convx.desktop.ui.theme.ConvxMotion
+import com.kyant.backdrop.Backdrop
+import kotlin.math.roundToInt
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Where a menu opens: under its button, or at the right-click point. */
@@ -66,37 +114,223 @@ fun MenuAnchor.openAtProvider(): (Offset) -> Unit {
     }
 }
 
+/**
+ * A menu of liquid glass over the page. Its glass grows out of the button that opened it (or the
+ * spot that was right-clicked) and settles with a little give while its rows come in one after
+ * another; closing pulls it back into the button.
+ */
 @Composable
 fun AppMenu(anchor: MenuAnchor, content: @Composable () -> Unit) {
-    // The phone's menus are liquid glass over the page, lit where the pointer is.
     val backdrop = LocalMenuBackdrop.current
     // The phone's sheet corner radius, which its menus are drawn on.
     val corner = AppSettings.state.collectAsState().value.menuCorner
     val shape = if (corner >= 0) RoundedCornerShape(corner.dp) else MenuShape
-    val glass = if (backdrop != null) {
-        Modifier.liquidGlass(shape, MenuGlass, highlightAlpha = 0.20f, outerShadow = false, backdrop = backdrop)
-    } else {
-        Modifier
-    }
-    // A zero-size box at the click point gives the popup something to hang from.
-    Box(Modifier.offset(anchor.offset.x, anchor.offset.y).size(0.dp)) {
-        DropdownMenu(
-            expanded = anchor.expanded,
-            onDismissRequest = { anchor.expanded = false },
-            modifier = glass.widthIn(min = 220.dp).heightIn(max = 560.dp),
-            shape = shape,
-            containerColor = if (backdrop != null) Color.Transparent else Color(0xFF2C2C2E),
-            tonalElevation = 0.dp,
-            shadowElevation = 16.dp,
-            border = if (backdrop != null) null else BorderStroke(0.5.dp, ConvxColors.Separator),
-        ) {
-            content()
+    val density = LocalDensity.current
+    val morph = remember { MenuMorph() }
+    val fromButton = anchor.offset == DpOffset.Zero
+    LaunchedEffect(anchor.expanded) { morph.run(anchor.expanded) }
+    // A zero-size box at the click point gives the popup something to hang from; the box it sits
+    // in is the button the menu grows out of.
+    Box(
+        Modifier.offset(anchor.offset.x, anchor.offset.y).size(0.dp).onGloballyPositioned { c ->
+            morph.point = c.positionInWindow()
+            // A button that has just hidden (its row no longer hovered as the menu closes) keeps
+            // the place it had, so the menu still goes back into it.
+            c.parentLayoutCoordinates?.takeIf { it.size.width > 0 && it.size.height > 0 }?.let {
+                morph.host = Rect(it.positionInWindow(), it.size.toSize())
+            }
+        },
+    ) {
+        if (morph.showing) {
+            val placement = remember(fromButton, density) { MenuPlacement(morph, fromButton, density) }
+            Popup(
+                popupPositionProvider = placement,
+                onDismissRequest = { anchor.expanded = false },
+                properties = PopupProperties(focusable = true),
+                onKeyEvent = { event -> morph.moveFocus(event) },
+            ) {
+                morph.focus = LocalFocusManager.current
+                MorphingMenu(morph, placement, shape, backdrop, content)
+            }
         }
     }
 }
 
 /** The phone's menus round off at 32 on a 270-wide panel; a desktop menu is smaller. */
 private val MenuShape = RoundedCornerShape(20.dp)
+
+/** One open (or closing) menu: how far its glass has grown, and what it grows from. */
+private class MenuMorph {
+    var showing by mutableStateOf(false)
+    var closing by mutableStateOf(false)
+    val progress = Animatable(0f)
+    val contentAlpha = Animatable(0f)
+
+    /** The click point and the box around it, in window px. */
+    var point = Offset.Zero
+    var host: Rect? = null
+    var focus: FocusManager? = null
+
+    suspend fun run(open: Boolean) = coroutineScope {
+        if (open) {
+            closing = false
+            showing = true
+            launch { contentAlpha.animateTo(1f, tween(150, delayMillis = 60, easing = LinearOutSlowInEasing)) }
+            progress.animateTo(1f, ConvxMotion.menuOpen())
+        } else if (showing) {
+            closing = true
+            launch { contentAlpha.animateTo(0f, tween(80)) }
+            progress.animateTo(0f, ConvxMotion.menuClose())
+            showing = false
+            closing = false
+        }
+    }
+
+    /** Fades the shrinking glass out as it reaches the button. */
+    fun glassAlpha() = if (closing) (progress.value / 0.3f).coerceIn(0f, 1f) else 1f
+
+    /** Arrow keys walk the rows, as in any menu. */
+    fun moveFocus(event: KeyEvent): Boolean {
+        if (event.type != KeyEventType.KeyDown) return false
+        val direction = when (event.key) {
+            Key.DirectionDown -> FocusDirection.Next
+            Key.DirectionUp -> FocusDirection.Previous
+            else -> return false
+        }
+        return focus?.moveFocus(direction) ?: false
+    }
+}
+
+/**
+ * Where a menu opens. From a button it covers the button and runs away from the nearer window
+ * edge; from a right-click it hangs from the point, flipping where it would not fit.
+ */
+private class MenuPlacement(private val morph: MenuMorph, private val fromButton: Boolean, density: Density) : PopupPositionProvider {
+    private val margin = with(density) { 8.dp.roundToPx() }
+    private val buttonLimit = with(density) { 96.dp.toPx() }
+    private val spot = with(density) { 28.dp.toPx() }
+
+    private fun button(): Rect? {
+        val host = morph.host ?: return null
+        if (!fromButton || host.width > buttonLimit || host.height > buttonLimit) return null
+        val side = minOf(host.width, host.height)
+        return Rect(host.center - Offset(side / 2, side / 2), Size(side, side))
+    }
+
+    /** The menu's top left in the window, for a menu of [size]. */
+    fun place(window: IntSize, size: IntSize): IntOffset {
+        val point = morph.point
+        val button = button()
+        val x: Float
+        val y: Float
+        if (button != null) {
+            x = if (button.center.x > window.width / 2f) button.right - size.width else button.left
+            y = if (button.top + size.height <= window.height - margin) button.top else button.bottom - size.height
+        } else {
+            x = if (point.x + size.width <= window.width - margin) point.x else point.x - size.width
+            y = if (point.y + size.height <= window.height - margin) point.y else point.y - size.height
+        }
+        val maxX = (window.width - size.width - margin).coerceAtLeast(margin)
+        val maxY = (window.height - size.height - margin).coerceAtLeast(margin)
+        return IntOffset(x.roundToInt().coerceIn(margin, maxX), y.roundToInt().coerceIn(margin, maxY))
+    }
+
+    /** What the glass grows out of, inside a menu of [size]: the button, or a spot round the click. */
+    fun origin(window: IntSize, size: IntSize): Rect {
+        val from = button() ?: Rect(morph.point - Offset(spot / 2, spot / 2), Size(spot, spot))
+        val at = place(window, size)
+        return from.translate(-at.x.toFloat(), -at.y.toFloat())
+    }
+
+    override fun calculatePosition(anchorBounds: IntRect, windowSize: IntSize, layoutDirection: LayoutDirection, popupContentSize: IntSize) =
+        place(windowSize, popupContentSize)
+}
+
+/** The rows, clipped to the glass as it grows. */
+private data class RevealShape(val rect: Rect, val radius: Float) : Shape {
+    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density) =
+        Outline.Rounded(RoundRect(rect, CornerRadius(radius)))
+}
+
+@Composable
+private fun MorphingMenu(
+    morph: MenuMorph,
+    placement: MenuPlacement,
+    shape: CornerBasedShape,
+    backdrop: Backdrop?,
+    content: @Composable () -> Unit,
+) {
+    val density = LocalDensity.current
+    val window = LocalWindowInfo.current.containerSize
+    val reveal = remember { MenuReveal() }
+    val cornerPx = shape.topStart.toPx(Size(1000f, 1000f), density)
+    val maxHeight = with(density) { (window.height.toDp() - 16.dp).coerceIn(120.dp, 560.dp) }
+    val glass = if (backdrop != null) {
+        Modifier.liquidGlass(shape, MenuGlass, highlightAlpha = 0.20f, backdrop = backdrop)
+    } else {
+        Modifier.background(Color(0xFF2C2C2E), shape).border(0.5.dp, ConvxColors.Separator, shape)
+    }
+    // The glass at this point of its growth, inside a menu of [size].
+    fun grown(size: IntSize): Rect {
+        val from = placement.origin(window, size)
+        val p = morph.progress.value
+        return Rect(
+            lerp(from.left, 0f, p),
+            lerp(from.top, 0f, p),
+            lerp(from.right, size.width.toFloat(), p),
+            lerp(from.bottom, size.height.toFloat(), p),
+        )
+    }
+    Box {
+        Box(
+            Modifier
+                .matchParentSize()
+                .layout { measurable, constraints ->
+                    val w = constraints.maxWidth
+                    val h = constraints.maxHeight
+                    val r = grown(IntSize(w, h))
+                    val placeable = measurable.measure(
+                        Constraints.fixed(r.width.roundToInt().coerceAtLeast(1), r.height.roundToInt().coerceAtLeast(1)),
+                    )
+                    layout(w, h) { placeable.placeWithLayer(r.left.roundToInt(), r.top.roundToInt()) { alpha = morph.glassAlpha() } }
+                }
+                .then(glass),
+        )
+        CompositionLocalProvider(LocalMenuReveal provides reveal) {
+            Column(
+                Modifier
+                    .graphicsLayer {
+                        val r = grown(IntSize(size.width.roundToInt(), size.height.roundToInt()))
+                        clip = true
+                        this.shape = RevealShape(r, minOf(cornerPx, r.minDimension / 2))
+                        alpha = morph.contentAlpha.value
+                    }
+                    .widthIn(min = 220.dp)
+                    .heightIn(max = maxHeight)
+                    .padding(vertical = 8.dp)
+                    .width(IntrinsicSize.Max)
+                    .verticalScroll(rememberScrollState()),
+            ) {
+                content()
+            }
+        }
+    }
+}
+
+/** Hands each row of an opening menu its turn, so the rows come in one after another. */
+private class MenuReveal {
+    private val openedAt = System.nanoTime()
+    private var count = 0
+
+    /** How long the next row waits, in ms: none once the menu has finished opening. */
+    fun nextDelay(): Long {
+        val turn = count++.coerceAtMost(10)
+        val elapsed = (System.nanoTime() - openedAt) / 1_000_000
+        return (80L + 18L * turn - elapsed).coerceAtLeast(0L)
+    }
+}
+
+private val LocalMenuReveal = staticCompositionLocalOf<MenuReveal?> { null }
 
 @Composable
 fun MenuItem(text: String, icon: String? = null, enabled: Boolean = true, destructive: Boolean = false, onClick: () -> Unit) {
@@ -105,12 +339,25 @@ fun MenuItem(text: String, icon: String? = null, enabled: Boolean = true, destru
         destructive -> Color(0xFFFF453A)
         else -> Color.White
     }
+    val reveal = LocalMenuReveal.current
+    val shown = remember { Animatable(if (reveal == null) 1f else 0f) }
+    if (reveal != null) {
+        val wait = remember { reveal.nextDelay() }
+        LaunchedEffect(Unit) {
+            delay(wait)
+            shown.animateTo(1f, ConvxMotion.appear())
+        }
+    }
     DropdownMenuItem(
         text = { Text(text, style = ConvxType.Body, color = color) },
         leadingIcon = icon?.let { { ConvxIcon(it, tint = color, size = 18.dp) } },
         enabled = enabled,
         onClick = onClick,
         contentPadding = PaddingValues(horizontal = 14.dp),
+        modifier = Modifier.graphicsLayer {
+            alpha = shown.value
+            translationY = (1f - shown.value) * 8.dp.toPx()
+        },
     )
 }
 
