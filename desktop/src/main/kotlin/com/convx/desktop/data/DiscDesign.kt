@@ -591,7 +591,16 @@ object DiscPresets {
             strokes += BrushStroke(BrushTip.INK, 0xFFE6B229, s * 0.34f, 1f, line(cx0, cy0, 0f, s * 0.02f, cx1, cy1), random.nextInt(999))
             strokes += BrushStroke(BrushTip.INK, 0xFFC0661C, s * 0.12f, 0.85f, curve(cx0 + s * 0.04f, cy0 + s * 0.08f, cx1, cy1 + s * 0.06f, 0.25f, 5), random.nextInt(999))
             strokes += BrushStroke(BrushTip.PEN, 0xCCFFF2B0, s * 0.06f, 1f, line(-s * 0.06f, -s * 0.06f, s * 0.02f, -s * 0.08f), 0)
-            DiscLayer(kind = LayerKind.PAINT, name = "Daisy ${n + 1}", strokes = strokes, x = fx, y = fy)
+            // Centred on what's painted, as a brush layer painted by hand is, so its box fits it.
+            val flower = DiscLayer(kind = LayerKind.PAINT, name = "Daisy ${n + 1}", strokes = strokes)
+            val box = DiscArt.paintBounds(flower)
+            val mx = box?.let { (it[0] + it[2]) / 2f } ?: 0f
+            val my = box?.let { (it[1] + it[3]) / 2f } ?: 0f
+            flower.copy(
+                x = fx + mx,
+                y = fy + my,
+                strokes = strokes.map { stroke -> stroke.copy(points = stroke.points.mapIndexed { i, v -> v - if (i % 2 == 0) mx else my }) },
+            )
         }
     }
 
@@ -1044,7 +1053,7 @@ object DiscPresets {
                 name = "Stickers", format = DiscFormat.CD, sheen = 0.35f,
                 layers = listOf(fill(0xFF1E1F26, name = "Black")) + listOf(
                     "strawberry", "ringed-planet", "butterfly", "cherries", "sunflower", "rainbow",
-                    "headphone", "crown", "gem-stone", "mushroom", "glowing-star", "four-leaf-clover",
+                    "headphone", "crown", "gem-stone", "mushroom", "lollipop", "four-leaf-clover",
                 ).mapIndexed { i, name ->
                     // Round the disc, in and out by turns, close enough to overlap like a laptop lid.
                     val a = Math.toRadians(-100.0 + i * 30.0 + (i * 37 % 11 - 5))
