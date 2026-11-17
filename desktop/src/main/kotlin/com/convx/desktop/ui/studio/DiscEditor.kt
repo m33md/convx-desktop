@@ -77,6 +77,7 @@ import com.convx.desktop.data.DiscLayer
 import com.convx.desktop.data.DiscPresets
 import com.convx.desktop.data.Library
 import com.convx.desktop.data.LayerKind
+import com.convx.desktop.data.SampleAssetPrefix
 import com.convx.desktop.data.TextPath
 import com.convx.desktop.data.newLayerId
 import com.convx.desktop.ui.components.AppMenu
@@ -183,6 +184,29 @@ object DiscEditor {
         val playlist = forPlaylist?.let { Library.playlist(it) }
         open(DiscPresets.start(preset, playlist?.name, playlist?.songs?.map { it.title }.orEmpty()), forPlaylist)
         dirty = true
+        coversInto(preset)
+    }
+
+    /**
+     * Swaps a preset's sample pictures for the playlist's own song covers once they're fetched, so a
+     * cover collage shows its songs. The sample pictures stand in until then.
+     */
+    private fun coversInto(preset: DiscPresets.Preset) {
+        val playlist = playlistId?.let { Library.playlist(it) } ?: return
+        if (!DiscPresets.usesCovers(preset)) return
+        val urls = playlist.songs.mapNotNull { it.thumbnail }.distinct().take(9)
+        if (urls.isEmpty()) return
+        val id = design.id
+        AppScope.launch(Dispatchers.Main) {
+            val covers = withContext(Dispatchers.IO) { urls.mapNotNull { url -> runCatching { importCoverPicture(url) }.getOrNull() } }
+            if (covers.isEmpty() || !isOpen || design.id != id) return@launch
+            design = design.copy(
+                layers = design.layers.map { layer ->
+                    val n = layer.asset?.takeIf { it.startsWith(SampleAssetPrefix) }?.removePrefix(SampleAssetPrefix)?.toIntOrNull()
+                    if (n == null) layer else layer.copy(asset = covers[n % covers.size])
+                },
+            )
+        }
     }
 
     /** The playlist's own design if it has one, or a new one with its name on it. */
@@ -191,7 +215,9 @@ object DiscEditor {
         if (linked != null) {
             open(linked, playlistId)
         } else {
-            openPreset(DiscPresets.of("afro-night") ?: DiscPresets.all.first(), playlistId)
+            // A playlist with covers starts as a ring of them; one without, as a holographic CD.
+            val covers = Library.playlist(playlistId)?.songs.orEmpty().any { it.thumbnail != null }
+            openPreset(DiscPresets.of(if (covers) "cover-collage" else "holographic") ?: DiscPresets.all.first(), playlistId)
         }
     }
 
@@ -320,9 +346,13 @@ object DiscEditor {
         dirty = true
     }
 
-    fun add(layer: DiscLayer) {
-        commit(design.copy(layers = design.layers + layer))
-        selectedId = layer.id
+    fun add(layer: DiscLayer) = addAll(listOf(layer))
+
+    /** Several new layers on top in one undo step, the last of them selected. */
+    fun addAll(layers: List<DiscLayer>) {
+        if (layers.isEmpty()) return
+        commit(design.copy(layers = design.layers + layers))
+        selectedId = layers.last().id
         picker = null
         painting = false
     }
@@ -475,6 +505,7 @@ object DiscEditor {
         val fresh = DiscPresets.start(preset, playlist?.name ?: design.name, playlist?.songs?.map { it.title }.orEmpty())
         commit(fresh.copy(id = design.id, name = design.name, createdAt = design.createdAt))
         selectedId = null
+        coversInto(preset)
     }
 
     private fun nudge(dx: Float, dy: Float) {

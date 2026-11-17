@@ -58,6 +58,7 @@ internal object DiscEffects {
             EffectKind.SMEAR -> r * (0.03f + 0.25f * a) * 3.5f
             EffectKind.GLITCH -> r * (0.04f + 0.18f * a)
             EffectKind.INK -> r * 0.06f
+            EffectKind.OUTLINE -> r * (0.006f + 0.04f * a)
             else -> 0f
         }.toDouble()
     }.toFloat())
@@ -81,7 +82,62 @@ internal object DiscEffects {
             EffectKind.CUT_WHITE -> cut(input, a, light = true)
             EffectKind.CUT_BLACK -> cut(input, a, light = false)
             EffectKind.SOFT_EDGES -> softEdges(input, r, a)
+            EffectKind.FOIL -> printedIn(input, DiscFinish.holographic(r * 0.55f, Color.makeRGB(196, 198, 208), seed = layer.seed, waves = 0.35f, strength = 1f, cx = ox, cy = oy), a)
+            EffectKind.CHROME -> printedIn(input, DiscFinish.chrome(r * 0.45f, seed = layer.seed, waves = 0.4f, cx = ox, cy = oy), a)
+            EffectKind.OUTLINE -> outline(input, r, a, color)
+            EffectKind.RECOLOR -> recolor(input, a, color)
         }
+    }
+
+    /**
+     * The layer in shades of one [color]: its brightness mapped from a deep version of the colour
+     * to a pale one, mixed with its own colours as much as [a] says, see-through parts kept.
+     */
+    private fun recolor(input: ImageFilter?, a: Float, color: Int): ImageFilter {
+        fun row(c: Int, channel: Int): FloatArray {
+            val lo = c / 255f * 0.22f
+            val hi = c / 255f * 0.55f + 0.45f
+            val d = (hi - lo) * a
+            val keep = 1f - a
+            return floatArrayOf(
+                d * 0.2126f + if (channel == 0) keep else 0f,
+                d * 0.7152f + if (channel == 1) keep else 0f,
+                d * 0.0722f + if (channel == 2) keep else 0f,
+                0f,
+                lo * a,
+            )
+        }
+        return ImageFilter.makeColorFilter(matrix(
+            *row(Color.getR(color), 0),
+            *row(Color.getG(color), 1),
+            *row(Color.getB(color), 2),
+            0f, 0f, 0f, 1f, 0f,
+        ), input, null)
+    }
+
+    /** The layer's shape filled with [finish] instead of its own colours, as much as [a] says. */
+    private fun printedIn(input: ImageFilter?, finish: Shader, a: Float): ImageFilter {
+        val inked = ImageFilter.makeBlend(BlendMode.SRC_IN, input, shaderFilter(finish), null)
+        val faded = ImageFilter.makeColorFilter(matrix(
+            1f, 0f, 0f, 0f, 0f,
+            0f, 1f, 0f, 0f, 0f,
+            0f, 0f, 1f, 0f, 0f,
+            0f, 0f, 0f, 0.25f + 0.75f * a, 0f,
+        ), inked, null)
+        return ImageFilter.makeBlend(BlendMode.SRC_OVER, input, faded, null)
+    }
+
+    /** A border of [color] round the layer's shape, behind it: the layer grown, filled with the colour. */
+    private fun outline(input: ImageFilter?, r: Float, a: Float, color: Int): ImageFilter {
+        val width = r * (0.006f + 0.04f * a)
+        val grown = ImageFilter.makeDilate(width, width, input, null)
+        val solid = ImageFilter.makeColorFilter(matrix(
+            0f, 0f, 0f, 0f, Color.getR(color) / 255f,
+            0f, 0f, 0f, 0f, Color.getG(color) / 255f,
+            0f, 0f, 0f, 0f, Color.getB(color) / 255f,
+            0f, 0f, 0f, 1f, 0f,
+        ), grown, null)
+        return ImageFilter.makeBlend(BlendMode.SRC_OVER, solid, input, null)
     }
 
     /**

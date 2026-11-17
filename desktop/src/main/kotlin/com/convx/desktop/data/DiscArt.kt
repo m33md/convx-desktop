@@ -89,7 +89,7 @@ object DiscArt {
         surface.canvas.clear(Color.TRANSPARENT)
         surface.canvas.clipPath(Path().addCircle(c, c, c), ClipMode.INTERSECT, true)
         printBase(surface.canvas, design, c, c, c)
-        for (layer in design.layers) if (layer.visible) drawLayer(surface.canvas, design, layer, res, c, c, c)
+        drawLayers(surface.canvas, design, res, c, c, c)
         return surface.makeImageSnapshot()
     }
 
@@ -176,7 +176,7 @@ object DiscArt {
             canvas.drawImageRect(print, Rect.makeWH(print.width.toFloat(), print.height.toFloat()), Rect.makeLTRB(cx - r, cy - r, cx + r, cy + r), SamplingMode.LINEAR, null, true)
         } else {
             printBase(canvas, design, cx, cy, r)
-            for (layer in design.layers) if (layer.visible) drawLayer(canvas, design, layer, res, cx, cy, r)
+            drawLayers(canvas, design, res, cx, cy, r)
         }
         canvas.restore()
         when (design.format) {
@@ -211,15 +211,14 @@ object DiscArt {
     private fun cdSheen(canvas: Canvas, design: DiscDesign, cx: Float, cy: Float, r: Float) {
         val k = design.sheen.coerceIn(0f, 1f) * 1.4f
         if (k <= 0f) return
-        canvas.save()
-        canvas.rotate(design.lightAngle, cx, cy)
+        // The rainbow a CD's tracks throw: two fans of colour either side of the middle, turned with the light.
         canvas.drawCircle(cx, cy, r, Paint().apply {
             isAntiAlias = true
             blendMode = BlendMode.SCREEN
-            shader = Shader.makeSweepGradient(cx, cy, intArrayOf(
-                0, withAlpha(0xFF66E0FF.toInt(), 0.12f * k), 0, withAlpha(0xFFFF66CC.toInt(), 0.11f * k), 0, withAlpha(0xFFFFE066.toInt(), 0.1f * k), 0,
-            ), floatArrayOf(0f, 0.12f, 0.25f, 0.45f, 0.6f, 0.78f, 1f))
+            shader = DiscFinish.diffraction(cx, cy, r, design.lightAngle - 40f, (if (printed(design)) 0.05f else 0.3f) * k)
         })
+        canvas.save()
+        canvas.rotate(design.lightAngle, cx, cy)
         canvas.drawCircle(cx, cy, r, Paint().apply {
             isAntiAlias = true
             shader = Shader.makeLinearGradient(cx - r, cy - r, cx + r, cy + r,
@@ -227,6 +226,17 @@ object DiscArt {
         })
         canvas.restore()
     }
+
+    /** Whether ink covers the disc: a print hides most of the rainbow a bare CD throws. */
+    private fun printed(design: DiscDesign): Boolean = design.layers.any {
+        it.visible && it.opacity > 0.8f && !it.clip && it.area != LayerArea.MIDDLE &&
+            (it.kind == LayerKind.FILL || (it.kind == LayerKind.PATTERN && it.blend == LayerBlend.NORMAL && it.pattern in Covering))
+    }
+
+    private val Covering = setOf(
+        PatternKind.PIXELS, PatternKind.MARBLE, PatternKind.PAPER, PatternKind.PLAID, PatternKind.GLITTER, PatternKind.PRISM, PatternKind.SWIRL,
+        PatternKind.WATERCOLOR, PatternKind.NEBULA, PatternKind.CANVAS, PatternKind.DENIM, PatternKind.CHECKER, PatternKind.SCALES,
+    )
 
     /** A bare CD's clear middle and its hole, cut through to what's under the disc. */
     private fun cdMiddle(canvas: Canvas, design: DiscDesign, cx: Float, cy: Float, r: Float) {
@@ -401,14 +411,53 @@ object DiscArt {
         LayerBlend.COLOR -> BlendMode.COLOR
     }
 
-    private fun drawLayer(canvas: Canvas, design: DiscDesign, layer: DiscLayer, res: Resources, cx: Float, cy: Float, r: Float) {
+    /**
+     * Every visible layer, bottom first. A layer set to clip, and any set to clip right above it, show
+     * only where the layer under them is: they're drawn as one group that takes that layer's blend,
+     * opacity and shadow.
+     */
+    private fun drawLayers(canvas: Canvas, design: DiscDesign, res: Resources, cx: Float, cy: Float, r: Float) {
+        val layers = design.layers.filter { it.visible }
+        var i = 0
+        while (i < layers.size) {
+            val base = layers[i]
+            var end = i + 1
+            while (end < layers.size && layers[end].clip) end++
+            if (end == i + 1) {
+                drawLayer(canvas, design, base, res, cx, cy, r)
+            } else {
+                canvas.saveLayer(Rect.makeLTRB(cx - r * 1.05f, cy - r * 1.05f, cx + r * 1.05f, cy + r * 1.05f), Paint().apply {
+                    alpha = (base.opacity.coerceIn(0f, 1f) * 255).roundToInt()
+                    blendMode = blendOf(base.blend)
+                    if (base.shadow) imageFilter = ImageFilter.makeDropShadow(r * 0.012f, r * 0.022f, r * 0.024f, r * 0.024f, withAlpha(Color.BLACK, 0.55f), null, null)
+                })
+                val inside = base.copy(opacity = 1f, blend = LayerBlend.NORMAL, shadow = false)
+                drawLayer(canvas, design, inside, res, cx, cy, r)
+                var remask = false
+                for (k in i + 1 until end) {
+                    val top = layers[k]
+                    // A plain layer paints only on what's there; one that blends is masked again after.
+                    if (top.blend == LayerBlend.NORMAL) drawLayer(canvas, design, top, res, cx, cy, r, BlendMode.SRC_ATOP)
+                    else {
+                        drawLayer(canvas, design, top, res, cx, cy, r)
+                        remask = true
+                    }
+                }
+                if (remask) drawLayer(canvas, design, inside, res, cx, cy, r, BlendMode.DST_IN)
+                canvas.restore()
+            }
+            i = end
+        }
+    }
+
+    private fun drawLayer(canvas: Canvas, design: DiscDesign, layer: DiscLayer, res: Resources, cx: Float, cy: Float, r: Float, mode: BlendMode? = null) {
         canvas.save()
         areaPath(design, layer.area, cx, cy, r)?.let { canvas.clipPath(it, ClipMode.INTERSECT, true) }
         val ox = cx + layer.x * r
         val oy = cy + layer.y * r
         val paint = Paint().apply {
             alpha = (layer.opacity.coerceIn(0f, 1f) * 255).roundToInt()
-            blendMode = blendOf(layer.blend)
+            blendMode = mode ?: blendOf(layer.blend)
             val effects = DiscEffects.filter(layer, r, ox, oy)
             imageFilter = if (layer.shadow) ImageFilter.makeDropShadow(r * 0.012f, r * 0.022f, r * 0.024f, r * 0.024f, withAlpha(Color.BLACK, 0.55f), effects, null) else effects
         }
@@ -456,6 +505,10 @@ object DiscArt {
                     val loop = colors + colors[0]
                     shader = Shader.makeSweepGradient(0f, 0f, loop, FloatArray(loop.size) { it / (loop.size - 1f) })
                 }
+                FillKind.HOLO -> shader = DiscFinish.holographic(r, palette[0], palette.drop(1).takeIf { it.size >= 2 }.orEmpty(), seed = layer.seed, waves = layer.density, strength = 0.4f + layer.amount * 0.8f)
+                FillKind.PEARL -> shader = DiscFinish.pearl(r, palette.takeIf { it.size >= 2 }.orEmpty(), seed = layer.seed, waves = layer.density)
+                FillKind.CHROME -> shader = DiscFinish.chrome(r, palette[0], palette.getOrElse(1) { 0xFF2A2B33.toInt() }, seed = layer.seed, waves = layer.density)
+                FillKind.MESH -> shader = DiscFinish.mesh(r, palette, seed = layer.seed, spread = layer.density)
             }
         }
         canvas.drawRect(Rect.makeLTRB(-e, -e, e, e), paint)
@@ -463,42 +516,78 @@ object DiscArt {
 
     // ---- Pictures ----------------------------------------------------------------------------
 
+    /** A layer's picture: a design asset, or one of the sample covers Convx paints itself. */
+    private fun picture(asset: String?, res: Resources): Image? = when {
+        asset == null -> null
+        asset.startsWith(SampleAssetPrefix) -> res.image(asset) ?: DiscSamples.image(asset)
+        else -> runCatching { res.image(asset) }.getOrNull()
+    }
+
+    private val Paper = Color.makeRGB(250, 249, 245)
+
     private fun imageLayer(canvas: Canvas, layer: DiscLayer, palette: List<Int>, res: Resources, r: Float) {
         val side = 2f * r * layer.scale
-        val image = layer.asset?.let { runCatching { res.image(it) }.getOrNull() }
+        val image = picture(layer.asset, res)
         val (hw, hh) = imageHalf(layer, image, r)
         val dst = Rect.makeLTRB(-hw, -hh, hw, hh)
-        if (layer.frame == ImageFrame.PHOTO) {
-            val border = side * 0.055f
-            canvas.drawRect(Rect.makeLTRB(dst.left - border, dst.top - border, dst.right + border, dst.bottom + border * 3.2f), fill(Color.makeRGB(250, 249, 245)))
+        // The paper or border the picture sits in.
+        when (layer.frame) {
+            ImageFrame.PHOTO -> {
+                val border = side * 0.055f
+                canvas.drawRect(Rect.makeLTRB(dst.left - border, dst.top - border, dst.right + border, dst.bottom + border * 3.2f), fill(Paper))
+            }
+            ImageFrame.PRINT -> {
+                val border = side * 0.045f
+                canvas.drawRect(Rect.makeLTRB(dst.left - border, dst.top - border, dst.right + border, dst.bottom + border), fill(Paper))
+            }
+            ImageFrame.STICKER -> {
+                val border = side * 0.06f
+                canvas.drawRRect(RRect.makeLTRB(dst.left - border, dst.top - border, dst.right + border, dst.bottom + border, side * 0.14f), fill(Color.WHITE))
+            }
+            else -> Unit
+        }
+        val clip: Path? = when (layer.frame) {
+            ImageFrame.CIRCLE -> Path().addCircle(0f, 0f, side / 2f)
+            ImageFrame.ROUNDED -> Path().addRRect(RRect.makeLTRB(dst.left, dst.top, dst.right, dst.bottom, side * 0.12f))
+            ImageFrame.STICKER -> Path().addRRect(RRect.makeLTRB(dst.left, dst.top, dst.right, dst.bottom, side * 0.09f))
+            else -> null
         }
         if (image == null) {
             placeholder(canvas, dst, layer.frame == ImageFrame.CIRCLE)
             return
         }
         val whole = layer.frame == ImageFrame.WHOLE
-        val picture = if (layer.look == ImageLook.PIXEL) pixelate(image, layer.amount, whole) else image
+        val shown = if (layer.look == ImageLook.PIXEL) pixelate(image, layer.amount, whole) else image
         val paint = Paint().apply {
             colorFilter = lookFilter(layer, palette)
             if (layer.look == ImageLook.GLOW) imageFilter = ImageFilter.makeBlur(side * 0.03f * layer.amount, side * 0.03f * layer.amount, FilterTileMode.CLAMP, null, null)
         }
         val sampling = if (layer.look == ImageLook.PIXEL) SamplingMode.DEFAULT else SamplingMode.MITCHELL
-        if (layer.frame == ImageFrame.CIRCLE) {
-            canvas.save()
-            canvas.clipPath(Path().addCircle(0f, 0f, side / 2f), ClipMode.INTERSECT, true)
-            place(canvas, picture, dst, paint, sampling, whole)
+        canvas.save()
+        clip?.let { canvas.clipPath(it, ClipMode.INTERSECT, true) }
+        if (layer.look == ImageLook.HOLO) {
+            // The picture's light and dark, its colours swapped for foil that shifts across it.
+            canvas.saveLayer(dst, null)
+            place(canvas, shown, dst, null, sampling, whole)
+            canvas.drawRect(dst, Paint().apply {
+                shader = DiscFinish.holographic(max(hw, hh) * 1.4f, Color.makeRGB(150, 150, 160), seed = layer.seed + 3, waves = 0.4f)
+                blendMode = BlendMode.COLOR
+                alpha = ((0.45f + layer.amount * 0.55f) * 255).roundToInt()
+            })
             canvas.restore()
         } else {
-            place(canvas, picture, dst, paint, sampling, whole)
+            place(canvas, shown, dst, paint, sampling, whole)
         }
         if (layer.look == ImageLook.GLOW) {
             // The sharp picture again over its own glow.
-            if (layer.frame == ImageFrame.CIRCLE) {
-                canvas.save()
-                canvas.clipPath(Path().addCircle(0f, 0f, side / 2f), ClipMode.INTERSECT, true)
-            }
-            place(canvas, picture, dst, Paint().apply { alpha = 150; blendMode = BlendMode.SCREEN; colorFilter = lookFilter(layer, palette) }, sampling, whole)
-            if (layer.frame == ImageFrame.CIRCLE) canvas.restore()
+            place(canvas, shown, dst, Paint().apply { alpha = 150; blendMode = BlendMode.SCREEN; colorFilter = lookFilter(layer, palette) }, sampling, whole)
+        }
+        canvas.restore()
+        if (layer.frame == ImageFrame.PRINT || layer.frame == ImageFrame.PHOTO) {
+            // A print's surface: a faint sheen from the top corner.
+            canvas.drawRect(dst, Paint().apply {
+                shader = Shader.makeLinearGradient(dst.left, dst.top, dst.right, dst.bottom, intArrayOf(withAlpha(Color.WHITE, 0.12f), 0, withAlpha(Color.BLACK, 0.06f)), floatArrayOf(0f, 0.45f, 1f))
+            })
         }
     }
 
@@ -516,7 +605,7 @@ object DiscArt {
      */
     /** The size a whole picture is added at: as big as fits inside the disc, corners and all. */
     fun fitScale(asset: String, res: Resources): Float {
-        val image = runCatching { res.image(asset) }.getOrNull() ?: return 0.6f
+        val image = picture(asset, res) ?: return 0.6f
         val k = min(image.width, image.height).toFloat() / max(image.width, image.height).coerceAtLeast(1)
         return 0.94f / kotlin.math.sqrt(1f + k * k)
     }
@@ -602,6 +691,7 @@ object DiscArt {
                 val lb = 0.0722f * (1 - s)
                 ColorFilter.makeMatrix(ColorMatrix(lr + s, lg, lb, 0f, 0.02f, lr, lg + s, lb, 0f, 0.02f, lr, lg, lb + s, 0f, 0.02f, 0f, 0f, 0f, 1f, 0f))
             }
+            ImageLook.HOLO -> null
             ImageLook.PIXEL -> {
                 // Fewer, punchier colours, like an old console's.
                 val levels = ByteArray(256) { i -> ((((i / 255f) * 5).toInt().coerceAtMost(4) / 4f) * 255).toInt().toByte() }
@@ -1175,13 +1265,57 @@ object DiscArt {
                 canvas.restore()
             }
             ShapeKind.TRIANGLE, ShapeKind.STAR, ShapeKind.HEART, ShapeKind.HEXAGON, ShapeKind.CROSS,
-            ShapeKind.ARROW, ShapeKind.SPEECH, ShapeKind.BURST -> {
-                val unit = unitShape(layer.shape)
+            ShapeKind.ARROW, ShapeKind.SPEECH, ShapeKind.BURST, ShapeKind.FLOWER, ShapeKind.CLOUD, ShapeKind.BOLT,
+            ShapeKind.MOON, ShapeKind.SUN, ShapeKind.SPARKLE, ShapeKind.DIAMOND, ShapeKind.DROP, ShapeKind.ARCH,
+            ShapeKind.HALF_CIRCLE, ShapeKind.QUARTER, ShapeKind.SCALLOP -> {
+                val unit = unitShape(layer.shape, random)
                 repeat(echoes) { i ->
                     val k = 1f - 0.16f * i
                     canvas.drawPath(Path().addPath(unit, Matrix33.makeScale(hw * k, hh * k), false), paint)
                 }
             }
+            ShapeKind.PILL -> repeat(echoes) { i ->
+                val d = inset(i)
+                canvas.drawRRect(RRect.makeLTRB(-hw + d, -hh + d, hw - d, hh - d, min(hw, hh) - d), paint)
+            }
+            ShapeKind.TICKET -> {
+                val notch = min(hw, hh) * 0.32f
+                val body = Path().addRRect(RRect.makeLTRB(-hw, -hh, hw, hh, min(hw, hh) * 0.08f))
+                val bites = Path().addCircle(-hw, 0f, notch).addCircle(hw, 0f, notch)
+                val ticket = Path.makeCombining(body, bites, PathOp.DIFFERENCE) ?: body
+                canvas.drawPath(ticket, paint)
+                // The perforation a stub tears off at.
+                val dots = stroke(if (outlined) color else withAlpha(Color.BLACK, 0.28f), max(sw, hh * 0.035f)).apply {
+                    pathEffect = org.jetbrains.skia.PathEffect.makeDash(floatArrayOf(hh * 0.05f, hh * 0.07f), 0f)
+                }
+                canvas.drawLine(hw * 0.45f, -hh * 0.88f, hw * 0.45f, hh * 0.88f, dots)
+            }
+            ShapeKind.RING -> {
+                val thick = min(hw, hh) * (0.08f + layer.amount.coerceIn(0f, 1f) * 0.6f)
+                canvas.drawOval(Rect.makeLTRB(-hw + thick / 2f, -hh + thick / 2f, hw - thick / 2f, hh - thick / 2f), stroke(color, thick))
+            }
+            ShapeKind.ASTERISK -> {
+                val arm = line.apply { strokeCap = PaintStrokeCap.ROUND; strokeWidth = sw * 2.2f }
+                for (k in 0 until 3) {
+                    val a = (k * PI / 3 + PI / 2).toFloat()
+                    canvas.drawLine(-cos(a) * (hw - sw), -sin(a) * (hh - sw), cos(a) * (hw - sw), sin(a) * (hh - sw), arm)
+                }
+            }
+            ShapeKind.SQUIGGLE -> {
+                val n = 6 + (layer.density.coerceIn(0f, 1f) * 10).roundToInt()
+                val pts = List(n) { i -> (-hw + 2f * hw * i / (n - 1)) to (random.nextFloat() * 2f - 1f) * (hh - sw) }
+                canvas.drawPath(catmull(pts), line.apply { strokeJoin = PaintStrokeJoin.ROUND; strokeCap = PaintStrokeCap.ROUND; strokeWidth = sw * 1.6f })
+            }
+            ShapeKind.BIRD -> canvas.drawPath(Path().apply {
+                moveTo(-hw, -hh * 0.1f)
+                quadTo(-hw * 0.45f, -hh, 0f, hh * 0.35f)
+                quadTo(hw * 0.45f, -hh, hw, -hh * 0.1f)
+            }, line.apply { strokeJoin = PaintStrokeJoin.ROUND; strokeCap = PaintStrokeCap.ROUND; strokeWidth = sw * 1.4f })
+            ShapeKind.DAISY -> daisy(canvas, random, hw, hh, color, palette.getOrElse(1) { Color.makeRGB(242, 190, 48) }, outlined, sw)
+            ShapeKind.MOUNTAINS -> mountains(canvas, random, hw, hh, color, palette.getOrElse(1) { Color.makeRGB(244, 240, 228) })
+            ShapeKind.PINE -> pine(canvas, hw, hh, color, palette.getOrElse(1) { mix(color, Color.BLACK, 0.4f) })
+            ShapeKind.CASSETTE -> cassette(canvas, hw, hh, color, palette.getOrElse(1) { Color.makeRGB(244, 238, 222) })
+            ShapeKind.TONEARM -> tonearm(canvas, hw, hh, color, palette.getOrElse(1) { Color.makeRGB(28, 28, 32) })
             ShapeKind.WAVE, ShapeKind.ZIGZAG -> {
                 val waves = 2 + (layer.density.coerceIn(0f, 1f) * 10).roundToInt()
                 val half = hw / waves
@@ -1212,8 +1346,85 @@ object DiscArt {
         }
     }
 
+    private fun union(paths: List<Path>): Path = paths.drop(1).fold(paths.first()) { acc, p -> Path.makeCombining(acc, p, PathOp.UNION) ?: acc }
+
+    /** A smooth curve through [pts], as curves (Catmull-Rom), open at both ends. */
+    private fun catmull(pts: List<Pair<Float, Float>>): Path = Path().apply {
+        moveTo(pts[0].first, pts[0].second)
+        for (i in 0 until pts.size - 1) {
+            val p0 = pts[max(i - 1, 0)]
+            val p1 = pts[i]
+            val p2 = pts[i + 1]
+            val p3 = pts[min(i + 2, pts.size - 1)]
+            cubicTo(
+                p1.first + (p2.first - p0.first) / 6f, p1.second + (p2.second - p0.second) / 6f,
+                p2.first - (p3.first - p1.first) / 6f, p2.second - (p3.second - p1.second) / 6f,
+                p2.first, p2.second,
+            )
+        }
+    }
+
     /** A filled shape in the box from -1 to 1, stretched to the layer's size when drawn. */
-    private fun unitShape(kind: ShapeKind): Path = when (kind) {
+    private fun unitShape(kind: ShapeKind, random: Random = Random(0)): Path = when (kind) {
+        ShapeKind.FLOWER -> union(List(6) { i ->
+            val a = (i * PI / 3 - PI / 2).toFloat()
+            Path().addCircle(cos(a) * 0.52f, sin(a) * 0.52f, 0.48f)
+        } + listOf(Path().addCircle(0f, 0f, 0.6f)))
+        ShapeKind.CLOUD -> {
+            val n = 3 + random.nextInt(2)
+            val bumps = List(n) { i ->
+                val x = -0.58f + i * 1.16f / (n - 1) + (random.nextFloat() - 0.5f) * 0.1f
+                val middle = 1f - kotlin.math.abs(i - (n - 1) / 2f) / n
+                Path().addCircle(x, 0.05f - middle * 0.35f - random.nextFloat() * 0.1f, 0.3f + middle * 0.22f + random.nextFloat() * 0.08f)
+            }
+            union(bumps + listOf(Path().addRRect(RRect.makeLTRB(-1f, -0.02f, 1f, 0.62f, 0.32f))))
+        }
+        ShapeKind.BOLT -> poly(0.28f, -1f, -0.58f, 0.14f, -0.04f, 0.14f, -0.3f, 1f, 0.6f, -0.2f, 0.06f, -0.2f, 0.4f, -1f)
+        ShapeKind.MOON -> {
+            val full = Path().addCircle(0f, 0f, 1f)
+            Path.makeCombining(full, Path().addCircle(0.48f, -0.28f, 0.84f), PathOp.DIFFERENCE) ?: full
+        }
+        ShapeKind.SUN -> union(listOf(Path().addCircle(0f, 0f, 0.56f)) + List(12) { i ->
+            val a = (i * PI / 6).toFloat()
+            val w = 0.11f
+            poly(
+                cos(a - w) * 0.66f, sin(a - w) * 0.66f,
+                cos(a) * 1f, sin(a) * 1f,
+                cos(a + w) * 0.66f, sin(a + w) * 0.66f,
+            )
+        })
+        ShapeKind.SPARKLE -> sparkle()
+        ShapeKind.DIAMOND -> poly(0f, -1f, 1f, 0f, 0f, 1f, -1f, 0f)
+        ShapeKind.DROP -> Path().apply {
+            moveTo(0f, -1f)
+            cubicTo(0.3f, -0.5f, 0.86f, -0.05f, 0.86f, 0.36f)
+            cubicTo(0.86f, 0.78f, 0.5f, 1f, 0f, 1f)
+            cubicTo(-0.5f, 1f, -0.86f, 0.78f, -0.86f, 0.36f)
+            cubicTo(-0.86f, -0.05f, -0.3f, -0.5f, 0f, -1f)
+            closePath()
+        }
+        ShapeKind.ARCH -> Path().apply {
+            moveTo(-1f, 1f)
+            lineTo(-1f, 0f)
+            arcTo(Rect.makeLTRB(-1f, -1f, 1f, 1f), 180f, 180f, false)
+            lineTo(1f, 1f)
+            closePath()
+        }
+        ShapeKind.HALF_CIRCLE -> Path().apply {
+            moveTo(-1f, 1f)
+            arcTo(Rect.makeLTRB(-1f, -1f, 1f, 3f), 180f, 180f, false)
+            closePath()
+        }
+        ShapeKind.QUARTER -> Path().apply {
+            moveTo(-1f, 1f)
+            lineTo(-1f, -1f)
+            arcTo(Rect.makeLTRB(-3f, -1f, 1f, 3f), 270f, 90f, false)
+            closePath()
+        }
+        ShapeKind.SCALLOP -> union(listOf(Path().addCircle(0f, 0f, 0.84f)) + List(16) { i ->
+            val a = (i * PI / 8).toFloat()
+            Path().addCircle(cos(a) * 0.82f, sin(a) * 0.82f, 0.18f)
+        })
         ShapeKind.TRIANGLE -> poly(0f, -1f, 1f, 1f, -1f, 1f)
         ShapeKind.STAR -> star(5, 1.05f, 0.44f).offset(0f, 0.1f, null)
         ShapeKind.HEART -> heart()
@@ -1287,6 +1498,171 @@ object DiscArt {
         edge(hw, hh, -hw, hh, 0f, 1f)
         edge(-hw, hh, -hw, -hh, 1f, 0f)
         return path.closePath()
+    }
+
+    /** A daisy: long white petals round a domed middle, each petal a little different. */
+    private fun daisy(canvas: Canvas, random: Random, hw: Float, hh: Float, petal: Int, middle: Int, outlined: Boolean, sw: Float) {
+        val n = 16
+        val shade = stroke(withAlpha(Color.BLACK, 0.16f), max(sw * 0.6f, min(hw, hh) * 0.012f))
+        for (i in 0 until n) {
+            val a = i * 360f / n + (random.nextFloat() - 0.5f) * 8f
+            val len = 0.86f + random.nextFloat() * 0.14f
+            canvas.save()
+            canvas.scale(hw, hh)
+            canvas.rotate(a)
+            val oval = Rect.makeLTRB(0.18f, -0.1f, len, 0.1f)
+            canvas.drawOval(oval, if (outlined) stroke(petal, sw / min(hw, hh)) else fill(petal))
+            if (!outlined) canvas.drawLine(0.25f, 0f, len * 0.82f, 0f, shade.apply { strokeWidth = 0.012f })
+            canvas.restore()
+        }
+        val m = min(hw, hh) * 0.27f
+        canvas.drawCircle(0f, 0f, m, fill(middle))
+        canvas.drawCircle(0f, 0f, m, Paint().apply {
+            isAntiAlias = true
+            shader = Shader.makeRadialGradient(-m * 0.3f, -m * 0.3f, m * 1.3f, intArrayOf(withAlpha(Color.WHITE, 0.35f), 0, withAlpha(Color.BLACK, 0.3f)), floatArrayOf(0f, 0.5f, 1f))
+        })
+    }
+
+    /** A mountain range across the box: peaks from the seed, each lit on one side, with snow on the tops. */
+    private fun mountains(canvas: Canvas, random: Random, hw: Float, hh: Float, rock: Int, snow: Int) {
+        val peaks = 3 + random.nextInt(3)
+        val xs = List(peaks) { i -> -hw + (i + 0.5f + (random.nextFloat() - 0.5f) * 0.5f) * 2f * hw / peaks }
+        val ys = List(peaks) { -hh + random.nextFloat() * hh * 0.9f }
+        // Back to front: the tallest drawn first so lower ones overlap them.
+        val order = (0 until peaks).sortedBy { ys[it] }
+        for (i in order) {
+            val px = xs[i]
+            val py = ys[i]
+            val half = (hh - py) * (0.9f + random.nextFloat() * 0.5f)
+            val left = px - half
+            val right = px + half * (0.8f + random.nextFloat() * 0.4f)
+            val body = Path().apply {
+                moveTo(left, hh)
+                lineTo(px - half * 0.35f, py + (hh - py) * 0.38f)
+                lineTo(px - half * 0.12f, py + (hh - py) * 0.12f)
+                lineTo(px, py)
+                lineTo(px + half * 0.2f, py + (hh - py) * 0.2f)
+                lineTo(px + half * 0.42f, py + (hh - py) * 0.32f)
+                lineTo(right, hh)
+                closePath()
+            }
+            canvas.drawPath(body, fill(rock))
+            // The side away from the light.
+            canvas.save()
+            canvas.clipPath(body, ClipMode.INTERSECT, true)
+            canvas.drawPath(poly(px, py, right + half, hh, px + half * 0.05f, hh), fill(withAlpha(Color.BLACK, 0.22f)))
+            // Snow on the top, its lower edge ragged.
+            val depth = (hh - py) * (0.22f + random.nextFloat() * 0.12f)
+            val cap = Path().apply {
+                moveTo(px - half * 2f, py - hh)
+                lineTo(px + half * 2f, py - hh)
+                lineTo(px + half * 2f, py + depth * 0.6f)
+                val steps = 7
+                for (k in steps downTo 0) {
+                    val x = px - half * 0.6f + half * 1.2f * k / steps
+                    val y = py + depth * (if (k % 2 == 0) 1.15f else 0.55f) * (0.8f + random.nextFloat() * 0.4f)
+                    lineTo(x, y)
+                }
+                lineTo(px - half * 2f, py + depth * 0.6f)
+                closePath()
+            }
+            canvas.drawPath(cap, fill(snow))
+            canvas.drawPath(poly(px, py, right + half, hh, px + half * 0.05f, hh), fill(withAlpha(Color.BLACK, 0.12f)))
+            canvas.restore()
+        }
+    }
+
+    /** A pine: tiers of branches narrowing up to the tip, on a short trunk. */
+    private fun pine(canvas: Canvas, hw: Float, hh: Float, leaves: Int, trunk: Int) {
+        canvas.drawRect(Rect.makeLTRB(-hw * 0.09f, hh * 0.72f, hw * 0.09f, hh), fill(trunk))
+        val tiers = 4
+        for (t in 0 until tiers) {
+            val top = -hh + t * hh * 0.42f
+            val bottom = top + hh * 0.8f
+            val w = hw * (0.42f + t * 0.2f)
+            canvas.drawPath(Path().apply {
+                moveTo(0f, top)
+                lineTo(w, bottom)
+                quadTo(w * 0.5f, bottom - hh * 0.08f, 0f, bottom - hh * 0.02f)
+                quadTo(-w * 0.5f, bottom - hh * 0.08f, -w, bottom)
+                closePath()
+            }, fill(leaves))
+        }
+    }
+
+    /** A cassette tape: its shell, a paper label with writing lines, the window with both reels, the screws. */
+    private fun cassette(canvas: Canvas, hw: Float, hh: Float, shell: Int, label: Int) {
+        val r = min(hw, hh)
+        canvas.drawRRect(RRect.makeLTRB(-hw, -hh, hw, hh, r * 0.1f), fill(shell))
+        canvas.drawRRect(RRect.makeLTRB(-hw, -hh, hw, hh, r * 0.1f), Paint().apply {
+            isAntiAlias = true
+            shader = Shader.makeLinearGradient(0f, -hh, 0f, hh, intArrayOf(withAlpha(Color.WHITE, 0.16f), 0, withAlpha(Color.BLACK, 0.18f)), floatArrayOf(0f, 0.5f, 1f))
+        })
+        val labelRect = Rect.makeLTRB(-hw * 0.86f, -hh * 0.8f, hw * 0.86f, hh * 0.42f)
+        canvas.drawRRect(RRect.makeLTRB(labelRect.left, labelRect.top, labelRect.right, labelRect.bottom, r * 0.05f), fill(label))
+        val ink = mix(shell, Color.BLACK, 0.2f)
+        canvas.drawRect(Rect.makeLTRB(labelRect.left, labelRect.top + hh * 0.12f, labelRect.right, labelRect.top + hh * 0.26f), fill(withAlpha(ink, 0.9f)))
+        for (k in 0..1) canvas.drawLine(labelRect.left + hw * 0.08f, labelRect.top + hh * (0.4f + k * 0.14f), labelRect.right - hw * 0.08f, labelRect.top + hh * (0.4f + k * 0.14f), stroke(withAlpha(ink, 0.45f), hh * 0.02f))
+        // The window and its two reels.
+        val win = RRect.makeLTRB(-hw * 0.5f, -hh * 0.02f, hw * 0.5f, hh * 0.32f, hh * 0.16f)
+        canvas.drawRRect(win, fill(Color.makeRGB(30, 30, 34)))
+        for (sx in listOf(-1f, 1f)) {
+            val cx = sx * hw * 0.32f
+            val cy = hh * 0.15f
+            canvas.drawCircle(cx, cy, hh * 0.13f, fill(Color.makeRGB(236, 236, 240)))
+            canvas.drawCircle(cx, cy, hh * 0.06f, fill(Color.makeRGB(30, 30, 34)))
+            for (k in 0 until 6) {
+                val a = (k * PI / 3).toFloat()
+                canvas.drawLine(cx, cy, cx + cos(a) * hh * 0.11f, cy + sin(a) * hh * 0.11f, stroke(Color.makeRGB(30, 30, 34), hh * 0.02f))
+            }
+        }
+        // The bottom edge where the tape shows, and four screws.
+        canvas.drawPath(poly(-hw * 0.62f, hh, -hw * 0.5f, hh * 0.58f, hw * 0.5f, hh * 0.58f, hw * 0.62f, hh), fill(withAlpha(Color.BLACK, 0.25f)))
+        for ((sx, sy) in listOf(-0.92f to -0.88f, 0.92f to -0.88f, -0.92f to 0.88f, 0.92f to 0.88f)) {
+            canvas.drawCircle(sx * hw, sy * hh, r * 0.045f, fill(withAlpha(Color.BLACK, 0.35f)))
+        }
+    }
+
+    /** A turntable's tonearm: the pivot and its counterweight top right, the arm down to the headshell on the record. */
+    private fun tonearm(canvas: Canvas, hw: Float, hh: Float, metal: Int, dark: Int) {
+        val r = min(hw, hh)
+        val px = hw * 0.62f
+        val py = -hh * 0.62f
+        val tipX = -hw * 0.72f
+        val tipY = hh * 0.62f
+        val chrome = Paint().apply {
+            isAntiAlias = true
+            mode = PaintMode.STROKE
+            strokeCap = PaintStrokeCap.ROUND
+            strokeWidth = r * 0.055f
+            shader = Shader.makeLinearGradient(px, py - r * 0.1f, px, py + r * 0.1f, intArrayOf(mix(metal, Color.WHITE, 0.5f), metal, mix(metal, Color.BLACK, 0.35f)), null)
+        }
+        // The base plate under the pivot.
+        canvas.drawCircle(px, py, r * 0.3f, fill(dark))
+        canvas.drawCircle(px, py, r * 0.3f, stroke(withAlpha(Color.WHITE, 0.22f), r * 0.012f))
+        // Counterweight behind the pivot.
+        val back = 0.42f
+        val bx = px + (px - tipX) * back * 0.35f
+        val by = py + (py - tipY) * back * 0.35f
+        canvas.drawLine(px, py, bx, by, chrome)
+        canvas.save()
+        canvas.translate(bx, by)
+        canvas.rotate(Math.toDegrees(atan2((py - tipY).toDouble(), (px - tipX).toDouble())).toFloat())
+        canvas.drawRRect(RRect.makeLTRB(-r * 0.04f, -r * 0.13f, r * 0.16f, r * 0.13f, r * 0.03f), fill(mix(metal, Color.BLACK, 0.25f)))
+        canvas.restore()
+        // The arm, bent a little before the headshell.
+        val bendX = tipX + (px - tipX) * 0.22f
+        val bendY = tipY + (py - tipY) * 0.22f + r * 0.06f
+        canvas.drawPath(Path().moveTo(px, py).lineTo(bendX, bendY).lineTo(tipX, tipY), chrome.apply { strokeJoin = PaintStrokeJoin.ROUND })
+        canvas.drawCircle(px, py, r * 0.11f, fill(mix(metal, Color.WHITE, 0.2f)))
+        canvas.drawCircle(px, py, r * 0.05f, fill(dark))
+        // The headshell: a small block with a finger lift.
+        canvas.save()
+        canvas.translate(tipX, tipY)
+        canvas.rotate(Math.toDegrees(atan2((tipY - bendY).toDouble(), (tipX - bendX).toDouble())).toFloat() + 90f)
+        canvas.drawRRect(RRect.makeLTRB(-r * 0.08f, -r * 0.02f, r * 0.08f, r * 0.2f, r * 0.03f), fill(dark))
+        canvas.drawLine(r * 0.08f, r * 0.04f, r * 0.17f, r * 0.0f, stroke(metal, r * 0.025f).apply { strokeCap = PaintStrokeCap.ROUND })
+        canvas.restore()
     }
 
     /** Bars of one to four widths, guard bars a little longer, and digits under them. */
@@ -1724,6 +2100,14 @@ object DiscArt {
                     }
                 }
             }
+            PatternKind.GLITTER -> finishRect(canvas, e, DiscFinish.glitter(r, palette, size = a, sparkle = 0.3f + d * 0.7f, seed = layer.seed))
+            PatternKind.PRISM -> finishRect(canvas, e, DiscFinish.prism(r, size = a, strength = 0.35f + d * 0.65f, seed = layer.seed))
+            PatternKind.SWIRL -> finishRect(canvas, e, DiscFinish.swirl(r, palette, twist = d, size = a, seed = layer.seed))
+            PatternKind.WATERCOLOR -> finishRect(canvas, e, DiscFinish.watercolor(r, c0, palette.getOrElse(1) { Color.makeRGB(244, 240, 230) }, size = a, wet = d, seed = layer.seed))
+            PatternKind.SMOKE -> finishRect(canvas, e, DiscFinish.smoke(r, c0, palette.getOrElse(1) { withAlpha(Color.WHITE, 0.7f) }, size = a, seed = layer.seed))
+            PatternKind.NEBULA -> finishRect(canvas, e, DiscFinish.nebula(r, palette.takeIf { it.size >= 4 } ?: (palette + listOf(0xFF05040F.toInt(), 0xFF5B2A86.toInt(), 0xFF1F6FB2.toInt(), 0xFFFFB3E6.toInt())).take(4), size = a, seed = layer.seed))
+            PatternKind.CANVAS -> finishRect(canvas, e, DiscFinish.canvas(r, c0, size = a, mottle = d, seed = layer.seed))
+            PatternKind.DENIM -> finishRect(canvas, e, DiscFinish.denim(r, c0, palette.getOrElse(1) { Color.makeRGB(214, 222, 235) }, size = a, wear = d, seed = layer.seed))
             PatternKind.STICKERS -> {
                 val step = r * (0.5f - d * 0.36f)
                 val half = step * (0.14f + a * 0.3f)
@@ -1737,6 +2121,8 @@ object DiscArt {
             }
         }
     }
+
+    private fun finishRect(canvas: Canvas, e: Float, shader: Shader) = canvas.drawRect(Rect.makeLTRB(-e, -e, e, e), Paint().apply { this.shader = shader })
 
     /** Lines of equal height over rolling hills, as on a map: every fifth one bolder. */
     private fun contours(canvas: Canvas, random: Random, palette: List<Int>, r: Float, e: Float, d: Float, a: Float) {
@@ -2141,8 +2527,10 @@ object DiscArt {
                 val half = r * layer.scale
                 when (layer.frame) {
                     ImageFrame.PHOTO -> Triple(half * 1.11f, half * 1.2f, half * 0.1f)
+                    ImageFrame.PRINT -> Triple(half * 1.09f, half * 1.09f, 0f)
+                    ImageFrame.STICKER -> Triple(half * 1.12f, half * 1.12f, 0f)
                     ImageFrame.WHOLE -> {
-                        val (hw, hh) = imageHalf(layer, layer.asset?.let { runCatching { res.image(it) }.getOrNull() }, r)
+                        val (hw, hh) = imageHalf(layer, picture(layer.asset, res), r)
                         Triple(hw, hh, 0f)
                     }
                     else -> Triple(half, half, 0f)

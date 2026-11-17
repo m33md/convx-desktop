@@ -78,7 +78,7 @@ object DiscCovers {
             runCatching {
                 val words = playlist.songs.take(60).flatMap { song -> listOf(song.title) + song.artists.map { it.name } }
                 val seed = playlist.coverSeed * 7919 + playlist.id.hashCode()
-                val image = CoverArt.render(CoverArt.Source(playlist.name, images, words, seed, design = playlist.coverSeed), fonts)
+                val image = CoverArt.render(CoverArt.Source(playlist.name, images, words, seed, design = playlist.coverSeed, count = playlist.songs.size), fonts)
                 val target = file(playlist, key)
                 target.writeBytes(CoverArt.encode(image))
                 // The playlist's earlier covers.
