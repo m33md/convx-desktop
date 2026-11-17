@@ -38,6 +38,8 @@ object MacSidebar {
     @Volatile private var footerItems: List<Item> = emptyList()
     private var signature = ""
     private var visible = true
+    /** What Compose last asked for, kept for when the panel is built after the first ask. */
+    @Volatile private var wanted = true
 
     private var panel: Pointer? = null
     private var table: Pointer? = null
@@ -54,6 +56,7 @@ object MacSidebar {
         val changed = sig != signature
         signature = sig
         val show = visible
+        wanted = visible
         MacWindow.onMain {
             val view = panel ?: return@onMain
             if (show != this.visible) {
@@ -336,6 +339,8 @@ object MacSidebar {
             Log.i(Tag, "Using NSGlassEffectView (Liquid Glass)")
         } else {
             view = MacWindow.send(MacWindow.send(MacWindow.cls("NSVisualEffectView"), "alloc"), "init")
+            // Sized before the rows go in: sizing it after would grow them with it, past its edges.
+            frame(view, 8.0, 8.0, Width, height)
             MacWindow.send(view, "setMaterial:", 7L)
             MacWindow.send(view, "setBlendingMode:", 0L)
             MacWindow.send(view, "setState:", 1L)
@@ -353,6 +358,9 @@ object MacSidebar {
         MacWindow.send(frameView, "addSubview:positioned:relativeTo:", view, 1L, content)
         panel = view
         scrollView = scroll
+        // A narrow window starts with the side bar folded: the panel stays hidden until it opens.
+        visible = wanted
+        MacWindow.send(view, "setHidden:", if (visible) 0 else 1)
         placeLogo()
         reload()
     }

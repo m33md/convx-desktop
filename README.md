@@ -43,6 +43,11 @@ itself from the same page (Settings > Help & About > App updates).
 You can also get an `.msi` installer, or a portable `.zip` that runs without installing, from the
 same page.
 
+On a Mac, download `Convx-<version>-mac-apple-silicon.dmg` (M1 or newer) or
+`Convx-<version>-mac-intel.dmg` from the same page, open it and drag Convx into Applications.
+The first time you open it, macOS says it can't check Convx for malware: click **Done**, then
+open **System Settings > Privacy & Security** and click **Open Anyway**.
+
 ## Build it yourself
 
 You need JDK 21.
@@ -55,11 +60,11 @@ cd desktop
 ```
 
 On a Mac, `packageDmg` builds for the kind of Mac it runs on (Intel or Apple Silicon), so build
-on each. `.github/workflows/desktop-macos.yml` does both on every push.
+on each. `.github/workflows/desktop-macos.yml` does both, and opens each app once to check it.
 
-Every push to `main` is built on GitHub Actions (`.github/workflows/desktop.yml`), and the
-finished installers replace the ones on the
-[latest release](https://github.com/m33md/convx-desktop/releases/latest).
+Every push is built on GitHub Actions (`.github/workflows/desktop.yml`, which runs the Mac
+builds too). For `main`, the finished Windows installers and Mac disk images replace the ones on
+the [latest release](https://github.com/m33md/convx-desktop/releases/latest).
 
 ## How it's made
 
@@ -69,7 +74,7 @@ decoded with FFmpeg, and modules run in QuickJS, as on the phone.
 
 | Path | What |
 | --- | --- |
-| `desktop/` | The Windows app |
+| `desktop/` | The app, for Windows and Mac |
 | `innertube/`, `lyrics/`, `canvas/`, `integrations/`, `spine/` | Code from the Convx phone app: YouTube Music, lyrics, animated artwork, song recognition and modules |
 | `installer/windows/` | Convx's setup window (a WiX bundle around the app's MSI) |
 

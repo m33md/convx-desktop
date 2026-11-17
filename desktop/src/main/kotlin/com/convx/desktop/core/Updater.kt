@@ -56,6 +56,10 @@ object Updater {
     /** Whether this copy can update itself: an installed Convx.exe, not a run from the build. */
     val canInstall: Boolean get() = installedExe() != null
 
+    /** On a Mac the update is a disk image to open, so [canInstall] is false there. */
+    val isMac: Boolean = System.getProperty("os.name").lowercase().contains("mac")
+    private val appleSilicon: Boolean = System.getProperty("os.arch").lowercase().let { it.contains("aarch64") || it.contains("arm64") }
+
     suspend fun check(): State = withContext(Dispatchers.IO) {
         val now = _state.value
         if (now is State.Checking || now is State.Downloading) return@withContext now
@@ -73,16 +77,23 @@ object Updater {
         val notes = release.string("body")
         val commit = Regex("""/tree/([0-9a-f]{40})""").find(notes)?.groupValues?.get(1) ?: error("the release names no build")
         val version = Regex("""Version (\d+(?:\.\d+)+)""").find(notes)?.groupValues?.get(1) ?: commit.take(7)
-        // Convx's setup .exe when the release has one (it shows its own progress window and keeps
-        // Windows' Installed apps entry right), else the MSI older releases carried.
-        val assets = release["assets"]?.jsonArray?.map { it.jsonObject }.orEmpty()
-        val installer = assets.firstOrNull { it.string("name").let { n -> n.startsWith("Convx-Setup-") && n.endsWith(".exe", ignoreCase = true) } }
-            ?: assets.firstOrNull { it.string("name").endsWith(".msi", ignoreCase = true) }
-            ?: error("the release has no installer")
         if (commit == AppInfo.COMMIT) return State.UpToDate
         // What the newer build adds over this one; a build GitHub can't place (made elsewhere) shows none.
         val compare = runCatching { get("https://api.github.com/repos/$Repo/compare/${AppInfo.COMMIT}...$commit").jsonObject }.getOrNull()
         if (compare != null && compare.string("status") in setOf("behind", "identical")) return State.UpToDate
+        val assets = release["assets"]?.jsonArray?.map { it.jsonObject }.orEmpty()
+        val installer = if (isMac) {
+            // The disk image made for this kind of Mac.
+            val wanted = if (appleSilicon) "-mac-apple-silicon.dmg" else "-mac-intel.dmg"
+            assets.firstOrNull { it.string("name").endsWith(wanted, ignoreCase = true) }
+                ?: return State.Failed("The newest version has no download for this Mac yet. Try again later.")
+        } else {
+            // Convx's setup .exe when the release has one (it shows its own progress window and keeps
+            // Windows' Installed apps entry right), else the MSI older releases carried.
+            assets.firstOrNull { it.string("name").let { n -> n.startsWith("Convx-Setup-") && n.endsWith(".exe", ignoreCase = true) } }
+                ?: assets.firstOrNull { it.string("name").endsWith(".msi", ignoreCase = true) }
+                ?: error("the release has no installer")
+        }
         val changes = compare?.get("commits")?.jsonArray.orEmpty()
             .map { it.jsonObject["commit"]?.jsonObject?.string("message").orEmpty().lineSequence().first().trim() }
             .filter { it.isNotEmpty() && !it.startsWith("Merge ") }

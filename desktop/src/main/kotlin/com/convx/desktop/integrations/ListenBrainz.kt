@@ -85,7 +85,7 @@ object ListenBrainz {
                                     if (!com.convx.desktop.player.LocalMusic.isLocal(song.id)) {
                                         put("origin_url", "https://music.youtube.com/watch?v=${song.id}")
                                     }
-                                    put("submission_client", "Convx for Windows")
+                                    put("submission_client", "Convx for ${AppInfo.PLATFORM}")
                                     put("submission_client_version", AppInfo.VERSION)
                                 })
                             })

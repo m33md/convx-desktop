@@ -22,6 +22,15 @@ object AppInfo {
 
     /** The commit this copy was built from, for the updater; "dev" for a build made elsewhere. */
     val COMMIT: String = build.getProperty("commit") ?: "dev"
+
+    /** The computer this copy runs on, as people say it: "Convx for Mac". */
+    val PLATFORM: String = System.getProperty("os.name").lowercase().let { os ->
+        when {
+            os.contains("mac") -> "Mac"
+            os.contains("win") -> "Windows"
+            else -> "Linux"
+        }
+    }
 }
 
 /** The phone's App.initializeSettings locale rule: setting, else the system's, else US/English. */

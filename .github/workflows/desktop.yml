@@ -11,6 +11,7 @@ on:
       - "integrations/**"
       - "spine/**"
       - ".github/workflows/desktop.yml"
+      - ".github/workflows/desktop-macos.yml"
   pull_request:
     paths:
       - "installer/**"
@@ -21,6 +22,7 @@ on:
       - "integrations/**"
       - "spine/**"
       - ".github/workflows/desktop.yml"
+      - ".github/workflows/desktop-macos.yml"
   workflow_dispatch:
 
 concurrency:
@@ -34,6 +36,10 @@ jobs:
     permissions:
       # Screenshots are pushed to the convx-desktop-snapshots branch.
       contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      # Whether Convx's own setup passed its try on this runner (the release offers it only then).
+      setup: ${{ steps.trysetup.outcome }}
     defaults:
       run:
         working-directory: desktop
@@ -49,21 +55,15 @@ jobs:
           # The whole history: the version number is counted from it.
           fetch-depth: 0
 
-      # The version people see: 1.1.20 for the first commit after aa77a0e, then one up for each
-      # commit on main that changes Convx. Shown in About, the setup window, the release and its
-      # file names; the updater goes by commits, so it never compares these numbers.
+      # The version people see (.github/scripts/convx-version.sh).
       - name: Version
+        id: version
         run: |
           cd "$GITHUB_WORKSPACE"
-          base=aa77a0e80c547908dc77cefd6e507bb9b153604d
-          if git merge-base --is-ancestor "$base" HEAD; then
-            count=$(git rev-list --count --first-parent "$base..HEAD" -- installer desktop innertube lyrics canvas integrations spine .github/workflows/desktop.yml)
-            version="1.1.$((19 + count))"
-          else
-            version=$CONVX_PACKAGE_VERSION
-          fi
+          version=$(bash .github/scripts/convx-version.sh)
           echo "Convx $version (installer $CONVX_PACKAGE_VERSION)"
           echo "CONVX_VERSION=$version" >> "$GITHUB_ENV"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
 
       # The runtime the installer ships: the JetBrains Runtime has the custom title bar the
       # app's top bar replaces Windows' with. Set up first so Temurin stays the build's Java.
@@ -224,17 +224,69 @@ jobs:
           path: desktop/build/Convx-portable-windows.zip
           if-no-files-found: error
 
-      # Same rolling release as desktop-release.yml, refreshed after every build of main. Work
-      # branches build and take screenshots, but only main reaches the download page.
+  # The Mac app for Intel and Apple Silicon, built beside the Windows one (desktop-macos.yml).
+  macos:
+    uses: ./.github/workflows/desktop-macos.yml
+    permissions:
+      # Its screenshots are pushed to the convx-macos-snapshots branch.
+      contents: write
+      actions: read
+
+  # GitHub's Apple Silicon Macs are sometimes too busy to take a job at all. When that leaves the
+  # run without its Apple Silicon disk image, it gets one more try, on another macOS image, while
+  # the Windows build is still going.
+  macos-again:
+    needs: macos
+    if: ${{ !cancelled() && needs.macos.outputs.arm64 != 'true' }}
+    uses: ./.github/workflows/desktop-macos.yml
+    with:
+      macs: '[{"arch":"arm64","runner":"macos-15"}]'
+    permissions:
+      contents: write
+      actions: read
+
+  # The rolling release, refreshed after every build of main: the Windows files, and the Mac disk
+  # images next to them when the Mac builds made them (if neither try got an Apple Silicon Mac, the
+  # release goes out without that one). Work branches build and take
+  # screenshots, but only main reaches the download page; started by hand on another branch, it
+  # shows what it would publish and publishes nothing.
+  release:
+    needs: [windows, macos, macos-again]
+    if: ${{ !cancelled() && needs.windows.result == 'success' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      # The publish script, and the commit whose message becomes the release's "What's new".
+      - uses: actions/checkout@v5
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: Convx-windows-*
+          path: out/windows
+
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: Convx-macos-*-dmg
+          path: out/mac
+          merge-multiple: true
+
       - name: Publish download links
-        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
-          SETUP_EXE: ${{ steps.trysetup.outcome == 'success' && 'build/setup/Convx-Setup.exe' || '' }}
+          DRY_RUN: ${{ github.ref != 'refs/heads/main' && '1' || '' }}
+          VERSION: ${{ needs.windows.outputs.version }}
+          SETUP_OK: ${{ needs.windows.outputs.setup }}
         run: |
-          bash ../.github/scripts/publish-desktop-release.sh "$GITHUB_SHA" "$CONVX_VERSION" \
-            build/compose/binaries/main/msi/*.msi \
-            build/compose/binaries/main/exe/*.exe \
-            build/Convx-portable-windows.zip \
-            ${SETUP_EXE:+"$SETUP_EXE"}
+          files=()
+          while IFS= read -r file; do files+=("$file"); done < <(
+            find out/windows -path '*/msi/*.msi'
+            find out/windows -path '*/exe/*.exe'
+            find out/windows -name 'Convx-portable-windows.zip'
+            if [ "$SETUP_OK" = success ]; then find out/windows -name Convx-Setup.exe; fi
+            find out/mac -name 'Convx-macos-*.dmg' 2>/dev/null | sort
+          )
+          printf '%s\n' "${files[@]}"
+          bash .github/scripts/publish-desktop-release.sh "$GITHUB_SHA" "$VERSION" "${files[@]}"

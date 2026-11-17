@@ -45,7 +45,9 @@ val javacpp = "1.5.12"
 val ffmpeg = "7.1.1-$javacpp"
 
 // FFmpeg ships one native jar per OS; bundle Windows for the installer and the
-// build machine's own OS so `run` works wherever it is launched.
+// build machine's own OS so `run` works wherever it is launched. A Mac build carries only its
+// own, so the disk image holds no Windows libraries.
+val buildOnMac = System.getProperty("os.name").lowercase().contains("mac")
 val hostNatives = run {
     val os = System.getProperty("os.name").lowercase()
     val arch = System.getProperty("os.arch").lowercase()
@@ -56,11 +58,11 @@ val hostNatives = run {
         else -> if (aarch) "linux-arm64" else "linux-x86_64"
     }
 }
-val nativeClassifiers = setOf("windows-x86_64", hostNatives)
+val nativeClassifiers = if (buildOnMac) setOf(hostNatives) else setOf("windows-x86_64", hostNatives)
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    implementation(compose.desktop.windows_x64)
+    if (!buildOnMac) implementation(compose.desktop.windows_x64)
     implementation(compose.material3)
     implementation(compose.foundation)
     implementation(compose.animation)

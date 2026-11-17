@@ -323,7 +323,7 @@ fun HelpHub() {
             Row(verticalAlignment = Alignment.Bottom) {
                 com.convx.desktop.ui.components.ConvxWordmark(22.dp)
                 Spacer(Modifier.width(8.dp))
-                Text("for Windows", style = ConvxType.Title3, color = ConvxColors.Label)
+                Text("for ${AppInfo.PLATFORM}", style = ConvxType.Title3, color = ConvxColors.Label)
             }
             Spacer(Modifier.height(4.dp))
             Text("Version ${AppInfo.VERSION}", style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel)
@@ -347,14 +347,14 @@ fun HelpHub() {
     }
     SectionGap()
     SettingsSection(
-        footer = "The Windows version of Convx, the music app by Aryan (Cosmic Taser), maintained by m33md and " +
+        footer = "The ${AppInfo.PLATFORM} version of Convx, the music app by Aryan (Cosmic Taser), maintained by m33md and " +
             "built from the phone app's own YouTube Music and lyrics code. Free software under GPL-3.0, with no warranty.",
     ) {
         LinkRow("Convx on GitHub", "The phone app's project", icon = "link", tint = SystemColors.Gray) {
             openUrl("https://github.com/cosmictaserdev-creator/convx")
         }
         RowDivider()
-        LinkRow("Source code", "Convx for Windows, under GPL-3.0", icon = "link", tint = SystemColors.Gray) {
+        LinkRow("Source code", "Convx for ${AppInfo.PLATFORM}, under GPL-3.0", icon = "link", tint = SystemColors.Gray) {
             openUrl("https://github.com/m33md/convx-desktop")
         }
         RowDivider()
@@ -386,12 +386,18 @@ fun UpdatesPage() {
     SettingsSection(footer = "Convx ${AppInfo.VERSION}, built from ${AppInfo.COMMIT.take(7)}.") {
         when (val s = state) {
             is com.convx.desktop.core.Updater.State.Available -> {
-                SettingsRow("Convx ${s.release.version} is available", "Installing closes Convx for a moment and opens it again.", icon = "download", tint = SystemColors.Blue)
+                val mac = com.convx.desktop.core.Updater.isMac
+                SettingsRow(
+                    "Convx ${s.release.version} is available",
+                    if (mac) "Open the downloaded disk image and drag Convx into Applications." else "Installing closes Convx for a moment and opens it again.",
+                    icon = "download",
+                    tint = SystemColors.Blue,
+                )
                 RowDivider()
                 if (com.convx.desktop.core.Updater.canInstall) {
                     ButtonRow("Download and install") { scope.launch { com.convx.desktop.core.Updater.downloadAndInstall() } }
                 } else {
-                    ButtonRow("Download the installer") { openUrl(s.release.installerUrl) }
+                    ButtonRow(if (mac) "Download" else "Download the installer") { openUrl(s.release.installerUrl) }
                 }
             }
             is com.convx.desktop.core.Updater.State.Downloading ->
