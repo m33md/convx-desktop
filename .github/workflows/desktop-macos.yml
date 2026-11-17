@@ -12,8 +12,9 @@ on:
         description: The Macs to build on, as a JSON list of {arch, runner}.
         type: string
         # macOS 26 has AppKit's Liquid Glass, so the try below sees the glass buttons and panel most
-        # Apple Silicon Macs show; the Intel one sees what macOS 15 and older show.
-        default: '[{"arch":"intel","runner":"macos-15-intel"},{"arch":"arm64","runner":"macos-26"}]'
+        # Apple Silicon Macs show; the Intel one sees what macOS 15 and older show. An optional Mac
+        # doesn't fail the run: desktop.yml gives Apple Silicon a second try if this one never starts.
+        default: '[{"arch":"intel","runner":"macos-15-intel"},{"arch":"arm64","runner":"macos-26","optional":true}]'
     outputs:
       intel:
         description: Whether the Intel disk image was made and passed its try.
@@ -26,12 +27,13 @@ on:
       macs:
         description: The Macs to build on, as a JSON list of {arch, runner}.
         type: string
-        default: '[{"arch":"intel","runner":"macos-15-intel"},{"arch":"arm64","runner":"macos-26"}]'
+        default: '[{"arch":"intel","runner":"macos-15-intel"},{"arch":"arm64","runner":"macos-26","optional":true}]'
 
 jobs:
   macos:
     name: macOS ${{ matrix.arch }}
     runs-on: ${{ matrix.runner }}
+    continue-on-error: ${{ matrix.optional == true }}
     timeout-minutes: 60
     strategy:
       fail-fast: false
@@ -53,13 +55,7 @@ jobs:
       - name: Version
         run: |
           cd "$GITHUB_WORKSPACE"
-          base=aa77a0e80c547908dc77cefd6e507bb9b153604d
-          if git merge-base --is-ancestor "$base" HEAD; then
-            count=$(git rev-list --count --first-parent "$base..HEAD" -- installer desktop innertube lyrics canvas integrations spine .github/workflows/desktop.yml .github/workflows/desktop-macos.yml)
-            version="1.1.$((19 + count))"
-          else
-            version=$CONVX_PACKAGE_VERSION
-          fi
+          version=$(bash .github/scripts/convx-version.sh)
           echo "Convx $version"
           echo "CONVX_VERSION=$version" >> "$GITHUB_ENV"
 

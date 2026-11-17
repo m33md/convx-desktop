@@ -55,20 +55,12 @@ jobs:
           # The whole history: the version number is counted from it.
           fetch-depth: 0
 
-      # The version people see: 1.1.20 for the first commit after aa77a0e, then one up for each
-      # commit on main that changes Convx. Shown in About, the setup window, the release and its
-      # file names; the updater goes by commits, so it never compares these numbers.
+      # The version people see (.github/scripts/convx-version.sh).
       - name: Version
         id: version
         run: |
           cd "$GITHUB_WORKSPACE"
-          base=aa77a0e80c547908dc77cefd6e507bb9b153604d
-          if git merge-base --is-ancestor "$base" HEAD; then
-            count=$(git rev-list --count --first-parent "$base..HEAD" -- installer desktop innertube lyrics canvas integrations spine .github/workflows/desktop.yml .github/workflows/desktop-macos.yml)
-            version="1.1.$((19 + count))"
-          else
-            version=$CONVX_PACKAGE_VERSION
-          fi
+          version=$(bash .github/scripts/convx-version.sh)
           echo "Convx $version (installer $CONVX_PACKAGE_VERSION)"
           echo "CONVX_VERSION=$version" >> "$GITHUB_ENV"
           echo "version=$version" >> "$GITHUB_OUTPUT"
@@ -234,8 +226,6 @@ jobs:
   # The Mac app for Intel and Apple Silicon, built beside the Windows one (desktop-macos.yml).
   macos:
     uses: ./.github/workflows/desktop-macos.yml
-    with:
-      macs: '[{"arch":"intel","runner":"macos-15-intel"}]'
     permissions:
       # Its screenshots are pushed to the convx-macos-snapshots branch.
       contents: write
