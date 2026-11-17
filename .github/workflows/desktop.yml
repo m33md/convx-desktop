@@ -234,17 +234,33 @@ jobs:
   # The Mac app for Intel and Apple Silicon, built beside the Windows one (desktop-macos.yml).
   macos:
     uses: ./.github/workflows/desktop-macos.yml
+    with:
+      macs: '[{"arch":"intel","runner":"macos-15-intel"}]'
     permissions:
       # Its screenshots are pushed to the convx-macos-snapshots branch.
       contents: write
+      actions: read
+
+  # GitHub's Apple Silicon Macs are sometimes too busy to take a job at all. When that leaves the
+  # run without its Apple Silicon disk image, it gets one more try, on another macOS image, while
+  # the Windows build is still going.
+  macos-again:
+    needs: macos
+    if: ${{ !cancelled() && needs.macos.outputs.arm64 != 'true' }}
+    uses: ./.github/workflows/desktop-macos.yml
+    with:
+      macs: '[{"arch":"arm64","runner":"macos-15"}]'
+    permissions:
+      contents: write
+      actions: read
 
   # The rolling release, refreshed after every build of main: the Windows files, and the Mac disk
-  # images next to them when the Mac builds made them (Apple Silicon runners are sometimes too busy
-  # to take the job; the release then goes out without that one). Work branches build and take
+  # images next to them when the Mac builds made them (if neither try got an Apple Silicon Mac, the
+  # release goes out without that one). Work branches build and take
   # screenshots, but only main reaches the download page; started by hand on another branch, it
   # shows what it would publish and publishes nothing.
   release:
-    needs: [windows, macos]
+    needs: [windows, macos, macos-again]
     if: ${{ !cancelled() && needs.windows.result == 'success' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     permissions:

@@ -7,7 +7,26 @@ name: Desktop build (macOS)
 # images on the download page next to the Windows files. It can also be run on its own.
 on:
   workflow_call:
+    inputs:
+      macs:
+        description: The Macs to build on, as a JSON list of {arch, runner}.
+        type: string
+        # macOS 26 has AppKit's Liquid Glass, so the try below sees the glass buttons and panel most
+        # Apple Silicon Macs show; the Intel one sees what macOS 15 and older show.
+        default: '[{"arch":"intel","runner":"macos-15-intel"},{"arch":"arm64","runner":"macos-26"}]'
+    outputs:
+      intel:
+        description: Whether the Intel disk image was made and passed its try.
+        value: ${{ jobs.results.outputs.intel }}
+      arm64:
+        description: Whether the Apple Silicon disk image was made and passed its try.
+        value: ${{ jobs.results.outputs.arm64 }}
   workflow_dispatch:
+    inputs:
+      macs:
+        description: The Macs to build on, as a JSON list of {arch, runner}.
+        type: string
+        default: '[{"arch":"intel","runner":"macos-15-intel"},{"arch":"arm64","runner":"macos-26"}]'
 
 jobs:
   macos:
@@ -17,13 +36,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - arch: intel
-            runner: macos-15-intel
-          # macOS 26 has AppKit's Liquid Glass, so the try below sees the glass buttons and panel
-          # most Apple Silicon Macs show; the Intel one sees what macOS 15 and older show.
-          - arch: arm64
-            runner: macos-26
+        include: ${{ fromJSON(inputs.macs) }}
     defaults:
       run:
         working-directory: desktop
@@ -99,6 +112,7 @@ jobs:
           name: Convx-macos-${{ matrix.arch }}-dmg
           path: desktop/build/Convx-macos-${{ matrix.arch }}.dmg
           compression-level: 0
+          overwrite: true
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
@@ -106,6 +120,7 @@ jobs:
           name: Convx-macos-${{ matrix.arch }}-app
           path: desktop/build/Convx-macos-${{ matrix.arch }}.zip
           compression-level: 0
+          overwrite: true
           if-no-files-found: error
 
       - uses: actions/upload-artifact@v4
@@ -113,24 +128,44 @@ jobs:
         with:
           name: Convx-macos-${{ matrix.arch }}-check
           path: desktop/build/check
+          overwrite: true
           if-no-files-found: ignore
 
-  # Each Mac's screenshots, the app's log and macOS' view of it, on the convx-macos-snapshots
-  # branch, so they can be looked at without the run's artifacts.
-  screenshots:
-    name: Mac screenshots
+  # Which disk images this run has made so far (for desktop.yml's second try), and each Mac's
+  # screenshots, the app's log and macOS' view of it on the convx-macos-snapshots branch, so they
+  # can be looked at without the run's artifacts.
+  results:
+    name: Mac results
     needs: macos
-    if: ${{ !cancelled() && github.event_name != 'pull_request' }}
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      actions: read
+    outputs:
+      intel: ${{ steps.made.outputs.intel }}
+      arm64: ${{ steps.made.outputs.arm64 }}
     steps:
+      - name: Disk images made
+        id: made
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          names=$(gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts?per_page=100" --jq '.artifacts[].name')
+          echo "$names"
+          for arch in intel arm64; do
+            if grep -qx "Convx-macos-$arch-dmg" <<< "$names"; then echo "$arch=true"; else echo "$arch=false"; fi >> "$GITHUB_OUTPUT"
+          done
+          cat "$GITHUB_OUTPUT"
+
       - uses: actions/download-artifact@v4
+        if: github.event_name != 'pull_request'
         with:
           pattern: Convx-macos-*-check
           path: check
 
       - name: Publish the screenshots
+        if: github.event_name != 'pull_request'
         working-directory: check
         run: |
           [ -n "$(ls -A)" ] || exit 0
