@@ -47,16 +47,16 @@ import kotlin.random.Random
  */
 object CoverArt {
     /** Raised whenever the drawing changes, so covers an older Convx drew are drawn again. */
-    const val Version = 2
+    const val Version = 3
 
-    enum class Style { Collage, Type, Stars, Prism, Mono, Duotone, Pixel, Glow }
+    enum class Style { Collage, Type, Stars, Prism, Mono, Duotone, Pixel, Glow, Holo, Swirl, Number, Aura, Chrome }
 
     /**
      * What a cover is made from. [covers] are the songs' pictures, the most typical first; [words]
      * are the songs' titles and artists; [seed] varies the drawing; [design] counts "New cover
-     * design" presses, which move on to the next fitting print.
+     * design" presses, which move on to the next fitting print; [count] is how many songs it has.
      */
-    class Source(val name: String, val covers: List<Image>, val words: List<String>, val seed: Int, val design: Int = 0, val style: Style? = null)
+    class Source(val name: String, val covers: List<Image>, val words: List<String>, val seed: Int, val design: Int = 0, val style: Style? = null, val count: Int = 0)
 
     /** [display] sets the playlist's name on Type prints; null falls back to Windows' bold sans. */
     class Fonts(val display: Typeface?)
@@ -77,6 +77,11 @@ object CoverArt {
                 Style.Duotone -> duotone(canvas, cx, cy, r, source, palette, random)
                 Style.Pixel -> pixel(canvas, cx, cy, r, source, palette, random)
                 Style.Glow -> glow(canvas, cx, cy, r, source, palette, random)
+                Style.Holo -> holo(canvas, cx, cy, r, palette, random)
+                Style.Swirl -> swirl(canvas, cx, cy, r, palette, random)
+                Style.Number -> number(canvas, cx, cy, r, source, palette, fonts, random)
+                Style.Aura -> aura(canvas, cx, cy, r, source, palette, fonts, random)
+                Style.Chrome -> chrome(canvas, cx, cy, r, palette, random)
             }
         }
         return surface.makeImageSnapshot()
@@ -96,13 +101,21 @@ object CoverArt {
         Style.Type to listOf("dance", "party", "gym", "workout", "hype", "afro", "afrobeats", "reggaeton", "latin", "club", "house", "techno", "edm", "hits", "top", "mix", "summer", "banger", "bangers", "rap", "remix", "funk", "phonk"),
         Style.Collage to listOf("radio", "mix", "favorites", "favourites", "faves", "liked", "best", "collection", "random", "idk", "everything", "misc"),
         Style.Glow to listOf("love", "heart", "feel", "mood", "slow", "sunset", "warm", "soul", "r&b", "rnb", "blue"),
+        Style.Holo to listOf("y2k", "hyperpop", "holo", "holographic", "2000s", "00s", "shiny", "bubblegum", "iridescent", "rainbow", "pride", "glam"),
+        Style.Swirl to listOf("psychedelic", "psych", "60s", "70s", "vintage", "groove", "groovy", "disco", "oldies", "classic", "trip", "trippy", "hippie", "jazz", "funk", "soul"),
+        Style.Number to listOf("top", "hits", "charts", "countdown", "best of", "rotation", "heavy rotation", "on repeat", "repeat"),
+        Style.Aura to listOf("aura", "chill", "vibes", "vibe", "dream", "dreamy", "calm", "meditation", "yoga", "sleep", "soft", "morning", "sunrise", "bedroom"),
+        Style.Chrome to listOf("techno", "electronic", "electro", "cyber", "future", "industrial", "dnb", "drum and bass", "trance", "rave", "metal", "chrome", "phonk"),
     )
+
+    /** The newer prints, offered a little more often than the first ones. */
+    private val Fresh = setOf(Style.Holo, Style.Swirl, Style.Number, Style.Aura, Style.Chrome, Style.Collage)
 
     fun pickStyle(source: Source, palette: Palette, random: Random): Style {
         val name = source.name.lowercase()
         val words = source.words.joinToString(" ").lowercase()
         val letters = source.name.count { it.isLetter() }
-        val score = Style.entries.associateWith { 1.0 }.toMutableMap()
+        val score = Style.entries.associateWith { if (it in Fresh) 1.4 else 1.0 }.toMutableMap()
         for ((style, keys) in moods) {
             for (key in keys) {
                 if (Regex("""(^|[^\p{L}])${Regex.escape(key)}([^\p{L}]|$)""").containsMatchIn(name)) score[style] = score[style]!! + 6.0
@@ -121,6 +134,9 @@ object CoverArt {
         if (palette.saturation < 0.18f) score[Style.Mono] = score[Style.Mono]!! + 1.5
         if (palette.brightness < 0.3f) score[Style.Prism] = score[Style.Prism]!! + 0.8
         if (palette.saturation > 0.45f) score[Style.Glow] = score[Style.Glow]!! + 0.5
+        // A big number needs one to show: the songs, or a number in the name (Top 50, 2016).
+        if (source.count <= 0) score[Style.Number] = 0.0
+        if (source.name.any { it.isDigit() }) score[Style.Number] = score[Style.Number]!! + 3.0
         // A name that says what it is (Chiptune, Rainy nights) gets that print first; "New cover
         // design" then goes through the other two likeliest. Without such a word, a weighted pick.
         val ranked = score.entries.filter { it.value > 0 }.sortedByDescending { it.value }.take(3)
@@ -430,46 +446,134 @@ object CoverArt {
         })
     }
 
+    /** The songs' covers as photo prints in a ring round a white disc, with a tag or two in the playlist's colours. */
     private fun collage(canvas: Canvas, cx: Float, cy: Float, r: Float, source: Source, p: Palette, random: Random) {
-        canvas.drawRect(square(cx, cy, r), Paint().apply { color = mix(p.light, Color.WHITE, 0.4f) })
-        // Small tags and dots in the playlist's colours, like stickers on a disc.
-        repeat(14) {
+        canvas.drawRect(square(cx, cy, r), Paint().apply { color = mix(p.light, Color.makeRGB(244, 242, 236), 0.7f) })
+        val pics = source.covers.take(9)
+        if (pics.isEmpty()) return
+        val spots = DiscCollage.spots(DiscCollage.Layout.RING, pics.size, random.nextInt(1000))
+        // Tags under the prints, peeking out between them.
+        repeat(3) { i ->
             val a = random.nextFloat() * 2 * PI.toFloat()
-            val d = r * (0.42f + random.nextFloat() * 0.55f)
+            val d = r * (0.42f + random.nextFloat() * 0.4f)
             val x = cx + cos(a) * d
             val y = cy + sin(a) * d
-            val c = listOf(p.vivid, p.accent, p.dark)[random.nextInt(3)]
+            val paint = Paint().apply { isAntiAlias = true; color = listOf(p.vivid, p.accent, p.dark)[i] }
             canvas.save()
-            canvas.rotate(random.nextFloat() * 60f - 30f, x, y)
-            if (random.nextBoolean()) {
-                canvas.drawRRect(RRect.makeXYWH(x, y, r * (0.12f + random.nextFloat() * 0.12f), r * 0.06f, r * 0.03f), Paint().apply { isAntiAlias = true; color = c })
-            } else {
-                canvas.drawCircle(x, y, r * (0.025f + random.nextFloat() * 0.03f), Paint().apply { isAntiAlias = true; color = c })
-            }
+            canvas.rotate(random.nextFloat() * 70f - 35f, x, y)
+            if (i == 2) canvas.drawCircle(x, y, r * 0.03f, paint)
+            else canvas.drawRRect(RRect.makeXYWH(x - r * 0.07f, y - r * 0.025f, r * 0.14f, r * 0.05f, r * 0.025f), paint)
             canvas.restore()
-        }
-        val pics = source.covers.take(9)
-        val side = r * if (pics.size <= 4) 0.52f else 0.42f
-        val slots = (0 until max(pics.size, 1)).map { i ->
-            val a = (i * 2 * PI / pics.size + random.nextDouble() * 0.5 - PI / 2).toFloat()
-            val d = r * (0.6f + random.nextFloat() * 0.12f)
-            Pair(cx + cos(a) * d, cy + sin(a) * d)
         }
         pics.forEachIndexed { i, image ->
-            val (x, y) = slots[i]
+            val spot = spots[i]
+            val x = cx + spot.x * r
+            val y = cy + spot.y * r
+            val half = spot.scale * r
+            val border = half * 0.09f
             canvas.save()
-            canvas.rotate(random.nextFloat() * 36f - 18f, x, y)
-            val rect = Rect.makeXYWH(x - side / 2, y - side / 2, side, side)
-            canvas.drawRect(rect.offset(r * 0.012f, r * 0.02f), Paint().apply {
-                color = withAlpha(Color.BLACK, 0.35f)
-                maskFilter = MaskFilter.makeBlur(FilterBlurMode.NORMAL, r * 0.02f, true)
+            canvas.rotate(spot.rotation, x, y)
+            val sheet = Rect.makeLTRB(x - half - border, y - half - border, x + half + border, y + half + border)
+            canvas.drawRect(sheet.offset(r * 0.01f, r * 0.018f), Paint().apply {
+                color = withAlpha(Color.BLACK, 0.32f)
+                maskFilter = MaskFilter.makeBlur(FilterBlurMode.NORMAL, r * 0.018f, true)
             })
-            val border = side * 0.06f
-            canvas.drawRect(Rect.makeLTRB(rect.left - border, rect.top - border, rect.right + border, rect.bottom + border), Paint().apply { color = Color.WHITE })
-            cover(canvas, image, rect)
+            canvas.drawRect(sheet, Paint().apply { color = Color.makeRGB(251, 250, 246) })
+            val photo = Rect.makeLTRB(x - half, y - half, x + half, y + half)
+            cover(canvas, image, photo)
+            // The print's gloss.
+            canvas.drawRect(photo, Paint().apply {
+                shader = Shader.makeLinearGradient(photo.left, photo.top, photo.right, photo.bottom,
+                    intArrayOf(withAlpha(Color.WHITE, 0.16f), withAlpha(Color.WHITE, 0f), withAlpha(Color.WHITE, 0.05f)), floatArrayOf(0f, 0.45f, 1f))
+            })
             canvas.restore()
         }
-        grain(canvas, cx, cy, r, 0.12f)
+        grain(canvas, cx, cy, r, 0.08f)
+    }
+
+    /** A holographic disc: pastel rainbow running over silver, a hint of the playlist's colour in it. */
+    private fun holo(canvas: Canvas, cx: Float, cy: Float, r: Float, p: Palette, random: Random) {
+        val area = square(cx, cy, r)
+        canvas.drawRect(area, Paint().apply {
+            shader = DiscFinish.holographic(r, Color.makeRGB(196, 199, 210), angle = random.nextFloat() * 360f, seed = random.nextInt(1000),
+                waves = 0.3f + random.nextFloat() * 0.15f, strength = 0.85f, cx = cx, cy = cy)
+        })
+        canvas.drawRect(area, Paint().apply { color = withAlpha(p.vivid, 0.14f); blendMode = BlendMode.SOFT_LIGHT })
+    }
+
+    /** Paint poured and swirled: the playlist's colours marbled together. */
+    private fun swirl(canvas: Canvas, cx: Float, cy: Float, r: Float, p: Palette, random: Random) {
+        val colors = listOf(p.dark, p.vivid, p.light, p.accent, mix(p.dark, p.vivid, 0.45f))
+        canvas.drawRect(square(cx, cy, r), Paint().apply {
+            shader = DiscFinish.swirl(r, colors, twist = 0.4f + random.nextFloat() * 0.3f, size = 0.45f + random.nextFloat() * 0.2f, seed = random.nextInt(1000), cx = cx, cy = cy)
+        })
+        grain(canvas, cx, cy, r, 0.1f)
+    }
+
+    /** The number of songs (or the number in the name) huge across a black disc, with small print and a barcode. */
+    private fun number(canvas: Canvas, cx: Float, cy: Float, r: Float, source: Source, p: Palette, fonts: Fonts, random: Random) {
+        canvas.drawRect(square(cx, cy, r), Paint().apply { color = Color.makeRGB(17, 17, 20) })
+        // Fine rings, as if pressed into the disc.
+        val ring = Paint().apply { isAntiAlias = true; mode = PaintMode.STROKE; strokeWidth = r * 0.003f; color = withAlpha(Color.WHITE, 0.035f) }
+        var rr = r * 0.38f
+        while (rr < r) {
+            canvas.drawCircle(cx, cy, rr, ring)
+            rr += r * 0.018f
+        }
+        val digits = Regex("\\d+").find(source.name)?.value?.take(4) ?: source.count.toString()
+        val ink = mix(p.light, Color.makeRGB(242, 236, 222), 0.6f)
+        val typeface = typefaceFor(digits, fonts)
+        val font = Font(typeface, r * 1.25f)
+        val line = TextLine.make(digits, font)
+        val scale = min(1f, r * 1.9f / max(1f, line.width))
+        canvas.save()
+        canvas.translate(cx, cy + r * 0.22f)
+        canvas.scale(scale, scale)
+        canvas.drawTextLine(line, -line.width / 2f, line.capHeight / 2f, Paint().apply { isAntiAlias = true; color = ink })
+        canvas.restore()
+        val small = Font(typefaceFor(source.name, fonts), r * 0.045f)
+        val lines = listOfNotNull(source.name.uppercase().take(24), source.count.takeIf { it > 0 }?.let { "$it SONGS" }, "SIDE A  ·  33⅓")
+        lines.forEachIndexed { i, text ->
+            canvas.drawTextLine(TextLine.make(text, small), cx + r * 0.12f, cy - r * 0.72f + i * r * 0.06f, Paint().apply { isAntiAlias = true; color = ink })
+        }
+        // A barcode: bars of a few widths, from the name.
+        var x = cx - r * 0.56f
+        val code = Random(source.name.hashCode())
+        val bar = Paint().apply { color = ink }
+        while (x < cx - r * 0.2f) {
+            val w = r * (0.006f + code.nextInt(3) * 0.005f)
+            canvas.drawRect(Rect.makeXYWH(x, cy - r * 0.76f, w, r * 0.12f), bar)
+            x += w + r * (0.006f + code.nextInt(2) * 0.005f)
+        }
+        grain(canvas, cx, cy, r, 0.08f)
+    }
+
+    /** Soft pools of the playlist's colours melting together, grainy, with its name small and spaced. */
+    private fun aura(canvas: Canvas, cx: Float, cy: Float, r: Float, source: Source, p: Palette, fonts: Fonts, random: Random) {
+        val colors = listOf(p.vivid, p.accent, p.light, mix(p.vivid, Color.WHITE, 0.5f), mix(p.accent, p.light, 0.4f))
+        canvas.drawRect(square(cx, cy, r), Paint().apply {
+            shader = DiscFinish.mesh(r, colors, seed = random.nextInt(1000), spread = 0.45f, cx = cx, cy = cy)
+        })
+        grain(canvas, cx, cy, r, 0.2f)
+        val text = source.name.trim().uppercase().take(26)
+        if (text.isNotEmpty()) {
+            val font = Font(typefaceFor(text, fonts), r * 0.055f)
+            val line = TextLine.make(text.toCharArray().joinToString(" "), font)
+            val scale = min(1f, r * 1.1f / max(1f, line.width))
+            canvas.save()
+            canvas.translate(cx, cy + r * 0.66f)
+            canvas.scale(scale, scale)
+            canvas.drawTextLine(line, -line.width / 2f, line.capHeight / 2f, Paint().apply { isAntiAlias = true; color = withAlpha(p.dark, 0.85f) })
+            canvas.restore()
+        }
+    }
+
+    /** Liquid chrome: a mirror poured into folds, its sky tinted by the playlist. */
+    private fun chrome(canvas: Canvas, cx: Float, cy: Float, r: Float, p: Palette, random: Random) {
+        canvas.drawRect(square(cx, cy, r), Paint().apply {
+            shader = DiscFinish.chrome(r, sky = mix(Color.makeRGB(214, 226, 255), p.vivid, 0.22f), ground = mix(Color.makeRGB(26, 27, 33), p.dark, 0.5f),
+                angle = random.nextFloat() * 360f, seed = random.nextInt(1000), waves = 0.5f + random.nextFloat() * 0.2f, cx = cx, cy = cy)
+        })
     }
 
     private fun typefaceFor(text: String, fonts: Fonts): Typeface {

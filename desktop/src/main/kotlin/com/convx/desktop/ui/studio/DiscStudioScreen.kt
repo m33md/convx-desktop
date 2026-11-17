@@ -223,10 +223,10 @@ private fun StudioHero(latest: DiscDesign?) {
 @Composable
 private fun HeroDiscs(latest: DiscDesign?, modifier: Modifier) {
     val front = remember(latest?.id, latest?.updatedAt) {
-        latest ?: DiscPresets.of("sticker-bomb")?.let { DiscPresets.start(it) }
+        latest ?: DiscPresets.of("holographic")?.let { DiscPresets.start(it) }
     }
     // Behind it, the other kind of disc: a record behind a CD, a CD behind a record.
-    val backKey = if (front?.format == DiscFormat.VINYL) "y2k" else "midnight-vinyl"
+    val backKey = if (front?.format == DiscFormat.VINYL) "cover-collage" else "painted-daisies"
     val back = remember(backKey) { DiscPresets.of(backKey)?.let { DiscPresets.start(it, "Disc Studio") } }
     val frontImage = discImage(front, 440, "hero:${front?.id}:${front?.updatedAt}")
     val backImage = discImage(back, 400, "hero:$backKey")
