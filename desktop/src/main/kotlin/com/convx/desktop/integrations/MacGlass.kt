@@ -20,6 +20,17 @@ object MacGlass {
 
     private class Native(val tag: Long, val glass: Pointer, val button: Pointer, var symbol: String, var onClick: () -> Unit)
 
+    /**
+     * Whether this Mac has AppKit's Liquid Glass (NSGlassEffectView, macOS 26 and later). Older
+     * Macs keep Convx's own glass buttons, drawn by Compose as on Windows.
+     */
+    val available: Boolean by lazy {
+        MacWindow.isMac && runCatching {
+            com.sun.jna.NativeLibrary.getInstance("/System/Library/Frameworks/AppKit.framework/AppKit")
+            MacWindow.cls("NSGlassEffectView") != null
+        }.getOrDefault(false).also { Log.i(Tag, if (it) "Using AppKit's Liquid Glass buttons" else "No AppKit Liquid Glass on this Mac; Convx draws its own buttons") }
+    }
+
     private val buttons = HashMap<String, Native>()
     private val handlers = HashMap<Long, Native>()
     private var nextTag = 1L
@@ -79,7 +90,7 @@ object MacGlass {
      * [symbol] on it. [enabled] false dims it; [accent] tints the symbol Convx red.
      */
     fun place(id: String, symbol: String, left: Double, top: Double, width: Double, height: Double, enabled: Boolean, accent: Boolean, onClick: () -> Unit) {
-        if (!MacWindow.isMac) return
+        if (!available) return
         specs[id] = Spec(symbol, left, top, width, height, enabled, accent, onClick)
         apply(id)
     }

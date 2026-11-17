@@ -235,7 +235,8 @@ jobs:
   macos:
     uses: ./.github/workflows/desktop-macos.yml
     permissions:
-      contents: read
+      # Its screenshots are pushed to the convx-macos-snapshots branch.
+      contents: write
 
   # The rolling release, refreshed after every build of main: the Windows files, and the Mac disk
   # images next to them when the Mac builds made them (Apple Silicon runners are sometimes too busy

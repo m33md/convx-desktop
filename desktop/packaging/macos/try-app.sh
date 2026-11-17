@@ -21,12 +21,14 @@ echo "== Signature"
   echo "-- spctl (Gatekeeper)"
   spctl --assess --type execute --verbose=4 "$app" 2>&1
   echo "-- syspolicy_check distribution"
-  syspolicy_check distribution "$app" 2>&1
+  syspolicy_check distribution --verbose "$app" 2>&1 || syspolicy_check distribution "$app" 2>&1
 } > "$out/signature.txt"
 cat "$out/signature.txt"
 
+# The app's runtime has no java command of its own, so this Mac's Java 21 runs the app's jars;
+# the FFmpeg libraries are the ones inside them.
 echo "== FFmpeg"
-java="$app/Contents/runtime/Contents/Home/bin/java"
+java="${JAVA_HOME:+$JAVA_HOME/bin/}java"
 classes=$(mktemp -d)
 here=$(cd "$(dirname "$0")" && pwd)
 if javac -cp "$app/Contents/app/*" -d "$classes" "$here/FfmpegCheck.java" &&
@@ -65,6 +67,30 @@ else
     failed=1
   fi
 fi
+
+# What a person who downloaded Convx sees the first time: the same app marked as downloaded from
+# the web, opened, with Gatekeeper's answer in its log and on the screen.
+echo "== Gatekeeper, as for a download"
+{
+  echo "-- spctl --status"
+  spctl --status 2>&1
+  copy=$(mktemp -d)/Convx.app
+  ditto "$app" "$copy"
+  xattr -w com.apple.quarantine "0081;$(printf '%x' "$(date +%s)");Safari;" "$copy"
+  since=$(date '+%Y-%m-%d %H:%M:%S')
+  open -n "$copy" 2>&1
+  sleep 10
+  if pgrep -f "$copy/Contents/MacOS/Convx" > /dev/null; then
+    echo "It opened"
+    pkill -f "$copy/Contents/MacOS/Convx"
+  else
+    echo "macOS stopped it"
+  fi
+  screencapture -x "$out/gatekeeper.png" || true
+  echo "-- syspolicyd"
+  log show --start "$since" --style compact --predicate 'process == "syspolicyd" OR process == "XprotectService" OR process == "CoreServicesUIAgent"' 2>&1 | grep -viE "^(Filtering|Timestamp)" | tail -n 60
+} > "$out/gatekeeper.txt" 2>&1
+cat "$out/gatekeeper.txt"
 
 # What the app wrote, and whatever macOS or Java kept of a crash.
 cp -R "$logs" "$out/logs" 2>/dev/null || true
