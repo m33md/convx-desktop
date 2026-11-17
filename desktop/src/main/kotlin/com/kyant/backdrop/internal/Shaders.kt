@@ -143,21 +143,13 @@ half4 main(float2 coord) {
         grad = gradBase;
     }
     float2 refractedCoord = coord + d * grad;
-    // Red bends a little more than green and blue a little less, along the same normal, as light
-    // through real glass does: an even fringe all the way round the rim, widest where it bends most.
-    // Each colour is gathered over a short spread rather than one shifted copy, so the fringe fades
-    // through the spectrum instead of showing as separate red and blue outlines.
-    float2 dispersedCoord = d * grad * (chromaticAberration * 0.06);
+    float dispersionIntensity = chromaticAberration * ((centeredCoord.x * centeredCoord.y) / (halfSize.x * halfSize.y));
+    float2 dispersedCoord = d * grad * dispersionIntensity;
     
     half4 refr = content.eval(refractedCoord);
-    half4 outer = content.eval(refractedCoord + dispersedCoord);
-    half4 outerHalf = content.eval(refractedCoord + 0.5 * dispersedCoord);
-    half4 innerHalf = content.eval(refractedCoord - 0.5 * dispersedCoord);
-    half4 inner = content.eval(refractedCoord - dispersedCoord);
-    half r = 0.5 * outer.r + 0.35 * outerHalf.r + 0.15 * refr.r;
-    half g = 0.25 * outerHalf.g + 0.5 * refr.g + 0.25 * innerHalf.g;
-    half b = 0.5 * inner.b + 0.35 * innerHalf.b + 0.15 * refr.b;
-    return half4(r, g, b, refr.a);
+    half4 refrRed = content.eval(refractedCoord + dispersedCoord);
+    half4 refrBlue = content.eval(refractedCoord - dispersedCoord);
+    return half4(refrRed.r, refr.g, refrBlue.b, refr.a);
 }"""
 
 internal const val DefaultHighlightShaderString = """

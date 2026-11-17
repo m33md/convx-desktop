@@ -320,7 +320,7 @@ object AppSettings {
     private val store = JsonFile(File(AppDirs.data, "settings.json"), Settings.serializer()) { Settings() }
 
     /** Raised whenever the glass defaults change, so saved settings take them up once. */
-    private const val GlassDefaults = 4
+    private const val GlassDefaults = 5
 
     init {
         // Saved settings spell every value out, so new glass defaults reach them here: once, on the

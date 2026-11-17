@@ -222,7 +222,8 @@ data class GlassSettings(
     val lensHeight: Float = 0.60f,
     /** 0..1 of 48 dp: how strongly it bends it. The phone's 69%. */
     val lensAmount: Float = 0.69f,
-    val chromaticAberration: Boolean = true,
+    /** The colour fringe round the rim. Off, as on the phone. */
+    val chromaticAberration: Boolean = false,
     /** The whole surface bends as a lens, not just its rim. Off, as on the phone. */
     val depthEffect: Boolean = false,
     /** How much of the dark tint the glass carries. */

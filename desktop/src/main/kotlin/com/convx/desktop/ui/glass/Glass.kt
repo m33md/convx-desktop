@@ -106,7 +106,7 @@ data class GlassConfig(
     val lensHeight: Float = 0.60f,
     /** 0..1 of [LensMaxDp]. */
     val lensAmount: Float = 0.69f,
-    val chromaticAberration: Boolean = true,
+    val chromaticAberration: Boolean = false,
     val depthEffect: Boolean = false,
     val surfaceTint: Color = GlassTokens.SurfaceTint,
     val surfaceOpacity: Float = GlassTokens.SurfaceOpacity,
