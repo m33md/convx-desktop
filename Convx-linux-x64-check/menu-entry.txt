@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Convx
+Comment=Convx music player for desktop
+Exec=/opt/convx/bin/Convx
+Icon=/opt/convx/lib/Convx.png
+Terminal=false
+Type=Application
+Categories=AudioVideo;Audio;Player;
+MimeType=
+StartupWMClass=convx-Convx

@@ -1,0 +1,45 @@
+-- .deb
+ new Debian package, version 2.0.
+ size 150576648 bytes: control archive=1216 bytes.
+     497 bytes,    11 lines      control              
+     896 bytes,    38 lines   *  postinst             #!/bin/sh
+     810 bytes,    31 lines   *  postrm               #!/bin/sh
+     622 bytes,    35 lines   *  preinst              #!/bin/sh
+     818 bytes,    39 lines   *  prerm                #!/bin/sh
+ Package: convx
+ Version: 1.2.94
+ Section: sound
+ Maintainer: Convx <Unknown>
+ Priority: optional
+ Architecture: arm64
+ Provides: convx
+ Description: Convx music player for desktop
+ Depends: libasound2, libbrotli1, libbsd0, libc6, libexpat1, libfontconfig1, libfreetype6, libgl1, libglvnd0, libglx0, libmd0, libpng16-16, libuuid1, libx11-6, libxau6, libxcb1, libxdmcp6, libxext6, libxi6, libxrender1, libxtst6, xdg-utils, zlib1g, libdrm2, libpulse0, libva-drm2, libva2, libxcb-shm0
+ Installed-Size: 308648
+ 
+-- .rpm
+Name        : convx
+Version     : 1.2.94
+Release     : 1
+Architecture: aarch64
+Install Date: (not installed)
+Group       : sound
+Size        : 314790376
+License     : GPLv3
+Signature   : (none)
+Source RPM  : convx-1.2.94-1.src.rpm
+Build Date  : Wed Nov 18 07:57:04 2026
+Build Host  : runnervmkvb9i.ewmxe25sd3tetdvf1xwbgmkmed.xx.internal.cloudapp.net
+Relocations : /opt 
+Vendor      : Convx
+Summary     : Convx
+Description :
+Convx music player for desktop
+-- .rpm requires
+/bin/sh
+/bin/sh
+/bin/sh
+rpmlib(CompressedFileNames) <= 3.0.4-1
+rpmlib(FileDigests) <= 4.6.0-1
+rpmlib(PayloadFilesHavePrefix) <= 4.0-1
+xdg-utils

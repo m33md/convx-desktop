@@ -1,0 +1,122 @@
+
+xwininfo: Window id: 0x50d (the root window) (has no name)
+
+  Root window id: 0x50d (the root window) (has no name)
+  Parent window id: 0x0 (none)
+     13 children:
+     0x400005 "convx-Convx": ("convx-Convx" "convx-Convx")  1x1+1+1  +1+1
+     0x20000e "Openbox": ("" (none))  1x1+-100+-100  +-100+-100
+     0x200062 (has no name): ()  1x1+0+0  +0+0
+        1 child:
+        0x200063 (has no name): ()  1x1+0+0  +1+1
+     0x200060 (has no name): ()  1x1+0+0  +0+0
+        1 child:
+        0x200061 (has no name): ()  1x1+0+0  +1+1
+     0x20005d (has no name): ()  1x1+0+0  +0+0
+        1 child:
+        0x20005e (has no name): ()  1x1+0+0  +1+1
+     0x200059 (has no name): ("OPENBOX_FOCUS_CYCLE_POPUP" "OPENBOX_FOCUS_CYCLE_POPUP")  1x1+0+0  +0+0
+        3 children:
+        0x20005c (has no name): ()  1x1+0+0  +1+1
+        0x20005b (has no name): ()  1x1+0+0  +1+1
+        0x20005a (has no name): ()  1x1+0+0  +1+1
+     0x200056 (has no name): ()  1x1+0+0  +0+0
+        2 children:
+        0x200058 (has no name): ()  1x1+0+0  +1+1
+        0x200057 (has no name): ()  1x1+0+0  +1+1
+     0x200055 (has no name): ()  1x1+0+0  +0+0
+     0x200054 (has no name): ()  1x1+0+0  +0+0
+     0x200053 (has no name): ()  1x1+0+0  +0+0
+     0x200052 (has no name): ()  1x1+0+0  +0+0
+     0x20005f (has no name): ()  1x1+0+0  +0+0
+     0x200180 (has no name): ()  1424x890+84+53  +84+53
+        56 children:
+        0x400004 "Convx": ("convx-Convx" "convx-Convx")  1422x865+1+20  +85+73
+           2 children:
+           0x400019 "FocusProxy": ("Focus-Proxy-Window" "FocusProxy")  1x1+-1+-1  +84+72
+           0x400016 "Content window": ("convx-Convx" "convx-Convx")  1424x890+-1+-20  +84+53
+              1 child:
+              0x40001a "sun-awt-X11-XCanvasPeer": ("convx-Convx" "convx-Convx")  1422x865+1+20  +85+73
+        0x2001cc (has no name): ()  1x1+0+0  +84+53
+        0x2001cb (has no name): ()  1x1+0+0  +84+53
+        0x2001ca (has no name): ()  1x1+0+0  +84+53
+        0x2001c9 (has no name): ()  1x1+0+0  +84+53
+        0x2001c8 (has no name): ()  1x1+0+0  +84+53
+        0x2001c7 (has no name): ()  1x1+0+0  +84+53
+        0x2001c6 (has no name): ()  1x1+0+0  +84+53
+        0x2001c5 (has no name): ()  1x1+0+0  +84+53
+        0x2001c4 (has no name): ()  1x1+0+0  +84+53
+        0x2001c3 (has no name): ()  1x1+0+0  +84+53
+        0x2001c2 (has no name): ()  1x1+0+0  +84+53
+        0x2001c1 (has no name): ()  1x1+0+0  +84+53
+        0x2001c0 (has no name): ()  1x1+0+0  +84+53
+        0x2001bf (has no name): ()  1x1+0+0  +84+53
+        0x2001be (has no name): ()  1x1+0+0  +84+53
+        0x2001bd (has no name): ()  1x1+0+0  +84+53
+        0x2001bc (has no name): ()  1x1+0+0  +84+53
+        0x2001bb (has no name): ()  1x1+0+0  +84+53
+        0x2001ba (has no name): ()  1x1+0+0  +84+53
+        0x2001b9 (has no name): ()  1x1+0+0  +84+53
+        0x2001b8 (has no name): ()  1x1+0+0  +84+53
+        0x2001b7 (has no name): ()  1x1+0+0  +84+53
+        0x2001b6 (has no name): ()  1x1+0+0  +84+53
+        0x2001b5 (has no name): ()  1x1+0+0  +84+53
+        0x2001b4 (has no name): ()  1x1+0+0  +84+53
+        0x2001b3 (has no name): ()  1x1+0+0  +84+53
+        0x2001b2 (has no name): ()  1x1+0+0  +84+53
+        0x2001b1 (has no name): ()  1x1+0+0  +84+53
+        0x2001b0 (has no name): ()  1x1+0+0  +84+53
+        0x2001af (has no name): ()  1x1+0+0  +84+53
+        0x2001ae (has no name): ()  1x1+0+0  +84+53
+        0x2001ad (has no name): ()  1x1+0+0  +84+53
+        0x2001ac (has no name): ()  26x1+1397+889  +1481+942
+        0x2001ab (has no name): ()  26x1+1397+885  +1481+938
+        0x2001aa (has no name): ()  1x25+1423+865  +1507+918
+        0x2001a9 (has no name): ()  26x1+1+889  +85+942
+        0x2001a8 (has no name): ()  26x1+1+885  +85+938
+        0x2001a7 (has no name): ()  1x25+0+865  +84+918
+        0x2001a6 (has no name): ()  1370x1+27+889  +111+942
+        0x2001a5 (has no name): ()  1370x1+27+885  +111+938
+        0x2001a0 (has no name): ()  1422x3+1+886  +85+939
+           4 children:
+           0x2001a4 (has no name): ()  1x3+1396+0  +1481+939
+           0x2001a3 (has no name): ()  1x3+25+0  +110+939
+           0x2001a2 (has no name): ()  25x3+1397+0  +1482+939
+           0x2001a1 (has no name): ()  25x3+0+0  +85+939
+        0x200198 (has no name): ()  1x840+1423+26  +1507+79
+        0x200197 (has no name): ()  1x840+0+26  +84+79
+        0x200191 (has no name): ()  1422x1+1+19  +85+72
+        0x200190 (has no name): ()  1x25+1423+1  +1507+54
+        0x20018f (has no name): ()  26x1+1398+0  +1482+53
+        0x20018e (has no name): ()  26x1+0+0  +84+53
+        0x20018d (has no name): ()  1372x1+26+0  +110+53
+        0x20018c (has no name): ()  1x25+0+1  +84+54
+        0x20018b (has no name): ()  1422x18+1+1  +85+54
+           12 children:
+           0x20019f (has no name): ()  12x12+1374+3  +1459+57
+           0x20019e (has no name): ()  14x14+4+2  +89+56
+           0x20019d (has no name): ()  12x12+0+0  +85+54
+           0x20019c (has no name): ()  12x12+0+0  +85+54
+           0x20019b (has no name): ()  12x12+1406+3  +1491+57
+           0x20019a (has no name): ()  12x12+1390+3  +1475+57
+           0x200199 (has no name): ()  1318x14+52+2  +137+56
+           0x200196 (has no name): ()  4x18+1418+0  +1503+54
+           0x200195 (has no name): ()  25x3+1397+0  +1482+54
+           0x200194 (has no name): ()  4x18+0+0  +85+54
+           0x200193 (has no name): ()  25x3+0+0  +85+54
+           0x200192 (has no name): ()  1372x3+25+0  +110+54
+        0x200186 (has no name): ()  1x1+0+0  +84+53
+           2 children:
+           0x200188 (has no name): ()  1x1+0+0  +84+53
+           0x200187 (has no name): ()  1x1+0+0  +84+53
+        0x200185 (has no name): ()  1x1+0+0  +84+53
+           1 child:
+           0x20018a (has no name): ()  1x1+0+0  +84+53
+        0x200184 (has no name): ()  1x1+0+0  +84+53
+        0x200183 (has no name): ()  1x1+0+0  +84+53
+           1 child:
+           0x200189 (has no name): ()  1x1+0+0  +84+53
+        0x200181 (has no name): ()  1422x865+1+20  +85+73
+           1 child:
+           0x200182 (has no name): ()  1422x865+0+0  +85+73
+

@@ -1,0 +1,199 @@
+PASS dsp +6 dB at 1 kHz, on 1 kHz = 1.995 (want 1.85..2.15)
+PASS dsp +6 dB at 1 kHz, on 100 Hz = 1.004 (want 0.95..1.08)
+PASS dsp +6 dB low shelf, on 30 Hz = 1.985 (want 1.8..2.15)
+PASS dsp +6 dB low shelf, on 5 kHz = 1.000 (want 0.95..1.06)
+PASS dsp Bass Boost with its preamp, on 31 Hz = 1.224 (want 1.1..1.35)
+PASS dsp spatial audio, on a centred tone = 0.706 (want 0.65..0.78)
+PASS dsp vocal reduction, on a centred tone = 0.000 (want 0.0..0.3)
+PASS dsp vocal reduction, on a tone on one side = 0.981 (want 0.85..1.15)
+PASS dsp skip silence, seconds kept of 3 = 2.040 (want 2.0..2.1)
+PASS dsp skip silence, frames accounted for = 3.000 (want 2.999..3.001)
+PASS dsp soft clip of 2.0 = 1.000 (want 0.95..1.0)
+PASS dsp ParametricEQ filters read = 2.000 (want 2.0..2.0)
+PASS dsp ParametricEQ preamp = -6.200 (want -6.21..-6.19)
+java.lang.NoClassDefFoundError: Could not initialize class org.bytedeco.ffmpeg.global.avutil
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:536)
+	at java.base/java.lang.Class.forName(Class.java:515)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1289)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1234)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1210)
+	at org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_BytePointer_int.<clinit>(Write_packet_Pointer_BytePointer_int.java:21)
+	at org.bytedeco.javacv.FFmpegFrameRecorder.<clinit>(FFmpegFrameRecorder.java:355)
+	at com.convx.desktop.tools.PlaybackCheckKt.libraryCheck(PlaybackCheck.kt:427)
+	at com.convx.desktop.tools.PlaybackCheckKt.main(PlaybackCheck.kt:44)
+Caused by: java.lang.ExceptionInInitializerError: Exception java.lang.UnsatisfiedLinkError: no jniavutil in java.library.path: /usr/java/packages/lib:/usr/lib64:/lib64:/lib:/usr/lib [in thread "main"]
+	at java.base/java.lang.ClassLoader.loadLibrary(ClassLoader.java:2458)
+	at java.base/java.lang.Runtime.loadLibrary0(Runtime.java:916)
+	at java.base/java.lang.System.loadLibrary(System.java:2064)
+	at org.bytedeco.javacpp.Loader.loadLibrary(Loader.java:1832)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1423)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1234)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1210)
+	at org.bytedeco.ffmpeg.global.avutil.<clinit>(avutil.java:14)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:536)
+	at java.base/java.lang.Class.forName(Class.java:515)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1289)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1234)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1226)
+	at org.bytedeco.javacv.FFmpegFrameRecorder.tryLoad(FFmpegFrameRecorder.java:111)
+	at org.bytedeco.javacv.FFmpegFrameRecorder.<clinit>(FFmpegFrameRecorder.java:137)
+	... 2 more
+FAIL library local file title: null
+FAIL library local file artists: null
+FAIL library local file album and track: null #null
+FAIL library local file length: null ms
+FAIL library local file codec: null
+PASS library Apple Music export: Road Trip, 1 tracks, 1 skipped
+PASS library proxy addresses: HTTP @ 127.0.0.1/<unresolved>:8080, SOCKS @ proxy.example.com/<unresolved>:1080
+PASS party position while playing: 12500
+PASS party position while paused: 10000
+PASS party resume anchored ahead: 300 ms
+PASS party clock offset: 5000 ms
+PASS party invite link: Invite(code=AB12CD, server=https://example.com)
+PASS party typed code: Invite(code=AB12CD, server=null)
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+PASS backup liked songs: [Get Lucky, Bohemian Rhapsody]
+PASS backup artists in order: [ArtistRef(id=UCdaftpunk, name=Daft Punk), ArtistRef(id=null, name=Pharrell Williams)]
+PASS backup album and length: AlbumRef(id=MPREb_queen, name=A Night at the Opera) 355s
+PASS backup playlist: Road trip: [Bohemian Rhapsody, Get Lucky]
+PASS backup saved playlist: [SavedPlaylist(id=PLchill, title=Chill mix, author=null, thumbnail=null, savedAt=1656000000000, editable=false)]
+PASS backup saved album: [SavedAlbum(browseId=MPREb_queen, playlistId=OLAK5uy_queen, title=A Night at the Opera, artists=[ArtistRef(id=UCiMhD4jzUqG-IgPzUmmytRQ, name=Queen)], year=1975, thumbnail=null, savedAt=1695000000000)]
+PASS backup followed artist: [Queen]
+PASS backup history: [(Get Lucky, 1700000500000), (Bohemian Rhapsody, 1700000100000)]
+PASS backup phone-only files: 2 left out
+PASS playlist file m3u name: Road trip
+PASS playlist file m3u songs: [FileTrack(title=Bohemian Rhapsody, artists=[Queen], durationMs=354000, videoId=null, spotifyId=null), FileTrack(title=Get Lucky, artists=[Daft Punk, Pharrell Williams], durationMs=0, videoId=5NV6Rdv1a3I, spotifyId=null), FileTrack(title=Creep, artists=[Radiohead], durationMs=0, videoId=null, spotifyId=null), FileTrack(title=Hello, artists=[Adele], durationMs=200000, videoId=null, spotifyId=null)]
+PASS playlist file csv columns: CsvPreview(rows=[[Track URI, Track Name, Artist Name(s), Album Name, Duration (ms)], [spotify:track:1, Bohemian Rhapsody, Queen, A Night at the Opera, 354320], [spotify:track:2, Get Lucky, Daft Punk,Pharrell Williams, Random Access Memories, 369626], [spotify:track:3, Say "Hello", again, Someone; Other, X, 215000]], columns=5, hasHeader=true, artistColumn=2, titleColumn=1, urlColumn=-1, durationColumn=4, spotifyColumn=0)
+PASS playlist file csv songs: [FileTrack(title=Bohemian Rhapsody, artists=[Queen], durationMs=354320, videoId=null, spotifyId=null), FileTrack(title=Get Lucky, artists=[Daft Punk, Pharrell Williams], durationMs=369626, videoId=null, spotifyId=null), FileTrack(title=Say "Hello", again, artists=[Someone, Other], durationMs=215000, videoId=null, spotifyId=null)]
+PASS playlist file exportify zip: [Parsed(title=late night drive, tracks=[FileTrack(title=Never Gonna Give You Up, artists=[Rick Astley], durationMs=213573, videoId=null, spotifyId=4uLU6hMCjMI75M1A2tKUQC), FileTrack(title=Song, artists=[Dream, Ivory, Someone], durationMs=200000, videoId=null, spotifyId=0000000000000000000000)]), Parsed(title=liked songs, tracks=[FileTrack(title=Shape of You, artists=[Ed Sheeran], durationMs=0, videoId=null, spotifyId=7qiZfU4dY1lWllzX7mPBI3)])]
+PASS playlist file csv without header: [FileTrack(title=Bohemian Rhapsody, artists=[Queen], durationMs=0, videoId=null, spotifyId=null), FileTrack(title=Hello, artists=[Adele], durationMs=0, videoId=null, spotifyId=null)]
+PASS playlist file itunes text export: CsvPreview(rows=[[Name, Artist, Album, Time], [Hello, Adele, 25, 295]], columns=4, hasHeader=true, artistColumn=1, titleColumn=0, urlColumn=-1, durationColumn=3, spotifyColumn=-1) -> [FileTrack(title=Hello, artists=[Adele], durationMs=295000, videoId=null, spotifyId=null)]
+PASS playlist file ansi m3u: #EXTINF:120,Beyoncé - Halo
+
+PASS playlist file youtube links: ok
+PASS downloads names: AC_DC - Back In Black_
+PASS downloads lrc time: [01:23.45]
+PASS downloads files aren't downloads: 
+PASS downloads plays from disk: Downloaded cHk-dl-chk0.m4a
+PASS downloads not downloaded: 
+PASS downloads album buttons: Done Running(done=1, total=2) None None
+PASS downloads remove: file gone
+PASS lyrics menu word timing kept: 12340 Hello there [12340, 12900], 15000 Again [15000]
+PASS lyrics menu plain text stays plain: First line, Second line
+PASS lyrics menu partial translation: [Hola, Dijo "ya"]
+PASS lyrics menu translation skips gaps: [Uno, null, Dos]
+PASS lyrics menu Claude stream: [Uno, Dos] after 2 pieces, end_turn
+PASS lyrics menu Claude refusal: Claude declined to translate these lyrics
+PASS home order default: [hero, quick_picks, speed_dial, from_the_community, forgotten_favorites, mood_and_genres, top_songs]
+PASS home order arranged: [speed_dial, forgotten_favorites, quick_picks, top_songs, from_the_community, mood_and_genres]
+PASS home order card off: [quick_picks, speed_dial, from_the_community, forgotten_favorites, mood_and_genres, top_songs]
+PASS home order shuffled keeps the card on top: [hero, quick_picks, speed_dial, from_the_community, forgotten_favorites, top_songs, mood_and_genres]
+PASS stats by time: [long 1x 240000ms, short 3x 105000ms]
+PASS stats time kept: [Ranked(value=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), song=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=1, playedMs=240000), Ranked(value=Song(id=short, title=Short, artists=[], album=null, duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), song=Song(id=short, title=Short, artists=[], album=null, duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=3, playedMs=105000)]
+PASS stats artists and albums: [Ranked(value=ArtistRef(id=UCstats, name=Artist), song=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=1, playedMs=240000)] [Ranked(value=AlbumRef(id=MPREstats, name=Album), song=Song(id=long, title=Long, artists=[ArtistRef(id=UCstats, name=Artist)], album=AlbumRef(id=MPREstats, name=Album), duration=null, thumbnail=null, explicit=false, isVideo=false, setVideoId=null), plays=1, playedMs=240000)]
+PASS stats all time: [long, short, old]
+PASS sonic tempo 1.5x: 63002 frames of 64000.0, 440.4 Hz
+PASS sonic pitch +12: 94612 frames of 96000, 880.2 Hz
+PASS sonic natural: 96000 frames passed through
+java.lang.NoClassDefFoundError: Could not initialize class org.bytedeco.javacv.FFmpegFrameRecorder
+	at com.convx.desktop.tools.PlaybackCheckKt.autoMixCheck$song(PlaybackCheck.kt:160)
+	at com.convx.desktop.tools.PlaybackCheckKt.autoMixCheck(PlaybackCheck.kt:174)
+	at com.convx.desktop.tools.PlaybackCheckKt.main(PlaybackCheck.kt:44)
+Caused by: java.lang.ExceptionInInitializerError: Exception java.lang.NoClassDefFoundError: Could not initialize class org.bytedeco.ffmpeg.global.avutil [in thread "main"]
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:536)
+FAIL automix measured: null / null
+	at java.base/java.lang.Class.forName(Class.java:515)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1289)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1234)
+	at org.bytedeco.javacpp.Loader.load(Loader.java:1210)
+	at org.bytedeco.ffmpeg.avformat.Write_packet_Pointer_BytePointer_int.<clinit>(Write_packet_Pointer_BytePointer_int.java:21)
+	at org.bytedeco.javacv.FFmpegFrameRecorder.<clinit>(FFmpegFrameRecorder.java:355)
+	at com.convx.desktop.tools.PlaybackCheckKt.libraryCheck(PlaybackCheck.kt:427)
+	... 1 more
+PASS creative delay echo at 250 ms: 0.242 at the beat, 0.0000 before it
+PASS creative delay dies away: 0.00004 in the last second
+PASS creative reverb tail: 49.8 dB below the sound just after it, 110.7 dB at 7 s
+PASS creative tape stop: 0.354 before, 0.0000 after it stops
+PASS creative style sequence: [REVERB_BLOOM, DELAY_BLEND, ECHO_FREEZE, REVERB_BLOOM, DELAY_BLEND, TAPE_STOP], off TRANSPARENT, after a bloom DELAY_BLEND
+PASS recognition resampler: 16000 samples, 1 kHz at 0.00 dB, 12 kHz at -50.4 dB
+PASS recognition signature: 476 bytes
+INFO recognition Shazam answered: No match found
+FAIL stream failure refused: NoClassDefFoundError: Could not initialize class org.bytedeco.ffmpeg.global.avutil -> "This song couldn't be played. Try it again, or pick another one."
+07:58:17.551 W/AudioCache: Download of ci-refused via CI failed at 0/-1 (108582 MB free)
+07:58:17.558 W/AudioCache: ci-renew: HTTP 403 at 1048576/3145851 via CI; carrying on via CI fresh
+PASS stream failure renewed: finished=true, failed=null, via CI fresh, file 3145851 of 3145851 bytes, exact=true
+PASS stream failure range ignored: finished=true, file 3145851 of 3145851 bytes
+PASS stream failure disk full: "There isn't enough free space on this PC to play songs. Free up some space and try again."
+PASS modules engine loads: {"settings":{"quality":{"type":"select","label":"Quality","options":[{"label":"CD","value":"LOSSLESS"}],"defaultValue":"LOSSLESS"}},"noStreamCache":false}
+PASS modules search: {"tracks":[{"id":"t1","title":"Song","artist":"Convx","duration":200,"audioQuality":"LOSSLESS"}],"total":1}
+PASS modules stream: {"streamUrl":"https://example.com/t1.flac","track":{"id":"t1","audioQuality":"LOSSLESS","format":"FLAC","bitDepth":24}}
+PASS modules module without exports refused: Module must export searchTracks and getTrackStreamUrl
+PASS modules timer before an answer: 202 ms 
+PASS modules background timers don't hold the answer: 1 ms 
+PASS modules addon dash: dash
+PASS modules addon urls: https://a.example/t0k/search?q=a%20b
+FAIL modules hls run: NoClassDefFoundError: Could not initialize class org.bytedeco.javacv.FFmpegFrameRecorder
+PASS party server create: code 5R52Q1, host=true
+PASS party server join: 2 members, guest host=false
+PASS party server clock: pong with serverMs 1794988699725
+PASS party server sync: the guest got the host's song in a state frame
+07:58:20.672 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:20.727 I/StreamResolver: 4NRXx6U8ABQ: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you’re not a bot)
+07:58:20.845 I/StreamResolver: 4NRXx6U8ABQ: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:20.945 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:21.048 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:21.227 I/StreamResolver: 4NRXx6U8ABQ: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+07:58:21.346 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:21.449 I/StreamResolver: 4NRXx6U8ABQ: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:21.449 W/StreamResolver: 4NRXx6U8ABQ: no client gave a stream (last: Sign in to confirm you’re not a bot)
+07:58:21.450 E/PlaybackCheck: Failed 4NRXx6U8ABQ
+FAIL 4NRXx6U8ABQ IllegalStateException: Sign in to confirm you’re not a bot
+07:58:21.475 I/StreamResolver: fHI8X4OXluQ: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+07:58:21.595 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:21.656 I/StreamResolver: fHI8X4OXluQ: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you’re not a bot)
+07:58:21.776 I/StreamResolver: fHI8X4OXluQ: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:21.871 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:21.975 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.072 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.179 I/StreamResolver: fHI8X4OXluQ: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.179 W/StreamResolver: fHI8X4OXluQ: no client gave a stream (last: Sign in to confirm you’re not a bot)
+07:58:22.180 E/PlaybackCheck: Failed fHI8X4OXluQ
+FAIL fHI8X4OXluQ IllegalStateException: Sign in to confirm you’re not a bot
+07:58:22.209 I/StreamResolver: kJQP7kiw5Fk: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+07:58:22.328 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.380 I/StreamResolver: kJQP7kiw5Fk: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you’re not a bot)
+07:58:22.474 I/StreamResolver: kJQP7kiw5Fk: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.572 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.669 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.779 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.880 I/StreamResolver: kJQP7kiw5Fk: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:58:22.880 W/StreamResolver: kJQP7kiw5Fk: no client gave a stream (last: Sign in to confirm you’re not a bot)
+07:58:22.880 E/PlaybackCheck: Failed kJQP7kiw5Fk
+FAIL kJQP7kiw5Fk IllegalStateException: Sign in to confirm you’re not a bot
+0 of 3 songs played
+Sign-in browsers found: Firefox (firefox, Firefox)
+Sign-in would open: Firefox
+07:58:22.900 I/BrowserSignIn: Opening Firefox (firefox, Firefox) for Google sign-in
+07:58:44.971 W/BrowserSignIn: Firefox kept no YouTube Music cookies. Cookies for: []. Profile: .parentlock 0, .startup-incomplete 0, SiteSecurityServiceState.bin 572, addonStartup.json.lz4 671, addons.json 24, bounce-tracking-protection.sqlite 98304, cache2 4096, cert9.db 229376, compatibility.ini 162, cookies.sqlite 98304, extension-preferences.json 1073, extension-store 4096, extensions.json 9768, key4.db 294912, permissions.sqlite 163840, pkcs11.txt 465, prefs.js 3192, security_state 4096, sessionCheckpoints.json 53, startupCache 4096, storage 4096, storage.sqlite 28672, times.json 50, user.js 639. Its output: Exiting due to channel error. | Exiting due to channel error. | Exiting due to channel error.
+07:58:44.972 I/BrowserSignIn: Read 0 cookies, visitor data missing, data sync id missing
+FAIL sign-in with Firefox: 0 cookies (), visitor data missing, 22s
+Media controls: skipped (no Windows desktop)
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':playbackCheck'.
+> Process 'command '/opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/21.0.13-9.0.LTS/arm64/bin/java'' finished with non-zero exit value 1
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 38s

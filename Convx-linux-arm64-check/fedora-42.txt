@@ -1,0 +1,17 @@
+Unable to find image 'fedora:42' locally
+42: Pulling from library/fedora
+3a701e4530f0: Pulling fs layer
+3a701e4530f0: Download complete
+3a701e4530f0: Pull complete
+Digest: sha256:99e203b80b1c3d8f7e161ec10a68fd02b081ef83a3963553e513c82846b97814
+Status: Downloaded newer image for fedora:42
+[1/7] Verify package files              100% |  11.0   B/s |   5.0   B |  00m00s
+[2/7] Prepare transaction               100% | 277.0   B/s |   5.0   B |  00m00s
+[3/7] Installing which-0:2.23-2.fc42.aa 100% |   7.2 MiB/s | 125.6 KiB |  00m00s
+[4/7] Installing emacs-filesystem-1:30. 100% | 531.2 KiB/s | 544.0   B |  00m00s
+[5/7] Installing desktop-file-utils-0:0 100% |  19.7 MiB/s | 322.1 KiB |  00m00s
+[6/7] Installing xdg-utils-0:1.2.1-3.fc 100% |  15.5 MiB/s | 349.5 KiB |  00m00s
+[7/7] Installing convx-0:1.2.94-1.aarch 100% | 150.9 MiB/s | 300.3 MiB |  00m02s
+Warning: skipped OpenPGP checks for 1 package from repository: @commandline
+convx-1.2.94-1.aarch64
+Convx

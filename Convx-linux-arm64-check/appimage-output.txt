@@ -1,0 +1,8 @@
+08:00:31.001 I/Startup: Convx 1.2.4 on Linux aarch64, Java 21.0.13, 105 GB free
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+08:00:31.402 I/LocalMusic: Scanned 0 folders: 0 songs, 0 new, 0 gone, 0 read
+[SKIKO] warn: Fallback to next API
+org.jetbrains.skiko.RenderException: Cannot create Linux GL context
+08:00:45.176 I/Memory: Java heap trimmed from 210 to 64 MB (29 MB in use)
