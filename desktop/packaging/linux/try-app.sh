@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
-# Tries the Linux build on this machine as a person would. The FFmpeg inside the app has to load
-# and decode. The .deb has to install with apt here and in a Debian container, and the .rpm with
-# dnf in a Fedora container. Convx has to open on a virtual screen from the installed package and
-# from the AppImage, and stay open for 40 seconds with its window named for its menu entry.
+# Tries the Linux build on this machine as a person would. The .deb has to install with apt here
+# and in a Debian container, and the .rpm with dnf in a Fedora container. The FFmpeg inside the
+# app has to load and decode with what the .deb depends on. Convx has to open on a virtual screen
+# from the installed package and from the AppImage, and stay open for 40 seconds with its window
+# named for its menu entry.
 # Screenshots, the app's log and what each package installed are kept in the output folder.
 # Exits 1 if a package doesn't install, the app quits or crashes, or FFmpeg decodes nothing.
 #
@@ -18,23 +19,6 @@ out=$(cd "$out" && pwd)
 here=$(cd "$(dirname "$0")" && pwd)
 logs="$HOME/.cache/Convx/logs"
 failed=0
-
-# The app's runtime has no java command of its own, so this machine's Java 21 runs the app's jars;
-# the FFmpeg libraries are the ones inside them.
-echo "== FFmpeg"
-classes=$(mktemp -d)
-if javac -cp "$app/lib/app/*" -d "$classes" "$here/../macos/FfmpegCheck.java" &&
-  java -cp "$classes:$app/lib/app/*" FfmpegCheck "$classes/tone.m4a" > "$out/ffmpeg.txt" 2>&1; then
-  tail -n 1 "$out/ffmpeg.txt"
-else
-  tail -n 40 "$out/ffmpeg.txt" 2>/dev/null
-  echo "::error::FFmpeg didn't load or decode in the Linux app"
-  failed=1
-  # Which native jars the app has, and JavaCPP's own account of the loading.
-  ls "$app/lib/app" | grep -E "ffmpeg|javacpp" | tee "$out/ffmpeg-jars.txt"
-  java -Dorg.bytedeco.javacpp.logger.debug=true -cp "$classes:$app/lib/app/*" FfmpegCheck "$classes/tone.m4a" > "$out/ffmpeg-debug.txt" 2>&1
-  grep -iE "platform|extract|load|error" "$out/ffmpeg-debug.txt" | head -n 40
-fi
 
 echo "== Packages"
 {
@@ -58,6 +42,23 @@ else
   tail -n 30 "$out/deb-install.txt"
   echo "::error::The .deb didn't install"
   failed=1
+fi
+
+# With what the .deb asked apt for installed: the app's runtime has no java command of its own, so
+# this machine's Java 21 runs the app's jars; the FFmpeg libraries are the ones inside them.
+echo "== FFmpeg"
+classes=$(mktemp -d)
+if javac -cp "$app/lib/app/*" -d "$classes" "$here/../macos/FfmpegCheck.java" &&
+  java -cp "$classes:$app/lib/app/*" FfmpegCheck "$classes/tone.m4a" > "$out/ffmpeg.txt" 2>&1; then
+  tail -n 1 "$out/ffmpeg.txt"
+else
+  tail -n 40 "$out/ffmpeg.txt" 2>/dev/null
+  echo "::error::FFmpeg didn't load or decode in the Linux app"
+  failed=1
+  # Which native jars the app has, and JavaCPP's own account of the loading.
+  ls "$app/lib/app" | grep -E "ffmpeg|javacpp" | tee "$out/ffmpeg-jars.txt"
+  java -Dorg.bytedeco.javacpp.logger.debug=true -cp "$classes:$app/lib/app/*" FfmpegCheck "$classes/tone.m4a" > "$out/ffmpeg-debug.txt" 2>&1
+  grep -iE "platform|extract|load|error" "$out/ffmpeg-debug.txt" | head -n 40
 fi
 
 # Debian and Fedora as they come, each with only what its package asks for.

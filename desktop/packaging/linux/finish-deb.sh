@@ -5,7 +5,8 @@
 #   xdg-desktop-menu instead, which fails, and so fails the whole install, on systems without a
 #   menu folder (minimal and tiling desktops, containers).
 # - The entry names the window class Convx gives its window (LinuxDesktop.WmClass).
-# - It depends on libpulse0, which FFmpeg's device library inside the app links against.
+# - It depends on the system libraries FFmpeg's own libraries (inside the app's jars, where
+#   jpackage doesn't look) link against: PulseAudio everywhere, and VA-API on ARM.
 #
 # Usage: finish-deb.sh <.deb>
 set -euo pipefail
@@ -29,7 +30,27 @@ for script in postinst prerm; do
 done
 
 control="$root/DEBIAN/control"
-grep -q 'libpulse0' "$control" || sed -i -E 's/^(Depends:.*[^[:space:]])[[:space:]]*$/\1, libpulse0/' "$control"
+natives=$(mktemp -d)
+for jar in $(find "$root/opt" -name 'ffmpeg-*-linux-*.jar'); do unzip -q -o "$jar" '*.so*' -d "$natives"; done
+bundled=$(find "$natives" -name '*.so*' -printf '%f\n')
+extra=()
+for lib in $(find "$natives" -name '*.so*' -exec readelf -d {} \; | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p' | sort -u); do
+  grep -qx "$lib" <<< "$bundled" && continue
+  case "$lib" in
+    libpulse.so.0) extra+=(libpulse0) ;;
+    libva.so.2) extra+=(libva2) ;;
+    libva-drm.so.2) extra+=(libva-drm2) ;;
+    libdrm.so.2) extra+=(libdrm2) ;;
+    libxcb.so.1) extra+=(libxcb1) ;;
+    libxcb-shm.so.0) extra+=(libxcb-shm0) ;;
+    libc.so.6 | libm.so.6 | libgcc_s.so.1 | libstdc++.so.6 | ld-linux-*) ;;
+    *) echo "::warning::FFmpeg needs $lib, which the .deb doesn't ask for" ;;
+  esac
+done
+rm -rf "$natives"
+for dep in "${extra[@]}"; do
+  grep -qE "^Depends:.*\b$dep\b" "$control" || sed -i -E "s/^(Depends:.*[^[:space:]])[[:space:]]*\$/\1, $dep/" "$control"
+done
 # Installed-Size grows by the copied entry.
 size=$(du -sk --exclude=DEBIAN "$root" | cut -f1)
 sed -i -E "s/^Installed-Size:.*/Installed-Size: $size/" "$control"
