@@ -1,0 +1,7 @@
+08:06:20.072 I/Startup: Convx 1.2 on Mac OS X x86_64, Java 21.0.12.1, 106 GB free
+08:06:28.582 I/LocalMusic: Scanned 0 folders: 0 songs, 0 new, 0 gone, 0 read
+08:06:33.430 I/MacGlass: No AppKit Liquid Glass on this Mac; Convx draws its own buttons
+08:06:43.549 I/MacSidebar: Using the sidebar material
+08:06:43.636 I/MacWindow: contentView AWTView subviews [NSVisualEffectView, AWTView, NSVisualEffectView, NSTitlebarContainerView] hidden=0 window=true layerBacked=1
+08:06:43.638 I/MacWindow: Native window material installed in a 1440x900 window
+08:06:45.519 I/MacMedia: macOS media controls on

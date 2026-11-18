@@ -1,0 +1,3 @@
+-- spctl --status
+assessments enabled
+macOS stopped it

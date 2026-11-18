@@ -1,0 +1,11 @@
+07:57:50.426 I/Startup: Convx 1.2 on Mac OS X aarch64, Java 21.0.13, 94 GB free
+07:57:52.410 I/LocalMusic: Scanned 1 folders: 0 songs, 0 new, 0 gone, 0 read
+07:57:55.133 I/MacGlass: Using AppKit's Liquid Glass buttons
+07:57:59.127 I/MacSidebar: Using NSGlassEffectView (Liquid Glass)
+07:57:59.166 I/MacWindow: contentView AWTView subviews [NSVisualEffectView, AWTView, NSGlassEffectView, NSTitlebarContainerView] hidden=0 window=true layerBacked=1
+07:57:59.168 I/MacWindow: Native window material installed in a 1024x677 window
+07:57:59.292 I/MacGlass: Glass button nav:chevron_leftpx at 156.0,12.0 40.0x40.0
+07:57:59.313 I/MacGlass: Glass button nav:chevron_right_px at 204.0,12.0 40.0x40.0
+07:57:59.323 I/MacGlass: Glass button sidebar at 102.0,12.0 40.0x40.0
+07:57:59.336 I/MacGlass: Glass button party at 970.0,12.0 40.0x40.0
+07:58:00.398 I/MacMedia: macOS media controls on
