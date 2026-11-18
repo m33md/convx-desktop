@@ -9,7 +9,15 @@ import com.convx.desktop.core.Log
 import com.sun.jna.Callback
 import com.sun.jna.CallbackReference
 import com.sun.jna.Pointer
+import com.sun.jna.Structure
 import kotlinx.coroutines.launch
+
+/** An NSSize passed by value, as [NSRect] is. */
+@Structure.FieldOrder("width", "height")
+class NSSize(
+    @JvmField var width: Double = 0.0,
+    @JvmField var height: Double = 0.0,
+) : Structure(), Structure.ByValue
 
 /**
  * The side panel as macOS draws it: an NSTableView in the system's source list style (its own
@@ -79,7 +87,17 @@ object MacSidebar {
 
     private const val Width = 232.0
     private const val HeaderHeight = 76.0
-    private const val FooterHeight = 82.0
+    /** Settings and the profile end this far above the panel's bottom, as far in as the lit row is from its sides. */
+    private const val FooterBottom = 16.0
+    /** The footer's two rows, the gap and hairline above them, up to where the scrolling list ends. */
+    private const val FooterHeight = FooterBottom + 64.0 + 10.0
+    /** The lit row's distance from the panel's left and right edges, the hairline's too. */
+    private const val PillInset = 18.0
+    /** Where the rows' icons and titles start. */
+    private const val IconX = 26.0
+    private const val TitleX = 54.0
+    /** A cover's side in pixels: 22 points on a Retina screen, with room to spare. */
+    private const val CoverPx = 66
 
     private fun heightOf(kind: Kind?): Double = if (kind == Kind.Group) 34.0 else 32.0
 
@@ -140,11 +158,13 @@ object MacSidebar {
         com.convx.desktop.core.AppScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             val bytes = runCatching {
                 if (url.startsWith("http")) {
-                    com.convx.desktop.core.Http.client.newCall(okhttp3.Request.Builder().url(url).build()).execute().use { it.body.bytes() }
+                    // The small size, as the side bar elsewhere asks for (a video's comes without black bars).
+                    val small = com.convx.desktop.ui.components.artworkUrl(url, CoverPx) ?: url
+                    com.convx.desktop.core.Http.client.newCall(okhttp3.Request.Builder().url(small).build()).execute().use { it.body.bytes() }
                 } else {
                     java.io.File(java.net.URI(url)).readBytes()
                 }
-            }.getOrNull() ?: return@launch
+            }.getOrNull()?.let { square(it) } ?: return@launch
             MacWindow.onMain {
                 val memory = com.sun.jna.Memory(bytes.size.toLong()).apply { write(0, bytes, 0, bytes.size) }
                 val data = MacWindow.send(MacWindow.cls("NSData"), "dataWithBytes:length:", memory, bytes.size.toLong())
@@ -155,15 +175,34 @@ object MacSidebar {
         }
     }
 
+    /** The cover's middle square at the size the row draws it, so a wide picture fills the square instead of shrinking to a strip. */
+    private fun square(bytes: ByteArray): ByteArray = runCatching {
+        org.jetbrains.skia.Image.makeFromEncoded(bytes).use { image ->
+            val side = minOf(image.width, image.height).toFloat()
+            val src = org.jetbrains.skia.Rect.makeXYWH((image.width - side) / 2f, (image.height - side) / 2f, side, side)
+            val surface = org.jetbrains.skia.Surface.makeRasterN32Premul(CoverPx, CoverPx)
+            surface.use {
+                it.canvas.drawImageRect(
+                    image, src, org.jetbrains.skia.Rect.makeWH(CoverPx.toFloat(), CoverPx.toFloat()),
+                    org.jetbrains.skia.FilterMipmap(org.jetbrains.skia.FilterMode.LINEAR, org.jetbrains.skia.MipmapMode.LINEAR), null, true,
+                )
+                it.makeImageSnapshot().use { shot -> shot.encodeToData(org.jetbrains.skia.EncodedImageFormat.PNG)?.bytes }
+            }
+        }
+    }.getOrNull() ?: bytes
+
     private fun cell(item: Item?): Pointer? {
         item ?: return null
-        val cell = MacWindow.send(MacWindow.send(MacWindow.cls("NSTableCellView"), "alloc"), "init")
+        // Made at the row's own size: the lit pill and the title stretch with the cell, so they keep
+        // their margins inside the panel whatever width the table gives it.
+        val cell = MacWindow.send(MacWindow.send(MacWindow.cls("NSTableCellView"), "alloc"), "initWithFrame:", NSRect(0.0, 0.0, Width, heightOf(item.kind)))
         when (item.kind) {
             Kind.Group -> {
                 val label = MacWindow.send(MacWindow.cls("NSTextField"), "labelWithString:", MacWindow.nsString(item.title))
                 MacWindow.send(label, "setFont:", font(11.0, 0.3))
                 MacWindow.send(label, "setTextColor:", color(1.0, 1.0, 1.0, 0.42))
-                frame(label, 18.0, 6.0, 200.0, 16.0)
+                frame(label, IconX, 6.0, Width - IconX - PillInset, 16.0)
+                MacWindow.send(label, "setAutoresizingMask:", 2L)
                 MacWindow.send(cell, "addSubview:", label)
                 MacWindow.send(cell, "setTextField:", label)
             }
@@ -176,7 +215,7 @@ object MacSidebar {
                     val white = MacWindow.msgSend.invokePointer(arrayOf(MacWindow.cls("NSColor"), MacWindow.sel("colorWithWhite:alpha:"), 1.0, 0.13))
                     MacWindow.send(layer, "setBackgroundColor:", MacWindow.send(white, "CGColor"))
                     MacWindow.msgSend.invokePointer(arrayOf(layer, MacWindow.sel("setCornerRadius:"), 8.0))
-                    frame(pill, 10.0, 1.0, 212.0, 30.0)
+                    frame(pill, PillInset, 1.0, Width - 2 * PillInset, 30.0)
                     MacWindow.send(pill, "setAutoresizingMask:", 2L)
                     MacWindow.send(cell, "addSubview:", pill)
                 }
@@ -189,7 +228,7 @@ object MacSidebar {
                     val layer = MacWindow.send(icon, "layer")
                     MacWindow.msgSend.invokePointer(arrayOf(layer, MacWindow.sel("setCornerRadius:"), 5.0))
                     MacWindow.send(layer, "setMasksToBounds:", 1)
-                    frame(icon, 18.0, 5.0, 22.0, 22.0)
+                    frame(icon, IconX, 5.0, 22.0, 22.0)
                 } else {
                     val image = MacWindow.send(
                         MacWindow.cls("NSImage"), "imageWithSystemSymbolName:accessibilityDescription:",
@@ -198,13 +237,13 @@ object MacSidebar {
                     MacWindow.send(icon, "setImage:", image)
                     // Convx red, as the reference's pink icons.
                     MacWindow.send(icon, "setContentTintColor:", color(0.98, 0.176, 0.282))
-                    frame(icon, 18.0, 6.0, 20.0, 20.0)
+                    frame(icon, IconX, 6.0, 20.0, 20.0)
                 }
                 val label = MacWindow.send(MacWindow.cls("NSTextField"), "labelWithString:", MacWindow.nsString(item.title))
                 MacWindow.send(label, "setFont:", font(13.0, 0.23))
                 MacWindow.send(label, "setTextColor:", color(1.0, 1.0, 1.0, 0.92))
                 MacWindow.send(label, "setLineBreakMode:", 4L) // truncate the tail
-                frame(label, 46.0, 6.0, 170.0, 20.0)
+                frame(label, TitleX, 6.0, Width - TitleX - PillInset - 2.0, 20.0)
                 MacWindow.send(label, "setAutoresizingMask:", 2L)
                 MacWindow.send(cell, "addSubview:", icon)
                 MacWindow.send(cell, "addSubview:", label)
@@ -272,6 +311,8 @@ object MacSidebar {
         MacWindow.send(list, "addTableColumn:", column)
         MacWindow.send(list, "setHeaderView:", null)
         MacWindow.send(list, "setStyle:", 4L)
+        // No gap between cells, so a cell spans the panel exactly and nothing hangs past its edge.
+        MacWindow.msgSend.invokePointer(arrayOf(list, MacWindow.sel("setIntercellSpacing:"), NSSize(0.0, 0.0)))
         MacWindow.send(list, "setBackgroundColor:", MacWindow.send(MacWindow.cls("NSColor"), "clearColor"))
         MacWindow.send(list, "setSelectionHighlightStyle:", -1L) // none: the selected row is drawn in its own cell
         MacWindow.send(list, "setFloatsGroupRows:", 0)
@@ -308,13 +349,13 @@ object MacSidebar {
         MacWindow.send(scroll, "setAutoresizingMask:", 18L)
 
         // Settings and the profile: a table of their own, pinned to the bottom, and a hairline above it.
-        frame(footer, 0.0, 8.0, Width, 68.0)
+        frame(footer, 0.0, FooterBottom, Width, 64.0)
         MacWindow.send(footer, "setAutoresizingMask:", 2L)
         val line = MacWindow.send(MacWindow.send(MacWindow.cls("NSView"), "alloc"), "init")
         MacWindow.send(line, "setWantsLayer:", 1)
         val white = MacWindow.msgSend.invokePointer(arrayOf(MacWindow.cls("NSColor"), MacWindow.sel("colorWithWhite:alpha:"), 1.0, 0.10))
         MacWindow.send(MacWindow.send(line, "layer"), "setBackgroundColor:", MacWindow.send(white, "CGColor"))
-        frame(line, 18.0, FooterHeight - 4.0, Width - 36.0, 1.0)
+        frame(line, PillInset, FooterHeight - 4.0, Width - 2 * PillInset, 1.0)
         MacWindow.send(line, "setAutoresizingMask:", 2L)
 
         val box = MacWindow.send(MacWindow.send(MacWindow.cls("NSView"), "alloc"), "init")
