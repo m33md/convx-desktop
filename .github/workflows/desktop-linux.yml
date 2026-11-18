@@ -74,6 +74,7 @@ jobs:
         run: |
           cp build/compose/binaries/main/deb/*.deb build/Convx-linux-${{ matrix.arch }}.deb
           cp build/compose/binaries/main/rpm/*.rpm build/Convx-linux-${{ matrix.arch }}.rpm
+          bash packaging/linux/finish-deb.sh build/Convx-linux-${{ matrix.arch }}.deb
           ls -l build/Convx-linux-*
 
       # The checks the Windows build runs, on Linux: decoding, the library, AutoMix and the rest,

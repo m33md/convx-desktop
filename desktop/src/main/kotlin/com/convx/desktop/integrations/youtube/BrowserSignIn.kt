@@ -513,9 +513,11 @@ object BrowserSignIn {
                 listOf("-no-remote", "-new-instance", "-profile", profile.path, "-width", "520", "-height", "780")
             }
         }
+        // Off Windows a browser explains in its output why it didn't start or load; kept for the log.
+        val output = if (isWindows) ProcessBuilder.Redirect.DISCARD else ProcessBuilder.Redirect.to(File(AppDirs.logs, "sign-in-browser.txt"))
         return ProcessBuilder(listOf(browser.path) + args + urls)
             .redirectErrorStream(true)
-            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectOutput(output)
             .start()
     }
 
@@ -618,6 +620,18 @@ object BrowserSignIn {
                     }
                 }
             }
+            if (cookies.isEmpty()) {
+                val files = profile.listFiles().orEmpty().sortedBy { it.name }.joinToString { "${it.name} ${it.length()}" }
+                val hosts = runCatching {
+                    DriverManager.getConnection("jdbc:sqlite:${File(copy, "cookies.sqlite").absolutePath}").use { connection ->
+                        connection.prepareStatement("SELECT DISTINCT host FROM moz_cookies LIMIT 12").executeQuery().use { rows ->
+                            buildList { while (rows.next()) add(rows.getString(1)) }
+                        }
+                    }
+                }.getOrElse { listOf("unreadable: ${it.message}") }
+                val output = File(AppDirs.logs, "sign-in-browser.txt").takeIf { it.isFile }?.readLines()?.takeLast(15).orEmpty()
+                Log.w(Tag, "Firefox kept no YouTube Music cookies. Cookies for: $hosts. Profile: $files. Its output: ${output.joinToString(" | ")}")
+            }
             val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
             return session(cookies, if (cookies.isEmpty()) null else readConfigOverHttp(cookie), requireAccount)
         } finally {
@@ -660,6 +674,18 @@ object BrowserSignIn {
                         }
                     }
                 }
+            }
+            if (cookies.isEmpty()) {
+                val files = profile.listFiles().orEmpty().sortedBy { it.name }.joinToString { "${it.name} ${it.length()}" }
+                val hosts = runCatching {
+                    DriverManager.getConnection("jdbc:sqlite:${File(copy, "cookies.sqlite").absolutePath}").use { connection ->
+                        connection.prepareStatement("SELECT DISTINCT host FROM moz_cookies LIMIT 12").executeQuery().use { rows ->
+                            buildList { while (rows.next()) add(rows.getString(1)) }
+                        }
+                    }
+                }.getOrElse { listOf("unreadable: ${it.message}") }
+                val output = File(AppDirs.logs, "sign-in-browser.txt").takeIf { it.isFile }?.readLines()?.takeLast(15).orEmpty()
+                Log.w(Tag, "Firefox kept no YouTube Music cookies. Cookies for: $hosts. Profile: $files. Its output: ${output.joinToString(" | ")}")
             }
             val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
             return session(cookies, if (cookies.isEmpty()) null else readConfigOverHttp(cookie), requireAccount)

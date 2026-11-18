@@ -30,6 +30,10 @@ else
   tail -n 40 "$out/ffmpeg.txt" 2>/dev/null
   echo "::error::FFmpeg didn't load or decode in the Linux app"
   failed=1
+  # Which native jars the app has, and JavaCPP's own account of the loading.
+  ls "$app/lib/app" | grep -E "ffmpeg|javacpp" | tee "$out/ffmpeg-jars.txt"
+  java -Dorg.bytedeco.javacpp.logger.debug=true -cp "$classes:$app/lib/app/*" FfmpegCheck "$classes/tone.m4a" > "$out/ffmpeg-debug.txt" 2>&1
+  grep -iE "platform|extract|load|error" "$out/ffmpeg-debug.txt" | head -n 40
 fi
 
 echo "== Packages"
