@@ -1,0 +1,19 @@
+08:19:56.517 I/Startup: Convx 1.2.4 on Windows Server 2025 amd64, Java 21.0.11, 216 GB free
+08:19:57.071 I/LocalMusic: Scanned 1 folders: 0 songs, 0 new, 0 gone, 0 read
+08:19:58.430 I/TitleBar: Custom title bar on, buttons take 141.0px
+08:19:58.469 I/Lyrics: PaxSenix: Spotify: nothing after 7 ms
+08:19:58.470 I/Lyrics: PaxSenix: Musixmatch: nothing after 10 ms
+08:19:58.474 I/Lyrics: Spicy Lyrics: nothing after 14 ms
+08:19:58.763 I/Lyrics: BetterLyrics Portato: words after 305 ms
+08:19:58.828 I/Lyrics: YouTube Subtitle: nothing after 368 ms
+08:19:58.872 I/Lyrics: lrc.red: words after 413 ms
+08:20:02.741 I/Touch: Listening to touch on 3 windows
+08:20:02.789 I/MediaControls: Windows media controls on
+08:20:02.937 I/MediaControls: Taskbar buttons on, 3 of 3 pictures, dark glyphs for a light taskbar
+08:20:32.685 I/Perf: Last 30 s: CPU 2.8% of 4 threads, 0.2 frames/s (DIRECT3D), window in front. Memory: 440 MB in use, 457 MB private; Java heap 49 of 77 MB, other Java 106 MB, covers 5 MB
+08:21:02.686 I/Perf: Last 30 s: CPU 0.2% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 436 MB in use, 453 MB private; Java heap 51 of 77 MB, other Java 106 MB, covers 5 MB
+08:21:32.688 I/Perf: Last 30 s: CPU 1.0% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 452 MB in use, 485 MB private; Java heap 42 of 77 MB, other Java 111 MB, covers 5 MB
+08:22:02.691 I/Perf: Last 30 s: CPU 8.8% of 4 threads, 1.3 frames/s (DIRECT3D), window in front. Memory: 499 MB in use, 587 MB private; Java heap 53 of 72 MB, other Java 115 MB, covers 10 MB
+08:22:32.694 I/Perf: Last 30 s: CPU 9.1% of 4 threads, 2.1 frames/s (DIRECT3D), window in front. Memory: 455 MB in use, 583 MB private; Java heap 63 of 72 MB, other Java 116 MB, covers 10 MB
+08:23:02.696 I/Perf: Last 30 s: CPU 0.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 435 MB in use, 583 MB private; Java heap 44 of 72 MB, other Java 116 MB, covers 10 MB
+08:23:32.697 I/Perf: Last 30 s: CPU 0.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 427 MB in use, 587 MB private; Java heap 45 of 72 MB, other Java 116 MB, covers 10 MB

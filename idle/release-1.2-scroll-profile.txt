@@ -1,0 +1,87 @@
+﻿42 running samples, 707 in native code
+
+Threads by CPU (share of the whole processor, average):
+    8.22%  C2 CompilerThread1
+    2.94%  pool-1-thread-2
+    1.44%  C2 CompilerThread0
+    0.86%  AWT-EventQueue-0
+    0.63%  C1 CompilerThread0
+    0.29%  DefaultDispatcher-worker-20
+    0.25%  DefaultDispatcher-worker-13
+    0.19%  DefaultDispatcher-worker-26
+    0.19%  DefaultDispatcher-worker-18
+    0.19%  DefaultDispatcher-worker-14
+    0.17%  DefaultDispatcher-worker-7
+    0.17%  DefaultDispatcher-worker-10
+    0.12%  DefaultDispatcher-worker-3
+    0.10%  DefaultDispatcher-worker-27
+    0.10%  DefaultDispatcher-worker-25
+
+Running samples by thread:
+     29  AWT-EventQueue-0
+      4  TimerQueue
+      2  DefaultDispatcher-worker-3
+      2  DefaultDispatcher-worker-13
+      1  DefaultDispatcher-worker-10
+      1  OkHttp Dispatcher
+      1  DefaultDispatcher-worker-6
+      1  AWT-Windows
+      1  kotlinx.coroutines.DefaultExecutor
+
+Top frames:
+      3  androidx/compose/ui/spatial/RectList.defragment
+      2  kotlinx/serialization/json/internal/StreamingJsonDecoder.<init>
+      2  javax/swing/TimerQueue.run
+      1  androidx/collection/MutableScatterMap.dropDeletes$collection
+      1  androidx/compose/ui/node/LayoutNode.invalidateOffsetFromRoot
+      1  com/music/innertube/models/MusicCarouselShelfRenderer$Header$$serializer.deserialize
+      1  okhttp3/HttpUrl$Builder.push
+      1  java/lang/StringUTF16.indexOf
+      1  kotlin/coroutines/CombinedContext.minusKey
+      1  androidx/compose/runtime/ComposerImpl.recordUsed
+      1  androidx/compose/ui/graphics/SkiaBackedPath.setFillType-oQ8Xj4U
+      1  kotlinx/serialization/json/internal/StringJsonLexer.consumeNextToken
+      1  androidx/collection/MutableIntObjectMap.resizeStorage$collection
+      1  androidx/compose/foundation/lazy/layout/LazyLayoutItemAnimator.onMeasured
+      1  androidx/compose/ui/node/NodeChain.padChain
+      1  kotlin/jvm/internal/Intrinsics.areEqual
+      1  androidx/compose/ui/node/InnerNodeCoordinator.onAfterPlaceAt
+      1  androidx/compose/ui/input/pointer/Node.buildCache
+      1  javax/swing/Timer$1.<init>
+      1  androidx/compose/runtime/collection/ScopeMap.removeScope-impl
+      1  androidx/compose/foundation/gestures/ScrollableNode.ensureMouseWheelScrollNodeInitialized
+      1  androidx/compose/runtime/SnapshotStateKt.derivedStateOf
+      1  androidx/compose/ui/input/pointer/PointerInputEventProcessorKt.ProcessResult
+      1  java/lang/invoke/DirectMethodHandle$Holder.invokeStatic
+      1  androidx/compose/ui/node/MeasureAndLayoutDelegate.forceMeasureTheSubtreeInternal
+
+First Convx frame:
+      2  com.convx.desktop.ui.components.ItemsKt$$Lambda/0x000000010080ca58.invoke
+      1  com.convx.desktop.ui.components.PageInsetsKt$$Lambda/0x000000010080ddb0.invoke
+      1  com.convx.desktop.ui.components.ItemsKt$$Lambda/0x00000001008166a8.invoke
+
+First Compose/Skia frame:
+      5  androidx.compose.foundation.lazy.layout.LazyLayoutKt$LazyLayout$2$$Lambda/0x0000000100681ec0.invoke
+      2  androidx.compose.ui.scene.ComposeSceneMediator$$Lambda/0x000000010052ea28.invoke
+      2  androidx.compose.foundation.layout.BoxWithConstraintsKt$$Lambda/0x0000000100523948.invoke
+      1  androidx.compose.runtime.snapshots.SnapshotStateObserver$$Lambda/0x00000001003b39a8.invoke
+      1  androidx.compose.foundation.lazy.LazyListMeasureKt$$Lambda/0x00000001007a2270.invoke
+      1  androidx.compose.foundation.lazy.LazyListState$$Lambda/0x000000010062c488.invoke
+      1  androidx.compose.animation.EnterExitTransitionModifierNode$$Lambda/0x0000000100741670.invoke
+      1  androidx.compose.foundation.layout.PaddingNode$$Lambda/0x0000000100731c90.invoke
+      1  androidx.compose.runtime.Recomposer$$Lambda/0x000000010031a8f8.invoke
+      1  androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2$$Lambda/0x00000001007c9c38.invoke
+      1  androidx.compose.ui.text.platform.ParagraphBuilder$$Lambda/0x00000001007262b8.invoke
+      1  androidx.compose.ui.graphics.layer.GraphicsLayer$$Lambda/0x00000001007a6f08.invoke
+      1  androidx.compose.foundation.Scrollbar_desktopKt$$Lambda/0x0000000100688ba0.invoke
+      1  androidx.compose.runtime.snapshots.SnapshotStateObserver$$Lambda/0x0000000100740490.invoke
+      1  androidx.compose.runtime.snapshots.SnapshotKt$$Lambda/0x000000010031b238.invoke
+      1  androidx.compose.runtime.SnapshotStateKt__SnapshotFlowKt$snapshotFlow$1$$Lambda/0x00000001005349d8.invoke
+
+Native samples, top frame (threads waiting in native code show here too):
+    498  sun/nio/ch/Net.poll
+     63  com/sun/jna/Native.invokeInt
+     63  sun/nio/ch/Net.accept
+     62  sun/awt/windows/WToolkit.eventLoop
+     20  org/jetbrains/skiko/context/Direct3DContextHandler.flush
+      1  org/jetbrains/skia/CanvasKt._nDrawPicture

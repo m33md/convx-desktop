@@ -1,0 +1,36 @@
+﻿2 running samples, 1207 in native code
+
+Threads by CPU (share of the whole processor, average):
+    1.94%  C2 CompilerThread1
+    0.73%  AWT-EventQueue-0
+    0.55%  C2 CompilerThread0
+    0.52%  C1 CompilerThread0
+    0.34%  JFR Periodic Tasks
+    0.14%  main
+    0.08%  DefaultDispatcher-worker-5
+    0.05%  DefaultDispatcher-worker-4
+    0.05%  Attach Listener
+    0.05%  AWT-Windows
+    0.05%  DefaultDispatcher-worker-6
+    0.02%  kotlinx.coroutines.DefaultExecutor
+    0.02%  convx-taskbar
+    0.01%  DefaultDispatcher-worker-7
+    0.01%  OkHttp amp-api.music.apple.com
+
+Running samples by thread:
+      2  kotlinx.coroutines.DefaultExecutor
+
+Top frames:
+      1  java/util/concurrent/atomic/AtomicIntegerFieldUpdater$AtomicIntegerFieldUpdaterImpl.accessCheck
+      1  kotlinx/coroutines/internal/DispatchedContinuationKt.safeDispatch
+
+First Convx frame:
+
+First Compose/Skia frame:
+
+Native samples, top frame (threads waiting in native code show here too):
+    875  sun/nio/ch/Net.poll
+    110  sun/nio/ch/Net.accept
+    110  sun/awt/windows/WToolkit.eventLoop
+    109  com/sun/jna/Native.invokeInt
+      3  jdk/jfr/internal/JVM.emitEvent

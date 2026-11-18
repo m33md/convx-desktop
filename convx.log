@@ -1,0 +1,277 @@
+07:56:08.038 I/AutoMix: Measured check-automix-a in 268ms: 120.0 BPM (0.82), A minor, intro ends 16.7s, outro 76.7s
+07:56:08.225 I/AutoMix: Measured check-automix-b in 185ms: 124.0 BPM (0.77), D minor, intro ends 16.2s, outro 78.1s
+07:56:10.735 W/AudioCache: Download of ci-refused via CI failed at 0/-1 (27533 MB free)
+com.convx.desktop.player.AudioCache$HttpStatusException: HTTP 403
+	at com.convx.desktop.player.AudioCache$Download.fetch(AudioCache.kt:580)
+	at com.convx.desktop.player.AudioCache$Download.run(AudioCache.kt:411)
+	at com.convx.desktop.player.AudioCache$Download.start$lambda$0(AudioCache.kt:361)
+	at kotlin.concurrent.ThreadsKt$thread$thread$1.run(Thread.kt:30)
+07:56:10.756 W/AudioCache: ci-renew: HTTP 403 at 1048576/3145851 via CI; carrying on via CI fresh
+07:56:16.319 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:16.398 I/StreamResolver: 4NRXx6U8ABQ: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you’re not a bot)
+07:56:16.486 I/StreamResolver: 4NRXx6U8ABQ: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:16.606 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:16.675 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:16.976 I/StreamResolver: 4NRXx6U8ABQ: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+07:56:17.055 I/StreamResolver: 4NRXx6U8ABQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.145 I/StreamResolver: 4NRXx6U8ABQ: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.146 W/StreamResolver: 4NRXx6U8ABQ: no client gave a stream (last: Sign in to confirm you’re not a bot)
+07:56:17.147 E/PlaybackCheck: Failed 4NRXx6U8ABQ
+java.lang.IllegalStateException: Sign in to confirm you’re not a bot
+	at com.convx.desktop.player.StreamResolver$resolve$2.invokeSuspend(StreamResolver.kt:286)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+07:56:17.189 I/StreamResolver: fHI8X4OXluQ: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+07:56:17.284 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.375 I/StreamResolver: fHI8X4OXluQ: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you’re not a bot)
+07:56:17.477 I/StreamResolver: fHI8X4OXluQ: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.558 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.633 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.718 I/StreamResolver: fHI8X4OXluQ: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.813 I/StreamResolver: fHI8X4OXluQ: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:17.814 W/StreamResolver: fHI8X4OXluQ: no client gave a stream (last: Sign in to confirm you’re not a bot)
+07:56:17.814 E/PlaybackCheck: Failed fHI8X4OXluQ
+java.lang.IllegalStateException: Sign in to confirm you’re not a bot
+	at com.convx.desktop.player.StreamResolver$resolve$2.invokeSuspend(StreamResolver.kt:286)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+07:56:17.857 I/StreamResolver: kJQP7kiw5Fk: TVHTML5_SIMPLY_EMBEDDED_PLAYER 2.0 -> ERROR (YouTube is no longer supported in this application or device.)
+07:56:17.971 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.43.32 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:18.064 I/StreamResolver: kJQP7kiw5Fk: VISIONOS 0.1 -> UNPLAYABLE (Sign in to confirm you’re not a bot)
+07:56:18.154 I/StreamResolver: kJQP7kiw5Fk: IOS 21.03.1 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:18.242 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:18.323 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.65.10 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:18.439 I/StreamResolver: kJQP7kiw5Fk: ANDROID_VR 1.61.48 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:18.529 I/StreamResolver: kJQP7kiw5Fk: ANDROID 21.03.38 -> LOGIN_REQUIRED (Sign in to confirm you’re not a bot)
+07:56:18.530 W/StreamResolver: kJQP7kiw5Fk: no client gave a stream (last: Sign in to confirm you’re not a bot)
+07:56:18.530 E/PlaybackCheck: Failed kJQP7kiw5Fk
+java.lang.IllegalStateException: Sign in to confirm you’re not a bot
+	at com.convx.desktop.player.StreamResolver$resolve$2.invokeSuspend(StreamResolver.kt:286)
+	at kotlin.coroutines.jvm.internal.BaseContinuationImpl.resumeWith(ContinuationImpl.kt:34)
+	at kotlinx.coroutines.DispatchedTask.run(DispatchedTask.kt:100)
+	at kotlinx.coroutines.internal.LimitedDispatcher$Worker.run(LimitedDispatcher.kt:124)
+	at kotlinx.coroutines.scheduling.TaskImpl.run(Tasks.kt:89)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler.runSafely(CoroutineScheduler.kt:586)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.executeTask(CoroutineScheduler.kt:820)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.runWorker(CoroutineScheduler.kt:717)
+	at kotlinx.coroutines.scheduling.CoroutineScheduler$Worker.run(CoroutineScheduler.kt:704)
+07:56:18.701 I/BrowserSignIn: Opening Microsoft Edge (msedge.exe, Chromium) for Google sign-in
+07:56:42.042 I/BrowserSignIn: Read 6 cookies, visitor data found, data sync id found
+07:56:42.882 I/BrowserSignIn: Opening Opera GX Stable (opera.exe, Chromium) for Google sign-in
+07:57:10.262 I/BrowserSignIn: Read 6 cookies, visitor data found, data sync id found
+07:57:13.558 I/BrowserSignIn: Opening Mozilla Firefox (firefox.exe, Firefox) for Google sign-in
+07:57:36.044 I/BrowserSignIn: Read 4 cookies, visitor data found, data sync id found
+07:57:36.237 I/BrowserSignIn: Opening Google Chrome (chrome.exe, Chromium) for Google sign-in
+07:57:59.685 I/BrowserSignIn: Read 6 cookies, visitor data found, data sync id found
+07:58:03.438 I/MediaControls: Windows media controls on
+07:58:03.545 I/MediaControls: Taskbar buttons on, 3 of 3 pictures, dark glyphs for a light taskbar
+07:58:04.950 I/MediaControls: NEXT from media key
+07:58:04.952 I/MediaControls: TOGGLE from taskbar
+07:58:04.959 I/MediaControls: NEXT from media key
+07:58:39.396 I/Snapshots: Wrote 01-home.png
+07:58:45.776 I/Snapshots: Wrote 01b-home-chip.png
+07:58:56.003 I/Snapshots: Wrote 02-search.png
+07:58:58.178 I/Snapshots: Wrote 02a-radio-empty.png
+07:59:08.423 I/Snapshots: Wrote 03-search-results.png
+07:59:18.734 I/Snapshots: Wrote 04-album.png
+07:59:29.074 I/Snapshots: Wrote 05-artist.png
+07:59:39.370 I/Snapshots: Wrote 06-playlist.png
+07:59:43.676 I/Snapshots: Wrote 07-settings.png
+07:59:45.842 I/Snapshots: Wrote 07b-settings-accounts.png
+07:59:49.093 I/Snapshots: Wrote 07c-settings-discord.png
+07:59:52.321 I/Snapshots: Wrote 07d-settings-glass.png
+07:59:54.513 I/Snapshots: Wrote 07da-settings-appearance.png
+07:59:56.711 I/Snapshots: Wrote 07db-settings-font.png
+07:59:58.946 I/Snapshots: Wrote 07dc-settings-font-outfit.png
+08:00:01.165 I/Snapshots: Wrote 07dd-settings-layout-home.png
+08:00:03.370 I/Snapshots: Wrote 07de-settings-home-order.png
+08:00:05.555 I/Snapshots: Wrote 07e-settings-playback.png
+08:00:08.832 I/Snapshots: Wrote 07f-settings-eq.png
+08:00:11.095 I/Snapshots: Wrote 07g-settings-eq-advanced.png
+08:00:13.393 I/Snapshots: Wrote 07ga-settings-automix.png
+08:00:15.600 I/Snapshots: Wrote 07h-settings-lastfm.png
+08:00:17.813 I/Snapshots: Wrote 07i-settings-youtube.png
+08:00:20.128 I/Snapshots: Wrote 07j-apple-import.png
+08:00:22.380 I/Snapshots: Wrote 07k-settings-folders.png
+08:00:24.535 I/Snapshots: Wrote 07l-settings-network.png
+08:00:26.840 I/Snapshots: Wrote 07la-settings-privacy-hub.png
+08:00:29.044 I/Snapshots: Wrote 07lb-settings-backup.png
+08:00:34.320 I/Snapshots: Wrote 07lc-settings-updates.png
+08:00:36.570 I/Snapshots: Wrote 07ld-settings-privacy.png
+08:00:40.869 I/Snapshots: Wrote 07le-settings-storage.png
+08:00:43.290 I/Snapshots: Wrote 07lc-csv-columns.png
+08:00:47.506 I/Snapshots: Wrote 07m-party.png
+08:00:47.758 I/Party: In party XC6RSQ as host
+08:01:17.726 I/Snapshots: Wrote 07n-party-in.png
+08:01:30.475 I/Snapshots: Wrote 08-explore.png
+08:01:46.094 I/Snapshots: Wrote 08a-moods.png
+08:01:46.147 I/Lyrics: PaxSenix: Spotify: nothing after 9 ms
+08:01:46.147 I/Lyrics: PaxSenix: Musixmatch: nothing after 9 ms
+08:01:46.148 I/Lyrics: PaxSenix: Musixmatch: nothing after 24 ms
+08:01:46.148 I/Lyrics: PaxSenix: Spotify: nothing after 25 ms
+08:01:46.153 I/Lyrics: Spicy Lyrics: nothing after 30 ms
+08:01:46.153 I/Lyrics: Spicy Lyrics: nothing after 30 ms
+08:01:46.409 I/Lyrics: YouTube Subtitle: nothing after 286 ms
+08:01:46.424 I/Lyrics: LRCLIB: lines after 301 ms
+08:01:46.427 I/Lyrics: LRCLIB: lines after 304 ms
+08:01:46.452 I/Lyrics: YouTube Subtitle: nothing after 329 ms
+08:01:46.468 I/Lyrics: lrc.red: words after 345 ms
+08:01:46.515 I/Lyrics: lrc.red: words after 392 ms
+08:01:56.630 I/Snapshots: Wrote 09-home-playing.png
+08:01:59.297 I/Snapshots: Wrote 09a-queue-conflict.png
+08:02:05.621 I/Snapshots: Wrote 10-artist-playing.png
+08:02:14.054 I/Snapshots: Wrote 10a-now-playing-panel.png
+08:02:18.725 I/Snapshots: Wrote 10b-now-playing-panel-home.png
+08:02:21.283 I/Snapshots: Wrote 10c-now-playing-panel-queue.png
+08:02:25.571 I/Snapshots: Wrote 11-library-artists.png
+08:02:37.844 I/Snapshots: Wrote 12-full-player-lyrics.png
+08:02:41.029 I/Snapshots: Wrote 12b-full-player-lyrics-fullscreen.png
+08:02:45.343 I/Snapshots: Wrote 13-full-player-queue.png
+08:02:49.732 I/Snapshots: Wrote 13a-player-v2.png
+08:02:57.274 I/Snapshots: Wrote 13b-player-card-glow.png
+08:03:02.494 I/Snapshots: Wrote 13c-player-vinyl-blur.png
+08:03:07.129 I/Snapshots: Wrote 13d-player-clover-mesh.png
+08:03:11.719 I/Snapshots: Wrote 13e-player-apple.png
+08:03:18.284 I/Snapshots: Wrote 13f-player-v2-hero-lyrics.png
+08:03:22.728 I/Snapshots: Wrote 13g-lyrics-apple-center.png
+08:03:27.322 I/Snapshots: Wrote 13h-lyrics-karaoke-apple.png
+08:03:31.752 I/Snapshots: Wrote 13i-lyrics-v2-fluid.png
+08:03:36.531 I/Snapshots: Wrote 13j-lyrics-metro-blur-right.png
+08:03:40.946 I/Snapshots: Wrote 13k-lyrics-chord-serif.png
+08:03:45.322 I/Snapshots: Wrote 13l-lyrics-translated.png
+08:03:48.658 I/Snapshots: Wrote 13m-lyrics-menu.png
+08:03:50.859 I/Snapshots: Wrote 13n-lyrics-offset.png
+08:04:01.175 I/Snapshots: Wrote 13o-lyrics-search.png
+08:04:04.368 I/Snapshots: Wrote 13p-player-hidden-artwork.png
+08:04:12.754 I/Snapshots: Wrote 13q-player-comments.png
+08:04:16.671 I/Snapshots: Wrote 13r-ambient.png
+08:04:19.164 I/Snapshots: Wrote 13s-tempo-pitch.png
+08:04:23.474 I/Snapshots: Wrote 13t-player-diy.png
+08:04:26.880 I/Snapshots: Wrote 13u-diy-editor.png
+08:04:52.386 I/Snapshots: Wrote 20-home-feed.png
+08:04:55.997 I/Snapshots: Wrote 20a-home-feed-down.png
+08:05:04.514 I/Snapshots: Wrote 21-stats.png
+08:05:07.930 I/Snapshots: Wrote 21a-stats-months.png
+08:05:16.892 I/Snapshots: Wrote 21b-replay-intro.png
+08:05:21.011 I/Snapshots: Wrote 21c-replay-minutes.png
+08:05:25.364 I/Snapshots: Wrote 21d-replay-top-song.png
+08:05:30.143 I/Snapshots: Wrote 21e-replay-top-artists.png
+08:05:34.905 I/Snapshots: Wrote 21f-replay-summary.png
+08:05:39.253 I/Snapshots: Wrote 22-my-top.png
+08:05:43.497 I/Snapshots: Wrote 22a-uploaded.png
+08:05:49.841 I/Snapshots: Wrote 24-radio.png
+08:06:00.032 I/Snapshots: Wrote 24a-radio-station.png
+08:06:02.180 I/Snapshots: Wrote 25-recognition.png
+08:06:06.379 I/Snapshots: Wrote 25a-recognition-history.png
+08:06:11.799 I/Snapshots: Wrote 26-profile.png
+08:06:14.986 I/Snapshots: Wrote 23-ai-dj.png
+08:06:27.397 I/Snapshots: Wrote 23a-ai-dj-set.png
+08:06:29.835 I/Snapshots: Wrote 23b-track-insights.png
+08:06:38.262 I/Snapshots: Wrote 14-library.png
+08:06:44.476 I/Snapshots: Wrote 15-liked.png
+08:06:50.727 I/Snapshots: Wrote 16-local-playlist.png
+08:06:54.991 I/Snapshots: Wrote 16a-playlist-picture.png
+08:07:01.627 I/Snapshots: Wrote 27-disc-studio.png
+08:07:06.294 I/Snapshots: Wrote 27a-disc-editor.png
+08:07:09.765 I/Snapshots: Wrote 27b-disc-editor-stickers.png
+08:07:13.296 I/Snapshots: Wrote 27c-disc-editor-as-cover.png
+08:07:17.524 I/Snapshots: Wrote 27d-playlist-disc-cover.png
+08:07:21.877 I/Snapshots: Wrote 16b-downloads.png
+08:07:26.404 I/Snapshots: Wrote 17-sidebar-collapsed.png
+08:07:30.026 I/Snapshots: Wrote 18-song-menu.png
+08:07:36.295 I/Snapshots: Wrote 19-settings-player-design.png
+08:07:38.611 I/Snapshots: Wrote 19a-settings-player-hub.png
+08:07:43.928 I/Snapshots: Wrote 19b-settings-lyrics-style.png
+08:07:47.250 I/Snapshots: Wrote 19c-settings-lyrics-effects.png
+08:07:49.503 I/Snapshots: Wrote 19d-settings-lyrics-text.png
+08:07:51.782 I/Snapshots: Wrote 19e-settings-lyrics-sources.png
+08:07:54.075 I/Snapshots: Wrote 19f-settings-romanization.png
+08:07:56.325 I/Snapshots: Wrote 19g-settings-ai-translation.png
+08:07:58.627 I/Snapshots: Wrote 19h-settings-library-hub.png
+08:08:02.000 I/Snapshots: Wrote 19i-settings-controls-layout.png
+08:08:05.433 I/Snapshots: Wrote 19j-settings-popup.png
+08:08:10.025 I/Snapshots: Wrote 14b-library-four-columns.png
+08:08:13.557 I/Snapshots: Wrote 19k-settings-player-icons.png
+08:08:16.933 I/Snapshots: Wrote 19l-player-custom-icons.png
+08:08:19.323 I/Snapshots: Wrote 19m-preset-save.png
+08:08:24.606 I/Snapshots: Wrote 19n-presets.png
+08:08:26.104 I/Snapshots: Wrote 19o-glass-hover-90ms.png
+08:08:28.106 I/Snapshots: Wrote 19o-glass-hover-250ms.png
+08:08:33.094 I/Snapshots: Wrote 19o-glass-hover-700ms.png
+08:08:39.355 I/Snapshots: Wrote 30-940x600-home.png
+08:08:43.499 I/Snapshots: Wrote 30-940x600-search-results.png
+08:08:47.622 I/Snapshots: Wrote 30-940x600-album.png
+08:08:51.844 I/Snapshots: Wrote 30-940x600-artist.png
+08:08:55.942 I/Snapshots: Wrote 30-940x600-playlist.png
+08:09:00.263 I/Snapshots: Wrote 30-940x600-explore.png
+08:09:03.449 I/Snapshots: Wrote 30-940x600-library.png
+08:09:06.676 I/Snapshots: Wrote 30-940x600-stats.png
+08:09:08.852 I/Snapshots: Wrote 30-940x600-settings.png
+08:09:12.133 I/Snapshots: Wrote 30-940x600-now-playing-panel.png
+08:09:15.277 I/Snapshots: Wrote 30-940x600-player.png
+08:09:18.413 I/Snapshots: Wrote 30-940x600-player-lyrics.png
+08:09:20.547 I/Snapshots: Wrote 30-940x600-player-queue.png
+08:09:26.997 I/Snapshots: Wrote 30-1280x688-home.png
+08:09:31.179 I/Snapshots: Wrote 30-1280x688-search-results.png
+08:09:35.357 I/Snapshots: Wrote 30-1280x688-album.png
+08:09:39.585 I/Snapshots: Wrote 30-1280x688-artist.png
+08:09:43.746 I/Snapshots: Wrote 30-1280x688-playlist.png
+08:09:48.287 I/Snapshots: Wrote 30-1280x688-explore.png
+08:09:51.550 I/Snapshots: Wrote 30-1280x688-library.png
+08:09:54.827 I/Snapshots: Wrote 30-1280x688-stats.png
+08:09:57.103 I/Snapshots: Wrote 30-1280x688-settings.png
+08:10:00.686 I/Snapshots: Wrote 30-1280x688-now-playing-panel.png
+08:10:03.833 I/Snapshots: Wrote 30-1280x688-player.png
+08:10:07.075 I/Snapshots: Wrote 30-1280x688-player-lyrics.png
+08:10:09.277 I/Snapshots: Wrote 30-1280x688-player-queue.png
+08:10:15.897 I/Snapshots: Wrote 30-1536x824-home.png
+08:10:20.096 I/Snapshots: Wrote 30-1536x824-search-results.png
+08:10:24.457 I/Snapshots: Wrote 30-1536x824-album.png
+08:10:28.677 I/Snapshots: Wrote 30-1536x824-artist.png
+08:10:33.000 I/Snapshots: Wrote 30-1536x824-playlist.png
+08:10:37.700 I/Snapshots: Wrote 30-1536x824-explore.png
+08:10:40.975 I/Snapshots: Wrote 30-1536x824-library.png
+08:10:44.276 I/Snapshots: Wrote 30-1536x824-stats.png
+08:10:46.665 I/Snapshots: Wrote 30-1536x824-settings.png
+08:10:50.308 I/Snapshots: Wrote 30-1536x824-now-playing-panel.png
+08:10:53.569 I/Snapshots: Wrote 30-1536x824-player.png
+08:10:56.860 I/Snapshots: Wrote 30-1536x824-player-lyrics.png
+08:10:59.239 I/Snapshots: Wrote 30-1536x824-player-queue.png
+08:11:06.131 I/Snapshots: Wrote 30-1920x1080-home.png
+08:11:10.404 I/Snapshots: Wrote 30-1920x1080-search-results.png
+08:11:14.833 I/Snapshots: Wrote 30-1920x1080-album.png
+08:11:19.281 I/Snapshots: Wrote 30-1920x1080-artist.png
+08:11:23.515 I/Snapshots: Wrote 30-1920x1080-playlist.png
+08:11:28.602 I/Snapshots: Wrote 30-1920x1080-explore.png
+08:11:32.034 I/Snapshots: Wrote 30-1920x1080-library.png
+08:11:35.538 I/Snapshots: Wrote 30-1920x1080-stats.png
+08:11:37.886 I/Snapshots: Wrote 30-1920x1080-settings.png
+08:11:41.643 I/Snapshots: Wrote 30-1920x1080-now-playing-panel.png
+08:11:45.074 I/Snapshots: Wrote 30-1920x1080-player.png
+08:11:48.567 I/Snapshots: Wrote 30-1920x1080-player-lyrics.png
+08:11:50.941 I/Snapshots: Wrote 30-1920x1080-player-queue.png
+08:11:58.242 I/Snapshots: Wrote 30-2560x1440-home.png
+08:12:02.770 I/Snapshots: Wrote 30-2560x1440-search-results.png
+08:12:07.166 I/Snapshots: Wrote 30-2560x1440-album.png
+08:12:11.956 I/Snapshots: Wrote 30-2560x1440-artist.png
+08:12:16.285 I/Snapshots: Wrote 30-2560x1440-playlist.png
+08:12:21.670 I/Snapshots: Wrote 30-2560x1440-explore.png
+08:12:25.219 I/Snapshots: Wrote 30-2560x1440-library.png
+08:12:28.849 I/Snapshots: Wrote 30-2560x1440-stats.png
+08:12:31.413 I/Snapshots: Wrote 30-2560x1440-settings.png
+08:12:35.953 I/Snapshots: Wrote 30-2560x1440-now-playing-panel.png
+08:12:39.324 I/Snapshots: Wrote 30-2560x1440-player.png
+08:12:42.730 I/Snapshots: Wrote 30-2560x1440-player-lyrics.png
+08:12:45.383 I/Snapshots: Wrote 30-2560x1440-player-queue.png

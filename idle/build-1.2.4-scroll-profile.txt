@@ -1,0 +1,81 @@
+﻿28 running samples, 711 in native code
+
+Threads by CPU (share of the whole processor, average):
+    6.54%  C2 CompilerThread1
+    2.73%  pool-1-thread-2
+    1.38%  C2 CompilerThread0
+    0.77%  AWT-EventQueue-0
+    0.59%  C1 CompilerThread0
+    0.53%  DefaultDispatcher-worker-11
+    0.18%  DefaultDispatcher-worker-12
+    0.17%  DefaultDispatcher-worker-8
+    0.17%  DefaultDispatcher-worker-6
+    0.13%  DefaultDispatcher-worker-1
+    0.11%  AWT-Windows
+    0.11%  JFR Periodic Tasks
+    0.09%  DefaultDispatcher-worker-14
+    0.09%  DefaultDispatcher-worker-13
+    0.05%  StringDedupThread
+
+Running samples by thread:
+     19  AWT-EventQueue-0
+      2  DefaultDispatcher-worker-1
+      2  TimerQueue
+      1  DefaultDispatcher-worker-8
+      1  DefaultDispatcher-worker-6
+      1  DefaultDispatcher-worker-11
+      1  pool-1-thread-2
+      1  kotlinx.coroutines.DefaultExecutor
+
+Top frames:
+      2  kotlin/jvm/internal/Intrinsics.areEqual
+      1  androidx/compose/runtime/ComposerKt.deactivateCurrentGroup$lambda$3
+      1  java/util/concurrent/atomic/AtomicReferenceFieldUpdater$AtomicReferenceFieldUpdaterImpl.accessCheck
+      1  androidx/compose/ui/node/RootNodeOwner.updatePositionCacheAndDispatch$default
+      1  kotlinx/serialization/json/internal/AbstractJsonLexer.isValidValueStart
+      1  java/lang/String.charAt
+      1  kotlinx/serialization/json/internal/AbstractJsonLexer.skipElement
+      1  androidx/compose/ui/node/NodeCoordinatorKt.nextUntil-hw7D004
+      1  androidx/compose/foundation/lazy/LazyListMeasureResult.<init>
+      1  androidx/compose/foundation/lazy/LazyListMeasureKt.measureLazyList_LCrQqZ4$lambda$11
+      1  com/convx/desktop/ui/components/PageInsetsKt.bleedStart_3ABfNKs$lambda$0
+      1  androidx.compose.foundation.lazy.LazyListKt$rememberLazyListMeasurePolicy$1$1$$Lambda/0x00000001006ef0a0.<init>
+      1  kotlinx/coroutines/flow/SharedFlowImpl.collect$suspendImpl
+      1  androidx/compose/ui/node/NodeCoordinator.isValidOwnerScope
+      1  androidx/compose/runtime/internal/RememberEventDispatcher.remembering
+      1  org/jetbrains/skiko/SkiaLayer.draw$skiko
+      1  androidx/compose/runtime/ComposerImpl.cleanUpCompose
+      1  javax/swing/Timer.post
+      1  java/awt/EventQueue.dispatchEventImpl
+      1  java.lang.invoke.LambdaForm$DMH/0x0000000100380400.newInvokeSpecial
+      1  java/lang/Class.getComponentType
+      1  androidx/compose/ui/layout/LayoutNodeSubcompositionsState.subcompose
+      1  kotlinx/coroutines/flow/internal/AbstractSharedFlow.allocateSlot
+      1  java/lang/Object.<init>
+      1  kotlinx/coroutines/scheduling/CoroutineScheduler.signalCpuWork
+
+First Convx frame:
+      1  com.convx.desktop.ui.components.PageInsetsKt$$Lambda/0x00000001007fc960.invoke
+
+First Compose/Skia frame:
+      4  androidx.compose.foundation.lazy.layout.LazyLayoutKt$LazyLayout$2$$Lambda/0x0000000100638548.invoke
+      2  androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2$$Lambda/0x000000010079d740.invoke
+      2  androidx.compose.ui.platform.FlushCoroutineDispatcher$dispatch$2$$Lambda/0x0000000100790ad0.invoke
+      1  androidx.compose.runtime.ComposerKt$$Lambda/0x00000001007be4b0.invoke
+      1  androidx.compose.ui.scene.ComposeSceneMediator$$Lambda/0x000000010053f9c8.invoke
+      1  androidx.compose.foundation.lazy.LazyListMeasureKt$$Lambda/0x0000000100717cd8.invoke
+      1  androidx.compose.ui.node.MeasurePassDelegate$$Lambda/0x00000001004a51a0.invoke
+      1  androidx.compose.foundation.lazy.LazyListKt$rememberLazyListMeasurePolicy$1$1$$Lambda/0x00000001006ef0a0.<init>
+      1  androidx.compose.ui.platform.FlushCoroutineDispatcher$$Lambda/0x000000010050e238.invoke
+      1  androidx.compose.ui.node.OwnerSnapshotObserver$$Lambda/0x00000001007b7038.invoke
+      1  androidx.compose.runtime.SnapshotStateKt__SnapshotFlowKt$snapshotFlow$1$$Lambda/0x0000000100580258.invoke
+      1  androidx.compose.foundation.lazy.LazyListState$$Lambda/0x0000000100621dc0.invoke
+
+Native samples, top frame (threads waiting in native code show here too):
+    482  sun/nio/ch/Net.poll
+     68  sun/nio/ch/Net.accept
+     68  sun/awt/windows/WToolkit.eventLoop
+     67  com/sun/jna/Native.invokeInt
+     23  org/jetbrains/skiko/context/Direct3DContextHandler.flush
+      2  org/jetbrains/skia/CanvasKt._nDrawPicture
+      1  java/util/zip/Inflater.inflateBytesBytes
