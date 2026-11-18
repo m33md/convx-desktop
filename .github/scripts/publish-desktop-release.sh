@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # Publishes the given files as the rolling "desktop-latest" release, built from commit $1 as
 # version $2. Every file is named with its version (Convx-Setup-1.0.71.exe, Convx-1.0.71.msi,
-# Convx-1.0.71-portable.zip, and the Mac disk images Convx-1.0.71-mac-apple-silicon.dmg and
-# Convx-1.0.71-mac-intel.dmg), and the notes carry the version and commit for the app's updater.
+# Convx-1.0.71-portable.zip, the Mac disk images Convx-1.0.71-mac-apple-silicon.dmg and
+# Convx-1.0.71-mac-intel.dmg, and the Linux packages Convx-1.0.71-linux-x64.deb, .rpm and .AppImage,
+# with -linux-arm64 ones for ARM), and the notes carry the version and commit for the app's updater.
 # It's marked the latest release, so /releases/latest always leads to the newest setup.
 # With DRY_RUN set it only prints the release it would make.
 #
@@ -33,6 +34,7 @@ for file in "$@"; do
     *.zip) add "$file" "Convx-$version-portable.zip" ;;
     */Convx-macos-arm64.dmg) add "$file" "Convx-$version-mac-apple-silicon.dmg" ;;
     */Convx-macos-intel.dmg) add "$file" "Convx-$version-mac-intel.dmg" ;;
+    */Convx-linux-*) name=$(basename "$file"); add "$file" "Convx-$version-${name#Convx-}" ;;
     *) files+=("$file") ;;
   esac
 done
@@ -62,10 +64,27 @@ if [ -n "$mac_arm" ] || [ -n "$mac_intel" ]; then
   download="On Windows, ${download,}"
 fi
 
+# The Linux packages, when the Linux builds made them.
+linux=
+linux_x64=$([ -e "$named/Convx-$version-linux-x64.deb" ] && echo yes || true)
+linux_arm=$([ -e "$named/Convx-$version-linux-arm64.deb" ] && echo yes || true)
+if [ -n "$linux_x64" ] || [ -n "$linux_arm" ]; then
+  if [ -n "$mac" ]; then platforms="Windows, Mac and Linux"; else platforms="Windows and Linux"; fi
+  arch=$([ -n "$linux_x64" ] && echo x64 || echo arm64)
+  linux="On Linux, download Convx-${version}-linux-${arch}.deb for Ubuntu, Debian or Mint, Convx-${version}-linux-${arch}.rpm for Fedora or openSUSE, or Convx-${version}-linux-${arch}.AppImage for any other (allow it to run as a program in its Properties, then open it)."
+  if [ -n "$linux_x64" ] && [ -n "$linux_arm" ]; then
+    linux+=" On an ARM computer, take the -linux-arm64 files instead."
+  elif [ -z "$linux_x64" ]; then
+    linux+=" These are for ARM computers."
+  fi
+  if [ -z "$mac" ]; then download="On Windows, ${download,}"; fi
+fi
+
 # The version's commit message is its "What's new". It comes after the line the updater reads,
 # which takes the first "Version" and the first /tree/ link in the notes.
 notes="${download} If Windows says it protected your PC, click More info, then Run anyway."
 if [ -n "$mac" ]; then notes+=$'\n\n'"${mac}"; fi
+if [ -n "$linux" ]; then notes+=$'\n\n'"${linux}"; fi
 notes+=$'\n\n'"Version ${version}. Source: https://github.com/${GITHUB_REPOSITORY}/tree/${sha}"
 changes=$(git log -1 --format=%B "$sha" 2>/dev/null | grep -viE '^(co-authored-by|claude-session):' | sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' || true)
 if [ -n "$changes" ]; then

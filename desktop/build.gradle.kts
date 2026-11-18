@@ -45,9 +45,10 @@ val javacpp = "1.5.12"
 val ffmpeg = "7.1.1-$javacpp"
 
 // FFmpeg ships one native jar per OS; bundle Windows for the installer and the
-// build machine's own OS so `run` works wherever it is launched. A Mac build carries only its
-// own, so the disk image holds no Windows libraries.
+// build machine's own OS so `run` works wherever it is launched. A Mac or Linux build carries
+// only its own, so the disk image and the Linux packages hold no Windows libraries.
 val buildOnMac = System.getProperty("os.name").lowercase().contains("mac")
+val buildOnLinux = System.getProperty("os.name").lowercase().contains("linux")
 val hostNatives = run {
     val os = System.getProperty("os.name").lowercase()
     val arch = System.getProperty("os.arch").lowercase()
@@ -58,11 +59,11 @@ val hostNatives = run {
         else -> if (aarch) "linux-arm64" else "linux-x86_64"
     }
 }
-val nativeClassifiers = if (buildOnMac) setOf(hostNatives) else setOf("windows-x86_64", hostNatives)
+val nativeClassifiers = if (buildOnMac || buildOnLinux) setOf(hostNatives) else setOf("windows-x86_64", hostNatives)
 
 dependencies {
     implementation(compose.desktop.currentOs)
-    if (!buildOnMac) implementation(compose.desktop.windows_x64)
+    if (!buildOnMac && !buildOnLinux) implementation(compose.desktop.windows_x64)
     implementation(compose.material3)
     implementation(compose.foundation)
     implementation(compose.animation)
@@ -137,12 +138,15 @@ compose.desktop {
             // that one run beside the app rather than stopping it.
             "-XX:+ExplicitGCInvokesConcurrent",
         )
+        // On Linux the window names itself after the menu entry the packages install (LinuxDesktop),
+        // so docks and task bars show Convx's icon for it.
+        if (buildOnLinux) jvmArgs += "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED"
         // The installer bundles this Java. CI points it at the JetBrains Runtime, whose custom
         // title bar the app uses; without it the app keeps the Windows title bar.
         System.getenv("CONVX_JBR")?.takeIf { it.isNotBlank() }?.let { javaHome = it }
 
         nativeDistributions {
-            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Dmg)
+            targetFormats(TargetFormat.Msi, TargetFormat.Exe, TargetFormat.Dmg, TargetFormat.Deb, TargetFormat.Rpm)
             packageName = "Convx"
             // The installer's own number, which only goes up (CI's CONVX_PACKAGE_VERSION).
             packageVersion = System.getenv("CONVX_PACKAGE_VERSION")?.takeIf { it.isNotBlank() } ?: appVersion
@@ -168,6 +172,17 @@ compose.desktop {
                 perUserInstall = true
                 // Fixed so new installers upgrade the existing install in place.
                 upgradeUuid = "6f1d1a6e-6a52-4f6b-9b0e-3c1f2d7a9c41"
+            }
+
+            linux {
+                // Installs to /opt/convx with a menu entry named convx-Convx.desktop, the name the
+                // window gives itself (LinuxDesktop.WmClass).
+                packageName = "convx"
+                iconFile.set(project.file("src/main/resources/convx.png"))
+                shortcut = true
+                menuGroup = "AudioVideo;Audio;Player;"
+                appCategory = "sound"
+                rpmLicenseType = "GPLv3"
             }
         }
     }

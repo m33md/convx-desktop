@@ -89,6 +89,7 @@ fun main() {
             "Java ${System.getProperty("java.version")}, ${AudioCache.freeBytes()?.let { "${it / 1_073_741_824} GB" } ?: "unknown space"} free",
     )
     Thread.setDefaultUncaughtExceptionHandler { thread, error -> Log.crash(thread, error) }
+    com.convx.desktop.integrations.LinuxDesktop.nameWindows()
     // A second Convx would write its own copy of the library over this one's; bring this one up instead.
     if (!com.convx.desktop.core.SingleInstance.claim()) {
         Log.i("Startup", "Convx is already open; brought its window up instead")

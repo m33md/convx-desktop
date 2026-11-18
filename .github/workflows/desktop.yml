@@ -12,6 +12,7 @@ on:
       - "spine/**"
       - ".github/workflows/desktop.yml"
       - ".github/workflows/desktop-macos.yml"
+      - ".github/workflows/desktop-linux.yml"
   pull_request:
     paths:
       - "installer/**"
@@ -23,6 +24,7 @@ on:
       - "spine/**"
       - ".github/workflows/desktop.yml"
       - ".github/workflows/desktop-macos.yml"
+      - ".github/workflows/desktop-linux.yml"
   workflow_dispatch:
 
 concurrency:
@@ -245,13 +247,20 @@ jobs:
       contents: write
       actions: read
 
+  # The Linux app for x64 and ARM computers: .deb, .rpm and AppImage (desktop-linux.yml).
+  linux:
+    uses: ./.github/workflows/desktop-linux.yml
+    permissions:
+      # Its screenshots are pushed to the convx-linux-snapshots branch.
+      contents: write
+
   # The rolling release, refreshed after every build of main: the Windows files, and the Mac disk
-  # images next to them when the Mac builds made them (if neither try got an Apple Silicon Mac, the
-  # release goes out without that one). Work branches build and take
+  # images and Linux packages next to them when those builds made them (if neither try got an
+  # Apple Silicon Mac, the release goes out without that one). Work branches build and take
   # screenshots, but only main reaches the download page; started by hand on another branch, it
   # shows what it would publish and publishes nothing.
   release:
-    needs: [windows, macos, macos-again]
+    needs: [windows, macos, macos-again, linux]
     if: ${{ !cancelled() && needs.windows.result == 'success' && github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch') }}
     runs-on: ubuntu-latest
     permissions:
@@ -272,6 +281,13 @@ jobs:
           path: out/mac
           merge-multiple: true
 
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          pattern: Convx-linux-*-packages
+          path: out/linux
+          merge-multiple: true
+
       - name: Publish download links
         env:
           GH_TOKEN: ${{ github.token }}
@@ -287,6 +303,7 @@ jobs:
             find out/windows -name 'Convx-portable-windows.zip'
             if [ "$SETUP_OK" = success ]; then find out/windows -name Convx-Setup.exe; fi
             find out/mac -name 'Convx-macos-*.dmg' 2>/dev/null | sort
+            find out/linux -name 'Convx-linux-*' 2>/dev/null | sort
           )
           printf '%s\n' "${files[@]}"
           bash .github/scripts/publish-desktop-release.sh "$GITHUB_SHA" "$VERSION" "${files[@]}"
