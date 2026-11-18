@@ -143,10 +143,70 @@ object BrowserSignIn {
         return (listOfNotNull(safari) + others).sortedByDescending { it.isDefault }
     }
 
+    private val isLinux = !isWindows && !isMac
+
+    /** Browsers a Linux sign-in can use: name, the commands it installs, its Flatpak id, and a word its menu entry's name carries. */
+    private data class LinuxApp(val name: String, val commands: List<String>, val flatpak: String, val key: String, val engine: Engine)
+
+    private val LinuxApps = listOf(
+        LinuxApp("Google Chrome", listOf("google-chrome-stable", "google-chrome"), "com.google.Chrome", "google-chrome", Engine.Chromium),
+        LinuxApp("Chromium", listOf("chromium", "chromium-browser"), "org.chromium.Chromium", "chromium", Engine.Chromium),
+        LinuxApp("Microsoft Edge", listOf("microsoft-edge-stable", "microsoft-edge"), "com.microsoft.Edge", "microsoft-edge", Engine.Chromium),
+        LinuxApp("Brave", listOf("brave-browser", "brave"), "com.brave.Browser", "brave", Engine.Chromium),
+        LinuxApp("Opera", listOf("opera"), "com.opera.Opera", "opera", Engine.Chromium),
+        LinuxApp("Vivaldi", listOf("vivaldi-stable", "vivaldi"), "com.vivaldi.Vivaldi", "vivaldi", Engine.Chromium),
+        LinuxApp("Firefox", listOf("firefox"), "org.mozilla.firefox", "firefox", Engine.Firefox),
+        LinuxApp("LibreWolf", listOf("librewolf"), "io.gitlab.librewolf-community", "librewolf", Engine.Firefox),
+        LinuxApp("Waterfox", listOf("waterfox"), "net.waterfox.waterfox", "waterfox", Engine.Firefox),
+        LinuxApp("Zen", listOf("zen-browser", "zen"), "app.zen_browser.zen", "zen", Engine.Firefox),
+        LinuxApp("Floorp", listOf("floorp"), "one.ablaze.floorp", "floorp", Engine.Firefox),
+    )
+
+    /** The menu entry of the system's web browser (xdg-settings), such as "firefox_firefox.desktop", in lower case. */
+    private fun linuxDefaultEntry(): String? = runCatching {
+        val process = ProcessBuilder("xdg-settings", "get", "default-web-browser").redirectErrorStream(true).start()
+        if (!process.waitFor(3, java.util.concurrent.TimeUnit.SECONDS)) {
+            process.destroyForcibly()
+            return null
+        }
+        process.inputStream.bufferedReader().readText().trim().lowercase().takeIf { it.endsWith(".desktop") }
+    }.getOrNull()
+
+    /**
+     * Each browser once: its Snap first (Ubuntu's /usr/bin/firefox only starts the Snap), then the
+     * one on the PATH, then its Flatpak.
+     */
+    private fun linuxBrowsers(): List<Browser> {
+        val home = System.getProperty("user.home")
+        val path = System.getenv("PATH").orEmpty().split(':').filter { it.isNotBlank() } + listOf("/usr/bin", "/usr/local/bin")
+        val flatpaks = listOf("/var/lib/flatpak/exports/bin", "$home/.local/share/flatpak/exports/bin")
+        val default = linuxDefaultEntry()
+        return LinuxApps.mapNotNull { app ->
+            val program = app.commands.map { File("/snap/bin", it) }.firstOrNull { it.canExecute() }
+                ?: app.commands.flatMap { command -> path.map { File(it, command) } }.firstOrNull { it.isFile && it.canExecute() }
+                ?: flatpaks.map { File(it, app.flatpak) }.firstOrNull { it.canExecute() }
+                ?: return@mapNotNull null
+            Browser(app.name, program.absolutePath, app.engine, isDefault = default != null && (app.key in default || app.flatpak.lowercase() in default))
+        }.sortedByDescending { it.isDefault }
+    }
+
+    /**
+     * The sign-in profile's folder. A Snap or Flatpak browser may only write inside its own folder,
+     * so its profile goes there.
+     */
+    private fun profileFor(browser: Browser): File {
+        val home = System.getProperty("user.home")
+        return when {
+            browser.path.startsWith("/snap/bin/") -> File(home, "snap/${File(browser.path).name.substringBefore('.')}/common/convx-sign-in")
+            "/flatpak/exports/bin/" in browser.path -> File(home, ".var/app/${File(browser.path).name}/convx-sign-in")
+            else -> File(AppDirs.cache, "sign-in-browser")
+        }
+    }
+
     /** The browsers on this PC Convx can sign in with, the system's default first. */
     fun browsers(): List<Browser> {
         if (isMac) return macBrowsers()
-        if (!isWindows) return emptyList()
+        if (isLinux) return linuxBrowsers()
         val found = LinkedHashMap<String, Browser>()
         for ((name, exe) in registered() + knownPaths()) {
             if (!exe.isFile) continue
@@ -250,7 +310,7 @@ object BrowserSignIn {
      */
     internal suspend fun signIn(browser: Browser, startUrl: String, requireAccount: Boolean, closeAfterMs: Long? = null): Session = withContext(Dispatchers.IO) {
         if (browser.engine == Engine.Safari) return@withContext signInSafari(startUrl, requireAccount, closeAfterMs)
-        val profile = File(AppDirs.cache, "sign-in-browser")
+        val profile = profileFor(browser)
         stopAll(profile)
         profile.deleteRecursively()
         profile.mkdirs()
@@ -438,7 +498,8 @@ object BrowserSignIn {
                 "--no-first-run",
                 "--no-default-browser-check",
                 "--disable-sync",
-            ) + if (visible) {
+                // Linux would ask for the keyring's password to keep the new profile's cookies.
+            ) + (if (isLinux) listOf("--password-store=basic") else emptyList()) + if (visible) {
                 listOf("--window-size=520,780", "--new-window")
             } else if (headless) {
                 listOf("--headless=new", "--remote-debugging-port=0", "--mute-audio")
@@ -452,9 +513,11 @@ object BrowserSignIn {
                 listOf("-no-remote", "-new-instance", "-profile", profile.path, "-width", "520", "-height", "780")
             }
         }
+        // Off Windows a browser explains in its output why it didn't start or load; kept for the log.
+        val output = if (isWindows) ProcessBuilder.Redirect.DISCARD else ProcessBuilder.Redirect.to(File(AppDirs.logs, "sign-in-browser.txt"))
         return ProcessBuilder(listOf(browser.path) + args + urls)
             .redirectErrorStream(true)
-            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+            .redirectOutput(output)
             .start()
     }
 
@@ -557,6 +620,18 @@ object BrowserSignIn {
                     }
                 }
             }
+            if (cookies.isEmpty()) {
+                val files = profile.listFiles().orEmpty().sortedBy { it.name }.joinToString { "${it.name} ${it.length()}" }
+                val hosts = runCatching {
+                    DriverManager.getConnection("jdbc:sqlite:${File(copy, "cookies.sqlite").absolutePath}").use { connection ->
+                        connection.prepareStatement("SELECT DISTINCT host FROM moz_cookies LIMIT 12").executeQuery().use { rows ->
+                            buildList { while (rows.next()) add(rows.getString(1)) }
+                        }
+                    }
+                }.getOrElse { listOf("unreadable: ${it.message}") }
+                val output = File(AppDirs.logs, "sign-in-browser.txt").takeIf { it.isFile }?.readLines()?.takeLast(15).orEmpty()
+                Log.w(Tag, "Firefox kept no YouTube Music cookies. Cookies for: $hosts. Profile: $files. Its output: ${output.joinToString(" | ")}")
+            }
             val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
             return session(cookies, if (cookies.isEmpty()) null else readConfigOverHttp(cookie), requireAccount)
         } finally {
@@ -599,6 +674,18 @@ object BrowserSignIn {
                         }
                     }
                 }
+            }
+            if (cookies.isEmpty()) {
+                val files = profile.listFiles().orEmpty().sortedBy { it.name }.joinToString { "${it.name} ${it.length()}" }
+                val hosts = runCatching {
+                    DriverManager.getConnection("jdbc:sqlite:${File(copy, "cookies.sqlite").absolutePath}").use { connection ->
+                        connection.prepareStatement("SELECT DISTINCT host FROM moz_cookies LIMIT 12").executeQuery().use { rows ->
+                            buildList { while (rows.next()) add(rows.getString(1)) }
+                        }
+                    }
+                }.getOrElse { listOf("unreadable: ${it.message}") }
+                val output = File(AppDirs.logs, "sign-in-browser.txt").takeIf { it.isFile }?.readLines()?.takeLast(15).orEmpty()
+                Log.w(Tag, "Firefox kept no YouTube Music cookies. Cookies for: $hosts. Profile: $files. Its output: ${output.joinToString(" | ")}")
             }
             val cookie = cookies.joinToString("; ") { (name, value) -> "$name=$value" }
             return session(cookies, if (cookies.isEmpty()) null else readConfigOverHttp(cookie), requireAccount)

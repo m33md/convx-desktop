@@ -58,7 +58,18 @@ object Updater {
 
     /** On a Mac the update is a disk image to open, so [canInstall] is false there. */
     val isMac: Boolean = System.getProperty("os.name").lowercase().contains("mac")
-    private val appleSilicon: Boolean = System.getProperty("os.arch").lowercase().let { it.contains("aarch64") || it.contains("arm64") }
+    private val arm64: Boolean = System.getProperty("os.arch").lowercase().let { it.contains("aarch64") || it.contains("arm64") }
+
+    /** On Linux the update is the package or AppImage this copy came as, to install the usual way. */
+    val isLinux: Boolean = System.getProperty("os.name").lowercase().contains("linux")
+
+    /** The kind of Linux download that replaces this copy: an AppImage, else the system's package type. */
+    private fun linuxPackage(): String = when {
+        System.getenv("APPIMAGE") != null -> ".AppImage"
+        File("/usr/bin/dpkg").exists() -> ".deb"
+        File("/usr/bin/rpm").exists() -> ".rpm"
+        else -> ".AppImage"
+    }
 
     suspend fun check(): State = withContext(Dispatchers.IO) {
         val now = _state.value
@@ -84,9 +95,14 @@ object Updater {
         val assets = release["assets"]?.jsonArray?.map { it.jsonObject }.orEmpty()
         val installer = if (isMac) {
             // The disk image made for this kind of Mac.
-            val wanted = if (appleSilicon) "-mac-apple-silicon.dmg" else "-mac-intel.dmg"
+            val wanted = if (arm64) "-mac-apple-silicon.dmg" else "-mac-intel.dmg"
             assets.firstOrNull { it.string("name").endsWith(wanted, ignoreCase = true) }
                 ?: return State.Failed("The newest version has no download for this Mac yet. Try again later.")
+        } else if (isLinux) {
+            // Convx-<v>-linux-x64.deb, -linux-arm64.AppImage and so on.
+            val wanted = "-linux-${if (arm64) "arm64" else "x64"}${linuxPackage()}"
+            assets.firstOrNull { it.string("name").endsWith(wanted, ignoreCase = true) }
+                ?: return State.Failed("The newest version has no download for Linux yet. Try again later.")
         } else {
             // Convx's setup .exe when the release has one (it shows its own progress window and keeps
             // Windows' Installed apps entry right), else the MSI older releases carried.

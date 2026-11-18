@@ -68,8 +68,8 @@ fun main(args: Array<String>) {
  * to YouTube Music stands in for the Google login, which a build machine has no account for.
  */
 private fun signInBrowsersCheck() {
-    if (!System.getProperty("os.name").lowercase().contains("win") || java.awt.GraphicsEnvironment.isHeadless()) {
-        println("Sign-in browsers: skipped (no Windows desktop)")
+    if (System.getProperty("os.name").lowercase().contains("mac") || java.awt.GraphicsEnvironment.isHeadless()) {
+        println("Sign-in browsers: skipped (no Windows or Linux desktop)")
         return
     }
     val browsers = com.convx.desktop.integrations.youtube.BrowserSignIn.browsers()

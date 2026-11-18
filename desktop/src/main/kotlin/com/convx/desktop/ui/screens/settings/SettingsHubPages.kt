@@ -387,9 +387,14 @@ fun UpdatesPage() {
         when (val s = state) {
             is com.convx.desktop.core.Updater.State.Available -> {
                 val mac = com.convx.desktop.core.Updater.isMac
+                val linux = com.convx.desktop.core.Updater.isLinux
                 SettingsRow(
                     "Convx ${s.release.version} is available",
-                    if (mac) "Open the downloaded disk image and drag Convx into Applications." else "Installing closes Convx for a moment and opens it again.",
+                    when {
+                        mac -> "Open the downloaded disk image and drag Convx into Applications."
+                        linux -> "Install the downloaded package, or use the new AppImage in place of this one."
+                        else -> "Installing closes Convx for a moment and opens it again."
+                    },
                     icon = "download",
                     tint = SystemColors.Blue,
                 )
@@ -397,7 +402,7 @@ fun UpdatesPage() {
                 if (com.convx.desktop.core.Updater.canInstall) {
                     ButtonRow("Download and install") { scope.launch { com.convx.desktop.core.Updater.downloadAndInstall() } }
                 } else {
-                    ButtonRow(if (mac) "Download" else "Download the installer") { openUrl(s.release.installerUrl) }
+                    ButtonRow(if (mac || linux) "Download" else "Download the installer") { openUrl(s.release.installerUrl) }
                 }
             }
             is com.convx.desktop.core.Updater.State.Downloading ->
