@@ -5,14 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Convx</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="description" content="Convx is a free, open-source music app with liquid glass, word-synced lyrics and AutoMix, for Android and Windows.">
+<meta name="description" content="Convx is a free, open-source music app with liquid glass, word-synced lyrics and AutoMix, for Android, Windows and Mac.">
 <meta name="theme-color" content="#000000">
 <meta property="og:type" content="website">
 <meta property="og:title" content="Convx. Just listen.">
-<meta property="og:description" content="A free, open-source music app with liquid glass, word-synced lyrics and AutoMix. For Android and Windows.">
+<meta property="og:description" content="A free, open-source music app with liquid glass, word-synced lyrics and AutoMix. For Android, Windows and Mac.">
 <meta property="og:image" content="https://m33md.github.io/convx-desktop/assets/og.jpg">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Convx","applicationCategory":"MultimediaApplication","operatingSystem":"Android 8.0+, Windows 10+","description":"A free, open-source music app with liquid glass, word-synced lyrics and AutoMix.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://www.gnu.org/licenses/gpl-3.0.html","author":{"@type":"Person","name":"Aryan (Cosmic Taser)"},"downloadUrl":"https://github.com/m33md/convx-desktop/releases/latest"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Convx","applicationCategory":"MultimediaApplication","operatingSystem":"Android 8.0+, Windows 10+, macOS","description":"A free, open-source music app with liquid glass, word-synced lyrics and AutoMix.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://www.gnu.org/licenses/gpl-3.0.html","author":{"@type":"Person","name":"Aryan (Cosmic Taser)"},"downloadUrl":"https://github.com/m33md/convx-desktop/releases/latest"}</script>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
@@ -31,7 +31,7 @@
   --glass-edge: rgba(255, 255, 255, 0.16);
   --label: #f5f5f7;
   --label-2: rgba(235, 235, 245, 0.66);
-  --label-3: rgba(235, 235, 245, 0.38);
+  --label-3: rgba(235, 235, 245, 0.52);
   --red: #fa2d48;
   --red-press: #e0203b;
   --crimson: #be1660;
@@ -39,6 +39,11 @@
   --font: "Plus Jakarta Sans", ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
   --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  /* One motion family: a strong ease-out for anything arriving or answering a press,
+     ease-in-out for things moving across the screen. No overshoot outside the lyrics demo. */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --red-cta: #e0203b;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
   color-scheme: dark;
 }
@@ -82,10 +87,6 @@ h1, h2, h3 { margin: 0; text-wrap: balance; font-weight: 800; }
 h2 { font-size: clamp(34px, 4.8vw, 58px); line-height: 1.03; letter-spacing: -0.038em; }
 h3 { font-size: 21px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 700; }
 p { margin: 0; }
-.eyebrow {
-  font-size: 13px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
-  color: var(--red); margin-bottom: 18px;
-}
 .lede { font-size: clamp(17px, 1.6vw, 20px); color: var(--label-2); max-width: 34em; }
 .body-2 { color: var(--label-2); max-width: 36em; }
 
@@ -104,24 +105,30 @@ p { margin: 0; }
   display: inline-flex; align-items: center; gap: 12px;
   min-height: 56px; padding: 10px 22px 10px 16px; border-radius: 999px;
   text-decoration: none; font-weight: 700; font-size: 16px; line-height: 1.15;
-  transition: transform 0.4s var(--spring), background-color 0.2s, box-shadow 0.2s;
+  transition: transform 0.16s var(--ease-out), background-color 0.2s ease;
 }
-.btn svg { width: 24px; height: 24px; flex: none; transition: transform 0.45s var(--spring); }
-.btn::after {
-  content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none;
-  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.20) 50%, transparent 70%);
-  transform: translateX(-110%); transition: transform 0.8s var(--ease);
-}
-.btn:hover::after { transform: translateX(110%); }
-.btn:hover svg { transform: translateY(1px) scale(1.06); }
+.btn svg { width: 24px; height: 24px; flex: none; transition: transform 0.2s var(--ease-out), opacity 0.2s ease, filter 0.2s ease; }
 .btn small { display: block; font-weight: 500; font-size: 12.5px; opacity: 0.78; margin-top: 2px; font-family: var(--mono); letter-spacing: -0.01em; }
-.btn:hover { transform: translateY(-1px); }
-.btn:active { transform: translateY(0) scale(0.98); }
-.btn-red { background: var(--red); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.12); }
-.btn-red:hover { background: #ff3753; }
+.btn:active { transform: scale(0.97); }
+.btn-red { background: var(--red-cta); color: #fff; box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -1px 0 rgba(0,0,0,0.12); }
+.btn-red small { opacity: 1; }
 .btn-glass { color: var(--label); }
 .btn.glass { box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
-.btn-glass:hover { background-color: rgba(255,255,255,0.10); }
+@media (hover: hover) and (pointer: fine) {
+  .btn-red:hover { background: #d61d37; }
+  .btn-glass:hover { background-color: rgba(255,255,255,0.10); }
+}
+/* A download answers the click: the arrow turns into a tick for a moment. */
+.btn .tick { position: absolute; left: 16px; top: calc(50% - 12px); opacity: 0; filter: blur(3px); transform: scale(0.8); }
+.btn.is-done > svg:not(.tick) { opacity: 0; filter: blur(3px); transform: scale(0.8); }
+.btn.is-done .tick { opacity: 1; filter: none; transform: none; }
+.dl-next {
+  display: grid; grid-template-rows: 0fr; opacity: 0; max-width: 34em;
+  font-size: 14.5px; color: var(--label-2); transition: grid-template-rows 0.3s var(--ease-out), opacity 0.3s ease, margin-top 0.3s var(--ease-out);
+}
+.dl-next > span { overflow: hidden; }
+.dl-next.on { grid-template-rows: 1fr; opacity: 1; margin-top: 16px; }
+.dl-next b { color: var(--label); }
 
 /* Nav */
 .nav {
@@ -149,7 +156,7 @@ p { margin: 0; }
 .puck {
   position: absolute; z-index: 0; top: 0; left: 0; height: 100%; width: 0; border-radius: 999px;
   background: rgba(255,255,255,0.11); box-shadow: inset 0 1px 0 rgba(255,255,255,0.16);
-  opacity: 0; transition: transform 0.55s var(--spring), width 0.55s var(--spring), opacity 0.25s;
+  opacity: 0; transition: transform 0.3s var(--ease-out), width 0.3s var(--ease-out), opacity 0.2s ease;
 }
 .nav-cta { min-height: 42px; padding: 8px 18px; font-size: 15px; }
 @media (min-width: 860px) { .nav-links { display: flex; } }
@@ -178,6 +185,7 @@ p { margin: 0; }
 .hero h1 { margin: 0 0 30px; line-height: 0; }
 .title svg { display: block; width: min(100%, 540px); height: auto; overflow: visible; }
 .title .t-body { fill: var(--label); }
+.title .t-dim { fill: rgba(235, 235, 245, 0.16); }
 .title .t-dot { fill: var(--red); transform-box: fill-box; transform-origin: 50% 50%; }
 .cta-row { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 34px; }
 .hero-meta { margin-top: 22px; font-size: 13px; color: var(--label-3); display: flex; flex-wrap: wrap; gap: 6px 18px; }
@@ -192,23 +200,17 @@ p { margin: 0; }
 .mac-view .card {
   position: absolute; inset: 0; margin: 0; z-index: 1;
   transform: translateX(100%); filter: brightness(1);
-  transition: transform 0.85s cubic-bezier(0.22, 0.9, 0.24, 1), filter 0.85s var(--ease);
+  transition: transform 0.6s var(--ease-in-out), filter 0.6s var(--ease-in-out);
 }
 .mac-view .card img { width: 100%; height: 100%; object-fit: cover; }
 .mac-view .card[data-pos="0"] { z-index: 2; transform: none; }
 .mac-view .card[data-pos="out"] { transform: translateX(-32%); filter: brightness(0.35); }
 .card.snap { transition: none !important; }
-.glare {
-  position: absolute; inset: 0; pointer-events: none; border-radius: inherit;
-  background: radial-gradient(55% 65% at var(--gx, 30%) var(--gy, 15%), rgba(255,255,255,0.13), transparent 62%);
-  opacity: var(--glare, 0.5); transition: opacity 0.5s var(--ease);
-}
-.mac-view > .glare { z-index: 4; }
 .stage .hero-phone { position: absolute; left: 3%; bottom: -14%; width: 24%; transform: translateZ(110px); cursor: pointer; }
 .hero-phone .scr {
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; border-radius: 0; aspect-ratio: auto;
   opacity: 0; transform: translateY(9%) scale(1.08); filter: blur(10px);
-  transition: opacity 0.55s var(--ease), transform 0.9s var(--spring), filter 0.55s var(--ease);
+  transition: opacity 0.45s var(--ease-out), transform 0.5s var(--ease-out), filter 0.45s var(--ease-out);
 }
 .hero-phone .scr.is-on { opacity: 1; transform: none; filter: none; }
 .hero-phone .scr.is-off { opacity: 0; transform: translateY(-7%) scale(0.93); filter: blur(8px); }
@@ -219,7 +221,7 @@ p { margin: 0; }
 }
 .stage-cap b { color: var(--label-2); font-weight: 500; }
 .stage-dots { display: flex; gap: 5px; }
-.stage-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.22); transition: width 0.45s var(--spring), background-color 0.3s; }
+.stage-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.22); transition: width 0.3s var(--ease-out), background-color 0.2s ease; }
 .stage-dots i.on { width: 18px; background: var(--label-2); }
 .screen {
   margin: 0; border-radius: 14px; overflow: hidden; background: #050505;
@@ -271,10 +273,11 @@ p { margin: 0; }
 .tour-meter em { margin-left: auto; font-style: normal; color: var(--label-2); }
 .tour-zoom {
   display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; padding: 6px 12px; border-radius: 999px; cursor: zoom-in;
-  font: 500 12px/1 var(--mono); color: var(--label); background: rgba(255,255,255,0.08); border: 1px solid var(--line);
-  transition: background-color 0.2s, transform 0.4s var(--spring);
+  font: 600 12.5px/1 var(--font); color: var(--label); background: rgba(255,255,255,0.08); border: 1px solid var(--line);
+  transition: background-color 0.2s ease, transform 0.16s var(--ease-out);
 }
-.tour-zoom:hover { background: rgba(255,255,255,0.14); transform: translateY(-1px); }
+.tour-zoom:active { transform: scale(0.96); }
+@media (hover: hover) and (pointer: fine) { .tour-zoom:hover { background: rgba(255,255,255,0.14); } }
 .tour-zoom svg { width: 13px; height: 13px; }
 .tour-view { cursor: zoom-in; }
 /* Full size: any tour screen opens at its real size, scrollable on a phone. */
@@ -285,9 +288,9 @@ p { margin: 0; }
 .shot-box::backdrop { background: rgba(0,0,0,0.84); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
 .shot-box img { display: block; width: 100%; height: auto; }
 /* A CSS entrance: GSAP measures a fixed element by moving it in the page, which would close a modal dialog. */
-.shot-box[open] { animation: box-in 0.5s var(--ease); }
-@keyframes box-in { from { opacity: 0; transform: scale(0.94); } }
-.shot-bar { position: sticky; top: 0; left: 0; z-index: 1; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 18px; background: rgba(5,5,5,0.92); font: 500 13px/1 var(--mono); color: var(--label-2); }
+.shot-box[open] { animation: box-in 0.3s var(--ease-out); }
+@keyframes box-in { from { opacity: 0; transform: scale(0.96); } }
+.shot-bar { position: sticky; top: 0; left: 0; z-index: 1; display: flex; align-items: center; gap: 12px; padding: 10px 10px 10px 18px; background: rgba(5,5,5,0.92); font: 600 13px/1 var(--font); color: var(--label-2); }
 .shot-bar b { color: var(--label); font-weight: 500; }
 .shot-close { margin-left: auto; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,0.08); color: var(--label); font-size: 20px; line-height: 1; cursor: pointer; }
 .shot-close:hover { background: rgba(255,255,255,0.16); }
@@ -297,15 +300,13 @@ p { margin: 0; }
 .tour-steps { list-style: none; margin: 0; padding: 2vh 0 16vh; }
 .tour-step {
   min-height: 40vh; display: flex; flex-direction: column; justify-content: center; padding: 32px 0;
-  border-top: 1px solid rgba(255,255,255,0.07); opacity: 0.3; cursor: pointer; transition: opacity 0.5s var(--ease);
+  border-top: 1px solid rgba(255,255,255,0.07); opacity: 0.3; cursor: pointer; transition: opacity 0.35s ease;
 }
 .tour-step:first-child { border-top: 0; }
 .tour-step:hover { opacity: 0.55; }
 .tour-step.is-on { opacity: 1; cursor: default; }
-.tour-num { display: flex; gap: 10px; margin-bottom: 12px; font-size: 12px; color: var(--red); }
-.tour-num b { font-weight: 500; color: var(--label-3); }
-.tour-step h3 { font-size: clamp(26px, 2.6vw, 36px); line-height: 1.08; letter-spacing: -0.025em; transition: transform 0.7s var(--spring); }
-.tour-step p { margin: 14px 0 0; color: var(--label-2); max-width: 30em; transition: transform 0.7s var(--spring) 0.04s; }
+.tour-step h3 { font-size: clamp(26px, 2.6vw, 36px); line-height: 1.08; letter-spacing: -0.025em; transition: transform 0.4s var(--ease-out); }
+.tour-step p { margin: 14px 0 0; color: var(--label-2); max-width: 30em; transition: transform 0.4s var(--ease-out) 0.03s; }
 .tour-step.is-on h3, .tour-step.is-on p { transform: translateX(6px); }
 @media (min-width: 960px) {
   .tour {
@@ -421,7 +422,6 @@ p { margin: 0; }
   display: flex; flex-direction: column; gap: 12px;
 }
 .tile p { color: var(--label-2); font-size: 15.5px; }
-.tile .kicker { font-size: 12px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--label-3); }
 @media (min-width: 760px) { .t-mix { grid-column: 1 / -1; } }
 @media (min-width: 1080px) {
   .t-mix { grid-column: span 4; }
@@ -461,7 +461,7 @@ p { margin: 0; }
   --d: 0;
   position: absolute; left: 50%; bottom: -36px; height: min(540px, 90%); width: auto; border-radius: 16px;
   box-shadow: 0 20px 50px rgba(0,0,0,0.6); transform-origin: 50% 100%; -webkit-user-drag: none; pointer-events: none;
-  transition: transform 0.85s var(--spring), opacity 0.5s var(--ease), filter 0.5s var(--ease);
+  transition: transform 0.5s var(--ease-out), opacity 0.4s ease, filter 0.4s ease;
 }
 .swipe.dragging img { transition: none; }
 .swipe img[data-pos="0"] { z-index: 3; transform: translateX(calc(var(--drag, 0) * 1px)) translateX(-50%) translateY(-14px) rotate(calc(var(--drag, 0) * 0.03deg)); }
@@ -470,7 +470,7 @@ p { margin: 0; }
 .swipe img[data-pos="-2"] { z-index: 1; transform: translateX(-165%) rotate(-24deg) scale(0.8); opacity: 0; }
 .swipe img[data-pos="2"] { z-index: 1; transform: translateX(65%) rotate(24deg) scale(0.8); opacity: 0; }
 .swipe-dots { display: flex; gap: 5px; margin-top: 2px; }
-.swipe-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); transition: width 0.45s var(--spring), background-color 0.3s; }
+.swipe-dots i { width: 6px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); transition: width 0.3s var(--ease-out), background-color 0.2s ease; }
 .swipe-dots i.on { width: 18px; background: var(--red); }
 
 /* Modules */
@@ -508,38 +508,38 @@ p { margin: 0; }
 @media (min-width: 1000px) { .studio-grid { grid-template-columns: minmax(0, 4fr) minmax(0, 6fr); gap: 64px; } }
 .studio-shot { position: relative; min-width: 0; }
 .studio-shot .disc-float { position: absolute; width: 30%; right: -4%; top: -9%; filter: drop-shadow(0 24px 40px rgba(0,0,0,0.7)); animation: spin 14s linear infinite; }
-.badge { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; padding: 7px 12px; border-radius: 999px; color: #fff; background: rgba(250, 45, 72, 0.14); border: 1px solid rgba(250, 45, 72, 0.4); margin-bottom: 20px; }
-.studio-facts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 32px; }
-.fact { padding: 14px; border-radius: 18px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); }
-.fact b { display: block; font-size: 22px; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
-.fact span { font-size: 13px; color: var(--label-2); }
+/* Loops stop while off screen. */
+.is-away, .is-away * { animation-play-state: paused !important; }
 .file { font-family: var(--mono); font-size: 0.92em; padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.08); }
 
-.rack { margin-top: clamp(56px, 8vw, 96px); overflow: hidden; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
-.rack-track { display: flex; gap: 22px; width: max-content; animation: slide 60s linear infinite; padding-block: 8px; }
-.rack:hover .rack-track { animation-play-state: paused; }
+.rack { margin-top: clamp(56px, 8vw, 96px); overflow-x: auto; scrollbar-width: none; -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+.rack::-webkit-scrollbar { display: none; }
+.has-gsap .rack { overflow: hidden; }
+.rack-track { display: flex; gap: 22px; width: max-content; padding: 8px 8vw; }
 .rack figure { margin: 0; width: clamp(120px, 14vw, 170px); flex: none; text-align: center; }
-.rack img { width: 100%; aspect-ratio: 1; filter: drop-shadow(0 14px 24px rgba(0,0,0,0.6)); transition: transform 0.7s var(--spring); }
-.rack figure:hover img { transform: rotate(160deg) scale(1.05); }
+.rack img { width: 100%; aspect-ratio: 1; filter: drop-shadow(0 14px 24px rgba(0,0,0,0.6)); transition: transform 1.2s var(--ease-out); }
+@media (hover: hover) and (pointer: fine) { .rack figure:hover img { transform: rotate(140deg); } }
 .rack figcaption { font-size: 12.5px; color: var(--label-3); margin-top: 10px; }
 .rack figcaption b { color: var(--label-2); font-weight: 600; }
-@keyframes slide { to { transform: translateX(calc(-50% - 11px)); } }
 @keyframes spin { to { transform: rotate(360deg); } }
 
 /* Download */
-.dl-grid { display: grid; gap: 16px; }
-@media (min-width: 900px) { .dl-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-.dl {
-  border-radius: 32px; padding: clamp(24px, 3.4vw, 40px); display: grid; gap: 22px; align-content: start; min-width: 0;
+.dl-list { border-radius: 32px; padding: 6px clamp(20px, 3vw, 36px); }
+.dl { display: grid; gap: 18px; padding-block: clamp(22px, 3vw, 32px); min-width: 0; }
+.dl + .dl { border-top: 1px solid rgba(255,255,255,0.08); }
+@media (min-width: 900px) {
+  .dl { grid-template-columns: minmax(0, 15rem) minmax(0, 1fr) auto; gap: 32px; align-items: center; }
 }
-.dl-top { display: flex; align-items: center; gap: 14px; }
+.dl-id { display: flex; align-items: center; gap: 14px; }
+.dl-act { display: grid; gap: 10px; justify-items: start; }
+@media (min-width: 900px) { .dl-act { justify-items: end; text-align: right; } }
 .dl-icon { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: rgba(255,255,255,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
 .dl-icon svg { width: 26px; height: 26px; }
-.dl h3 { font-size: 26px; }
-.dl-ver { font-size: 12.5px; color: var(--label-3); }
-.dl ol { margin: 0; padding-left: 20px; display: grid; gap: 8px; color: var(--label-2); font-size: 15.5px; }
-.dl ol li::marker { font-family: var(--mono); color: var(--label-3); font-size: 13px; }
-.dl .btn { justify-self: start; }
+.dl h3 { font-size: 24px; }
+.dl-ver { display: block; margin-top: 2px; font-size: 13px; color: var(--label-3); font-variant-numeric: tabular-nums; }
+.dl ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--label-2); font-size: 15px; }
+.dl ol li::marker { color: var(--label-3); font-size: 13px; font-variant-numeric: tabular-nums; }
+.dl .btn { min-width: 12.5rem; }
 .dl-also { font-size: 14px; color: var(--label-3); }
 .dl-also a { color: var(--label-2); }
 .setup-shot { border-radius: 14px; width: min(100%, 400px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
@@ -569,65 +569,55 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   .stage .hero-phone { width: 27%; left: 10%; }
   .stage-cap { right: 0; }
   .stage-cap .hint { display: none; }
-  .studio-facts { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
-  .studio-facts .fact:last-child { grid-column: 1 / -1; }
   .party-code b { font-size: 20px; }
 }
 
 /* Motion */
-.nav { transition: transform 0.55s var(--ease); }
+.nav { transition: transform 0.35s var(--ease-out); }
 .nav.tucked { transform: translateY(calc(-100% - 8px)); }
-.tile { isolation: isolate; transition: transform 0.55s var(--spring), border-color 0.3s; }
-.tile::before {
-  content: ""; position: absolute; z-index: -1; inset: 0; border-radius: inherit; pointer-events: none;
-  background: radial-gradient(380px circle at var(--mx, 50%) var(--my, 0%), rgba(255,255,255,0.065), transparent 65%);
-  opacity: 0; transition: opacity 0.4s;
-}
-.tile:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.14); }
-.tile:hover::before { opacity: 1; }
-.chip { transition: transform 0.45s var(--spring), background-color 0.2s; }
-.chip:hover { transform: translateY(-2px); background-color: rgba(255,255,255,0.09); }
-.sources li { transition: transform 0.55s var(--spring), border-color 0.3s; }
-.t-modules:hover .sources li { transform: translateX(6px); }
-.t-modules:hover .sources li:nth-child(2) { transition-delay: 0.06s; }
-.t-modules:hover .sources li:nth-child(3) { transition-delay: 0.12s; }
+.tile { isolation: isolate; transition: border-color 0.2s ease; }
+.chip { transition: background-color 0.2s ease; }
+.sources li { transition: transform 0.3s var(--ease-out), border-color 0.2s ease; }
 .party-code b { display: inline-block; min-width: 7.2ch; }
-.plat { transition: border-color 0.3s; }
-.plat:hover { border-color: rgba(255,255,255,0.14); }
-.plat-android .mock { transition: transform 0.9s var(--spring); }
-.plat-android:hover .mock { transform: translateY(-16px) rotate(-1deg); }
+.plat { transition: border-color 0.2s ease; }
+.plat-android .mock { transition: transform 0.5s var(--ease-out); }
 #lyrics .split > div:last-child, .plat-windows, .studio-shot { perspective: 1400px; }
-.plat-windows .screen { transition: transform 0.9s var(--spring); }
-.plat-windows:hover .screen { transform: translate(-10px, -10px); }
-.studio-shot .screen { transition: transform 0.9s var(--spring); }
-.studio-shot:hover .screen { transform: perspective(1400px) rotateY(-5deg) rotateX(3deg); }
-.dl { transition: transform 0.55s var(--spring), border-color 0.3s; }
-.dl:hover { transform: translateY(-4px); border-color: rgba(255,255,255,0.16); }
-.dl-icon { transition: transform 0.6s var(--spring); }
-.dl:hover .dl-icon { transform: rotate(-8deg) scale(1.08); }
-.fact { transition: transform 0.5s var(--spring), background-color 0.3s; }
-.fact:hover { transform: translateY(-3px); background-color: rgba(255,255,255,0.07); }
+.plat-windows .screen, .studio-shot .screen { transition: transform 0.5s var(--ease-out); }
+@media (hover: hover) and (pointer: fine) {
+  .tile:hover { border-color: rgba(255,255,255,0.16); }
+  .chip:hover { background-color: rgba(255,255,255,0.09); }
+  .t-modules:hover .sources li { transform: translateX(6px); }
+  .t-modules:hover .sources li:nth-child(2) { transition-delay: 0.04s; }
+  .t-modules:hover .sources li:nth-child(3) { transition-delay: 0.07s; }
+  .plat:hover { border-color: rgba(255,255,255,0.14); }
+  .plat-android:hover .mock { transform: translateY(-10px); }
+  .plat-windows:hover .screen { transform: translate(-6px, -6px); }
+  .studio-shot:hover .screen { transform: perspective(1400px) rotateY(-4deg) rotateX(2deg); }
+}
 
 @media (prefers-reduced-motion: no-preference) {
   /* The hero arrives: words rise, the title is drawn, the screens fly in from the dark. */
-  .hero-copy > * { animation: rise-in 0.9s var(--ease) backwards; }
-  .hero-copy > :nth-child(1) { animation-delay: 0.05s; }
-  .hero-copy > :nth-child(3) { animation-delay: 0.35s; }
-  .hero-copy > :nth-child(4) { animation-delay: 0.45s; }
-  .hero-copy > :nth-child(5) { animation-delay: 0.55s; }
-  .hero-copy > .title { animation: none; }
-  .title svg { animation: draw-in 1.1s var(--ease) 0.12s backwards; }
-  .title .t-dot { animation: dot-in 0.7s var(--spring) 0.95s backwards; }
-  .hero-mac { animation: deck-in 1.3s var(--spring) 0.25s backwards; }
-  .stage .hero-phone { animation: phone-in 1.2s var(--spring) 0.5s backwards; }
-  .stage-cap { animation: rise-in 0.8s var(--ease) 1s backwards; }
-  @keyframes rise-in { from { opacity: 0; translate: 0 22px; filter: blur(6px); } }
-  @keyframes draw-in { from { clip-path: inset(-10% 100% -10% 0); translate: -12px 0; } to { clip-path: inset(-10% -10% -10% 0); } }
-  @keyframes dot-in { from { transform: scale(0); } }
-  @keyframes deck-in { from { opacity: 0; transform: translate3d(10%, 8%, -320px) rotateY(16deg); } }
-  @keyframes phone-in { from { opacity: 0; transform: translate3d(-40%, 30%, 110px) rotate(-8deg); } }
+  /* The one authored moment: "Just listen." fills in like a synced lyric line, a word at a time,
+     and the red dot lands on the beat. Everything else on the page is already there. */
+  .t-line { transform-box: view-box; }
+  .t-line-1 { animation: sing-1 0.62s cubic-bezier(0.3, 0.15, 0.4, 1) 0.3s backwards; }
+  .t-line-2 { animation: sing-2 0.86s cubic-bezier(0.3, 0.15, 0.4, 1) 1.02s backwards; }
+  .title .t-dot { animation: dot-in 0.34s var(--ease-out) 1.84s backwards; }
+  @keyframes sing-1 { from { transform: translateX(-3800px); } }
+  @keyframes sing-2 { from { transform: translateX(-4600px); } }
+  @keyframes dot-in { from { opacity: 0; transform: scale(0.5); } }
+  .hero-copy > :not(.title) { animation: fade-in 0.5s var(--ease-out) backwards; }
+  .hero-copy > .lede { animation-delay: 0.08s; }
+  .hero-copy > .cta-row { animation-delay: 0.14s; }
+  .hero-copy > .hero-meta { animation-delay: 0.18s; }
+  .hero-mac { animation: deck-in 0.9s var(--ease-out) 0.2s backwards; }
+  .stage .hero-phone { animation: phone-in 0.9s var(--ease-out) 0.3s backwards; }
+  .stage-cap { animation: fade-in 0.4s ease 0.9s backwards; }
+  @keyframes fade-in { from { opacity: 0; translate: 0 8px; } }
+  @keyframes deck-in { from { opacity: 0; transform: translate3d(3%, 4%, -80px) rotateY(5deg); } }
+  @keyframes phone-in { from { opacity: 0; transform: translate3d(-8%, 10%, 110px); } }
 
-  /* Scroll motion (section reveals, the hero drifting away, the tour) is driven by GSAP ScrollTrigger below. */
+  /* Scroll motion is only where scrolling means something: the tour and the disc rack (GSAP, below). */
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -650,6 +640,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <symbol id="i-phone" viewBox="0 0 24 24"><rect x="6" y="2.5" width="12" height="19" rx="3" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M10.5 18.5h3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-pc" viewBox="0 0 24 24"><rect x="2.5" y="4" width="19" height="13" rx="2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M8.5 20.5h7M12 17v3.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-down" viewBox="0 0 24 24"><path d="M12 4v11m0 0-4.5-4.5M12 15l4.5-4.5M5 19.5h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4.5" y="5" width="15" height="10.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 19h19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 3.5V17h0A2.5 2.5 0 0 1 4 14.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M20.5 3.5 3.5 10.5l6.5 2.5 2.5 6.5z M10 13l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
@@ -683,9 +674,8 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <canvas class="stars" aria-hidden="true"></canvas>
   <div class="wrap hero-grid">
     <div class="hero-copy">
-      <p class="eyebrow">Free music app for Android and Windows</p>
-      <h1 class="title"><span class="sr">Just listen.</span><svg viewBox="0 0 4012 1540" aria-hidden="true"><path class="t-body" fill-rule="evenodd" d="M3278,871 3270,858 3254,844 3247,839 3234,834 3221,831 3206,830 3192,832 3178,835 3164,841 3150,849 3131,864 3121,876 3116,884 3107,900 3101,917 3097,935 3094,949 3000,1386 2998,1407 2997,1435 3000,1457 3004,1470 3011,1485 3020,1498 3035,1513 3054,1526 3068,1532 3093,1538 3118,1539 3142,1536 3166,1529 3175,1525 3199,1512 3226,1490 3238,1479 3248,1468 3261,1446 3270,1428 3277,1411 3364,1006 3369,998 3373,994 3377,992 3382,991 3427,990 3535,988 3542,990 3545,992 3547,995 3547,1003 3485,1293 3484,1301 3485,1316 3489,1332 3496,1346 3500,1353 3505,1360 3516,1371 3528,1379 3542,1386 3557,1391 3573,1395 3588,1396 3603,1395 3639,1386 3653,1380 3668,1372 3681,1362 3700,1346 3710,1334 3718,1322 3727,1303 3732,1288 3791,1011 3794,994 3794,977 3791,961 3789,954 3783,942 3774,932 3762,925 3752,921 3294,919 3288,917 3284,912 3280,878ZM2526,212 2524,220 2516,262 2516,269 2518,275 2520,281 2524,286 2529,290 2534,292 2542,294 2616,295 2622,299 2624,302 2625,305 2625,310 2567,582 2566,595 2566,614 2567,627 2570,639 2577,656 2587,672 2598,685 2612,696 2623,702 2641,709 2659,714 2679,715 2704,714 2724,709 2745,702 2770,689 2789,676 2805,661 2824,639 2836,621 2845,601 2852,581 2910,310 2912,304 2915,300 2922,296 2928,295 3130,295 3145,293 3158,289 3165,285 3177,276 3183,270 3192,258 3198,245 3200,237 3201,224 3199,210 3194,200 3190,195 3180,186 3169,182 3162,181 2952,180 2946,178 2941,173 2940,168 2948,126 2949,107 2948,94 2946,82 2942,70 2937,59 2931,49 2924,39 2916,30 2902,19 2891,13 2880,8 2868,4 2849,1 2836,0 2817,1 2803,3 2790,6 2770,13 2757,19 2744,26 2726,38 2714,48 2694,70 2686,82 2675,100 2669,113 2664,127 2655,168 2652,172 2647,177 2643,179 2639,180 2573,180 2559,182 2551,186 2539,194 2533,201ZM2238,1361 2241,1367 2246,1373 2260,1387 2268,1391 2282,1393 2337,1394 2662,1395 2667,1398 2670,1404 2671,1428 2673,1444 2677,1459 2682,1473 2690,1485 2695,1491 2705,1501 2717,1509 2731,1516 2748,1522 2762,1525 2783,1525 2797,1523 2812,1520 2832,1512 2847,1504 2859,1496 2871,1486 2888,1469 2903,1449 2915,1428 2921,1413 2926,1394 2944,1322 2946,1308 2946,1296 2945,1293 2944,1291 2940,1290 2472,1290 2464,1288 2459,1285 2454,1280 2449,1275 2446,1265 2445,1258 2448,1241 2450,1233 2453,1226 2458,1220 2464,1213 2470,1209 2481,1203 2489,1201 2496,1200 2959,1200 2964,1198 2967,1195 2968,1192 2997,1055 2996,1051 2991,1047 2989,1044 2987,1039 2988,1035 3007,997 3015,975 3018,958 3019,935 3017,913 3012,899 3002,879 2998,872 2988,862 2969,848 2947,838 2926,832 2875,830 2788,830 2680,830 2593,831 2563,833 2556,836 2543,844 2529,854 2517,864 2511,873 2503,889 2494,926 2488,954 2482,977 2479,992 2477,998 2473,1002 2468,1005 2463,1007 2380,1007 2364,1009 2349,1011 2334,1019 2319,1030 2307,1041 2298,1052 2290,1069 2285,1086 2237,1313 2235,1328 2235,1346ZM2788,1020 2793,1022 2797,1026 2800,1030 2801,1035 2800,1041 2790,1087 2783,1099 2776,1107 2764,1115 2752,1119 2743,1120 2503,1120 2491,1118 2484,1114 2476,1106 2472,1095 2471,1087 2472,1081 2482,1037 2485,1031 2489,1026 2494,1023 2500,1021 2506,1020ZM1747,210 1744,218 1696,445 1696,450 1697,455 1699,459 1703,462 1707,464 1713,465 2157,465 2162,466 2166,469 2168,473 2169,479 2153,552 2151,557 2147,560 2139,565 1746,565 1726,567 1712,572 1693,583 1677,597 1664,615 1656,634 1653,653 1654,665 1655,672 1659,683 1662,688 1669,697 1674,702 1684,708 1694,712 1701,714 1714,715 2274,715 2294,712 2313,705 2331,693 2347,677 2358,659 2365,640 2420,380 2420,375 2419,370 2417,366 2414,363 2409,361 2403,360 1959,360 1954,359 1950,356 1947,351 1947,345 1963,273 1968,265 1972,262 1977,260 2402,260 2416,258 2430,252 2436,247 2445,237 2453,224 2459,194 2459,189 2457,180 2457,174 2459,170 2466,160 2468,155 2483,81 2484,62 2480,44 2471,28 2459,15 2449,9 2438,4 2426,1 2413,0 2048,0 2035,1 2022,4 2002,12 1984,23 1968,38 1955,55 1948,68 1944,81 1927,161 1924,167 1920,171 1915,174 1909,175 1796,175 1789,176 1776,180 1763,187 1753,198ZM1546,1037 1543,1045 1535,1087 1536,1094 1537,1100 1540,1106 1544,1111 1549,1115 1554,1117 1561,1119 1635,1120 1642,1124 1644,1127 1645,1130 1644,1135 1587,1407 1585,1420 1585,1439 1587,1452 1590,1464 1597,1481 1606,1497 1618,1510 1632,1521 1648,1530 1660,1534 1679,1539 1698,1540 1723,1539 1744,1534 1764,1527 1790,1514 1808,1501 1825,1486 1844,1464 1856,1446 1865,1426 1872,1406 1929,1135 1932,1129 1935,1125 1941,1121 1948,1120 2150,1120 2165,1118 2178,1113 2191,1106 2198,1100 2207,1090 2212,1082 2218,1070 2220,1062 2221,1049 2219,1035 2214,1025 2210,1020 2199,1011 2194,1009 2182,1006 1972,1005 1965,1003 1961,998 1960,993 1968,951 1969,932 1968,919 1965,907 1962,895 1957,884 1951,874 1944,864 1935,855 1921,844 1911,838 1899,833 1887,829 1869,826 1855,825 1837,826 1823,828 1809,831 1790,838 1776,844 1763,851 1746,863 1734,873 1714,895 1705,907 1695,925 1689,938 1684,952 1674,993 1672,997 1667,1002 1663,1004 1658,1005 1592,1005 1579,1007 1570,1011 1558,1019 1553,1026ZM906,505 907,518 910,530 915,541 923,551 931,559 942,566 953,571 971,575 1508,575 1528,573 1543,569 1556,563 1568,556 1586,541 1596,530 1604,518 1614,498 1618,485 1672,230 1673,217 1670,205 1665,195 1656,187 1650,184 1638,180 1453,180 1443,182 1437,186 1433,190 1430,195 1428,200 1390,380 1388,386 1383,390 1378,394 1372,395 1192,395 1186,394 1183,391 1180,387 1180,382 1218,201 1218,194 1217,190 1215,186 1208,181 1202,180 1022,180 1010,182 1002,184 990,191 978,200 969,211 963,224 908,485ZM766,1035 764,1043 716,1270 715,1275 716,1280 719,1284 722,1287 727,1289 732,1290 1177,1290 1182,1291 1186,1294 1188,1298 1188,1304 1173,1377 1168,1385 1163,1388 1158,1390 765,1390 746,1392 732,1397 713,1408 697,1422 684,1440 676,1459 673,1478 673,1490 675,1497 679,1508 682,1513 689,1522 694,1527 703,1533 714,1537 721,1539 733,1540 1294,1540 1313,1537 1333,1530 1351,1518 1366,1502 1378,1484 1384,1465 1439,1205 1440,1200 1439,1195 1437,1191 1434,1188 1429,1186 1423,1185 979,1185 973,1184 969,1181 967,1176 967,1170 982,1098 987,1090 991,1087 997,1085 1422,1085 1436,1083 1449,1077 1456,1072 1465,1062 1472,1049 1479,1019 1479,1014 1476,1005 1477,999 1479,995 1485,985 1487,980 1503,906 1503,887 1499,869 1491,853 1479,840 1469,834 1458,829 1445,826 1433,825 1068,825 1055,826 1041,829 1022,837 1003,848 987,863 975,880 968,893 963,906 946,986 944,992 939,996 935,999 929,1000 816,1000 808,1001 795,1005 783,1012 773,1023ZM447,159 448,165 451,169 455,173 463,175 609,175 615,177 619,181 620,185 620,190 580,380 578,386 572,392 567,394 563,395 452,395 446,394 441,390 440,383 447,346 448,339 447,335 444,331 441,328 436,326 282,325 268,327 256,331 244,339 237,345 229,356 223,368 198,485 196,505 198,524 205,541 213,551 221,560 237,569 249,573 262,575 728,575 749,573 769,566 783,559 801,546 816,530 824,518 834,499 838,485 930,50 931,38 930,31 926,20 922,14 915,7 909,4 898,1 890,0 568,0 555,1 541,4 522,12 504,23 488,38 475,55 468,68 464,81ZM459,926 460,934 461,940 464,946 468,951 473,955 478,958 485,959 492,960 671,960 679,959 692,955 699,951 710,941 715,933 720,920 726,892 727,879 726,867 725,860 720,850 712,840 702,833 692,828 686,826 673,825 548,825 534,826 515,833 502,840 491,850 481,861 473,873 468,886ZM353,1453 356,1472 363,1488 373,1503 381,1512 394,1523 410,1532 428,1537 447,1540 470,1540 484,1538 503,1534 523,1526 542,1516 560,1503 575,1489 589,1472 597,1460 604,1447 609,1434 613,1421 689,1065 691,1051 689,1038 687,1033 681,1023 672,1014 661,1008 649,1005 642,1005 495,1005 481,1008 468,1015 456,1022 451,1027 441,1039 434,1052 429,1065 355,1415 352,1434ZM0,1439 3,1458 9,1476 15,1486 21,1496 33,1510 48,1521 58,1527 69,1532 87,1537 107,1540 132,1539 152,1536 179,1527 199,1518 223,1502 240,1486 259,1464 271,1446 282,1420 288,1400 381,965 383,951 384,932 383,919 379,901 372,884 366,873 355,859 341,847 331,840 315,833 303,829 290,826 277,825 259,825 245,826 225,831 211,835 185,847 167,859 155,868 144,879 129,895 113,919 101,945 96,965 3,1400 0,1420Z"/><path class="t-dot" d="M3813,1243 3789,1357 3790,1369 3793,1380 3797,1386 3805,1393 3816,1398 3829,1400 3936,1400 3949,1396 3961,1390 3968,1385 3978,1375 3986,1363 3990,1350 4012,1244 4011,1232 4009,1224 4004,1214 3996,1207 3985,1202 3972,1200 3872,1200 3859,1202 3845,1207 3834,1214 3828,1219 3819,1232Z"/></svg></h1>
-      <p class="lede">Convx brings your music, lyrics and library together under a calm sheet of glass. Stream from YouTube Music, sing along word by word, and let one song flow into the next.</p>
+      <h1 class="title"><span class="sr">Just listen.</span><svg viewBox="0 0 4012 1540" aria-hidden="true"><defs><path id="t-shape" fill-rule="evenodd" d="M3278,871 3270,858 3254,844 3247,839 3234,834 3221,831 3206,830 3192,832 3178,835 3164,841 3150,849 3131,864 3121,876 3116,884 3107,900 3101,917 3097,935 3094,949 3000,1386 2998,1407 2997,1435 3000,1457 3004,1470 3011,1485 3020,1498 3035,1513 3054,1526 3068,1532 3093,1538 3118,1539 3142,1536 3166,1529 3175,1525 3199,1512 3226,1490 3238,1479 3248,1468 3261,1446 3270,1428 3277,1411 3364,1006 3369,998 3373,994 3377,992 3382,991 3427,990 3535,988 3542,990 3545,992 3547,995 3547,1003 3485,1293 3484,1301 3485,1316 3489,1332 3496,1346 3500,1353 3505,1360 3516,1371 3528,1379 3542,1386 3557,1391 3573,1395 3588,1396 3603,1395 3639,1386 3653,1380 3668,1372 3681,1362 3700,1346 3710,1334 3718,1322 3727,1303 3732,1288 3791,1011 3794,994 3794,977 3791,961 3789,954 3783,942 3774,932 3762,925 3752,921 3294,919 3288,917 3284,912 3280,878ZM2526,212 2524,220 2516,262 2516,269 2518,275 2520,281 2524,286 2529,290 2534,292 2542,294 2616,295 2622,299 2624,302 2625,305 2625,310 2567,582 2566,595 2566,614 2567,627 2570,639 2577,656 2587,672 2598,685 2612,696 2623,702 2641,709 2659,714 2679,715 2704,714 2724,709 2745,702 2770,689 2789,676 2805,661 2824,639 2836,621 2845,601 2852,581 2910,310 2912,304 2915,300 2922,296 2928,295 3130,295 3145,293 3158,289 3165,285 3177,276 3183,270 3192,258 3198,245 3200,237 3201,224 3199,210 3194,200 3190,195 3180,186 3169,182 3162,181 2952,180 2946,178 2941,173 2940,168 2948,126 2949,107 2948,94 2946,82 2942,70 2937,59 2931,49 2924,39 2916,30 2902,19 2891,13 2880,8 2868,4 2849,1 2836,0 2817,1 2803,3 2790,6 2770,13 2757,19 2744,26 2726,38 2714,48 2694,70 2686,82 2675,100 2669,113 2664,127 2655,168 2652,172 2647,177 2643,179 2639,180 2573,180 2559,182 2551,186 2539,194 2533,201ZM2238,1361 2241,1367 2246,1373 2260,1387 2268,1391 2282,1393 2337,1394 2662,1395 2667,1398 2670,1404 2671,1428 2673,1444 2677,1459 2682,1473 2690,1485 2695,1491 2705,1501 2717,1509 2731,1516 2748,1522 2762,1525 2783,1525 2797,1523 2812,1520 2832,1512 2847,1504 2859,1496 2871,1486 2888,1469 2903,1449 2915,1428 2921,1413 2926,1394 2944,1322 2946,1308 2946,1296 2945,1293 2944,1291 2940,1290 2472,1290 2464,1288 2459,1285 2454,1280 2449,1275 2446,1265 2445,1258 2448,1241 2450,1233 2453,1226 2458,1220 2464,1213 2470,1209 2481,1203 2489,1201 2496,1200 2959,1200 2964,1198 2967,1195 2968,1192 2997,1055 2996,1051 2991,1047 2989,1044 2987,1039 2988,1035 3007,997 3015,975 3018,958 3019,935 3017,913 3012,899 3002,879 2998,872 2988,862 2969,848 2947,838 2926,832 2875,830 2788,830 2680,830 2593,831 2563,833 2556,836 2543,844 2529,854 2517,864 2511,873 2503,889 2494,926 2488,954 2482,977 2479,992 2477,998 2473,1002 2468,1005 2463,1007 2380,1007 2364,1009 2349,1011 2334,1019 2319,1030 2307,1041 2298,1052 2290,1069 2285,1086 2237,1313 2235,1328 2235,1346ZM2788,1020 2793,1022 2797,1026 2800,1030 2801,1035 2800,1041 2790,1087 2783,1099 2776,1107 2764,1115 2752,1119 2743,1120 2503,1120 2491,1118 2484,1114 2476,1106 2472,1095 2471,1087 2472,1081 2482,1037 2485,1031 2489,1026 2494,1023 2500,1021 2506,1020ZM1747,210 1744,218 1696,445 1696,450 1697,455 1699,459 1703,462 1707,464 1713,465 2157,465 2162,466 2166,469 2168,473 2169,479 2153,552 2151,557 2147,560 2139,565 1746,565 1726,567 1712,572 1693,583 1677,597 1664,615 1656,634 1653,653 1654,665 1655,672 1659,683 1662,688 1669,697 1674,702 1684,708 1694,712 1701,714 1714,715 2274,715 2294,712 2313,705 2331,693 2347,677 2358,659 2365,640 2420,380 2420,375 2419,370 2417,366 2414,363 2409,361 2403,360 1959,360 1954,359 1950,356 1947,351 1947,345 1963,273 1968,265 1972,262 1977,260 2402,260 2416,258 2430,252 2436,247 2445,237 2453,224 2459,194 2459,189 2457,180 2457,174 2459,170 2466,160 2468,155 2483,81 2484,62 2480,44 2471,28 2459,15 2449,9 2438,4 2426,1 2413,0 2048,0 2035,1 2022,4 2002,12 1984,23 1968,38 1955,55 1948,68 1944,81 1927,161 1924,167 1920,171 1915,174 1909,175 1796,175 1789,176 1776,180 1763,187 1753,198ZM1546,1037 1543,1045 1535,1087 1536,1094 1537,1100 1540,1106 1544,1111 1549,1115 1554,1117 1561,1119 1635,1120 1642,1124 1644,1127 1645,1130 1644,1135 1587,1407 1585,1420 1585,1439 1587,1452 1590,1464 1597,1481 1606,1497 1618,1510 1632,1521 1648,1530 1660,1534 1679,1539 1698,1540 1723,1539 1744,1534 1764,1527 1790,1514 1808,1501 1825,1486 1844,1464 1856,1446 1865,1426 1872,1406 1929,1135 1932,1129 1935,1125 1941,1121 1948,1120 2150,1120 2165,1118 2178,1113 2191,1106 2198,1100 2207,1090 2212,1082 2218,1070 2220,1062 2221,1049 2219,1035 2214,1025 2210,1020 2199,1011 2194,1009 2182,1006 1972,1005 1965,1003 1961,998 1960,993 1968,951 1969,932 1968,919 1965,907 1962,895 1957,884 1951,874 1944,864 1935,855 1921,844 1911,838 1899,833 1887,829 1869,826 1855,825 1837,826 1823,828 1809,831 1790,838 1776,844 1763,851 1746,863 1734,873 1714,895 1705,907 1695,925 1689,938 1684,952 1674,993 1672,997 1667,1002 1663,1004 1658,1005 1592,1005 1579,1007 1570,1011 1558,1019 1553,1026ZM906,505 907,518 910,530 915,541 923,551 931,559 942,566 953,571 971,575 1508,575 1528,573 1543,569 1556,563 1568,556 1586,541 1596,530 1604,518 1614,498 1618,485 1672,230 1673,217 1670,205 1665,195 1656,187 1650,184 1638,180 1453,180 1443,182 1437,186 1433,190 1430,195 1428,200 1390,380 1388,386 1383,390 1378,394 1372,395 1192,395 1186,394 1183,391 1180,387 1180,382 1218,201 1218,194 1217,190 1215,186 1208,181 1202,180 1022,180 1010,182 1002,184 990,191 978,200 969,211 963,224 908,485ZM766,1035 764,1043 716,1270 715,1275 716,1280 719,1284 722,1287 727,1289 732,1290 1177,1290 1182,1291 1186,1294 1188,1298 1188,1304 1173,1377 1168,1385 1163,1388 1158,1390 765,1390 746,1392 732,1397 713,1408 697,1422 684,1440 676,1459 673,1478 673,1490 675,1497 679,1508 682,1513 689,1522 694,1527 703,1533 714,1537 721,1539 733,1540 1294,1540 1313,1537 1333,1530 1351,1518 1366,1502 1378,1484 1384,1465 1439,1205 1440,1200 1439,1195 1437,1191 1434,1188 1429,1186 1423,1185 979,1185 973,1184 969,1181 967,1176 967,1170 982,1098 987,1090 991,1087 997,1085 1422,1085 1436,1083 1449,1077 1456,1072 1465,1062 1472,1049 1479,1019 1479,1014 1476,1005 1477,999 1479,995 1485,985 1487,980 1503,906 1503,887 1499,869 1491,853 1479,840 1469,834 1458,829 1445,826 1433,825 1068,825 1055,826 1041,829 1022,837 1003,848 987,863 975,880 968,893 963,906 946,986 944,992 939,996 935,999 929,1000 816,1000 808,1001 795,1005 783,1012 773,1023ZM447,159 448,165 451,169 455,173 463,175 609,175 615,177 619,181 620,185 620,190 580,380 578,386 572,392 567,394 563,395 452,395 446,394 441,390 440,383 447,346 448,339 447,335 444,331 441,328 436,326 282,325 268,327 256,331 244,339 237,345 229,356 223,368 198,485 196,505 198,524 205,541 213,551 221,560 237,569 249,573 262,575 728,575 749,573 769,566 783,559 801,546 816,530 824,518 834,499 838,485 930,50 931,38 930,31 926,20 922,14 915,7 909,4 898,1 890,0 568,0 555,1 541,4 522,12 504,23 488,38 475,55 468,68 464,81ZM459,926 460,934 461,940 464,946 468,951 473,955 478,958 485,959 492,960 671,960 679,959 692,955 699,951 710,941 715,933 720,920 726,892 727,879 726,867 725,860 720,850 712,840 702,833 692,828 686,826 673,825 548,825 534,826 515,833 502,840 491,850 481,861 473,873 468,886ZM353,1453 356,1472 363,1488 373,1503 381,1512 394,1523 410,1532 428,1537 447,1540 470,1540 484,1538 503,1534 523,1526 542,1516 560,1503 575,1489 589,1472 597,1460 604,1447 609,1434 613,1421 689,1065 691,1051 689,1038 687,1033 681,1023 672,1014 661,1008 649,1005 642,1005 495,1005 481,1008 468,1015 456,1022 451,1027 441,1039 434,1052 429,1065 355,1415 352,1434ZM0,1439 3,1458 9,1476 15,1486 21,1496 33,1510 48,1521 58,1527 69,1532 87,1537 107,1540 132,1539 152,1536 179,1527 199,1518 223,1502 240,1486 259,1464 271,1446 282,1420 288,1400 381,965 383,951 384,932 383,919 379,901 372,884 366,873 355,859 341,847 331,840 315,833 303,829 290,826 277,825 259,825 245,826 225,831 211,835 185,847 167,859 155,868 144,879 129,895 113,919 101,945 96,965 3,1400 0,1420Z"/><linearGradient id="t-feather"><stop offset="0" stop-color="#fff"/><stop offset="0.88" stop-color="#fff"/><stop offset="1" stop-color="#000"/></linearGradient><mask id="t-sing" maskUnits="userSpaceOnUse" x="-5000" y="-200" width="10000" height="2000"><rect class="t-line t-line-1" x="-500" y="-80" width="4300" height="850" fill="url(#t-feather)"/><rect class="t-line t-line-2" x="-500" y="770" width="5100" height="850" fill="url(#t-feather)"/></mask></defs><use class="t-dim" href="#t-shape"/><use class="t-body" href="#t-shape" mask="url(#t-sing)"/><path class="t-dot" d="M3813,1243 3789,1357 3790,1369 3793,1380 3797,1386 3805,1393 3816,1398 3829,1400 3936,1400 3949,1396 3961,1390 3968,1385 3978,1375 3986,1363 3990,1350 4012,1244 4011,1232 4009,1224 4004,1214 3996,1207 3985,1202 3972,1200 3872,1200 3859,1202 3845,1207 3834,1214 3828,1219 3819,1232Z"/></svg></h1>
+      <p class="lede">A free music app for Android, Windows and Mac. Convx brings your music, lyrics and library together under a calm sheet of glass: stream from YouTube Music, sing along word by word, and let one song flow into the next.</p>
       <div class="cta-row" data-cta>
         <a class="btn btn-red" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases">
           <svg aria-hidden="true"><use href="#i-phone"/></svg>
@@ -696,7 +686,8 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           <span>Download for Windows<small data-label="windows">Setup · Windows 10+</small></span>
         </a>
       </div>
-      <p class="hero-meta mono"><span>Free</span><span>Open source, GPL-3.0</span><span>No account needed</span></p>
+      <p class="dl-next" data-dl-next aria-live="polite"></p>
+      <p class="hero-meta"><span>Free</span><span>Open source, GPL-3.0</span><span>No account needed</span></p>
     </div>
     <div class="stage" data-stage>
       <div class="scene">
@@ -708,7 +699,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
               <figure class="card" data-pos="1" data-name="Player"><img src="assets/img/win-player.webp" width="1440" height="900" alt="Convx for Windows: the full-screen player with the vinyl design"></figure>
               <figure class="card" data-pos="2" data-name="Disc Studio"><img src="assets/img/disc-editor.webp" width="1600" height="1000" alt="Convx for Windows: Disc Studio, designing a record with mountains drawn into its grooves"></figure>
               <figure class="card" data-pos="3" data-name="Moods &amp; Genres"><img src="assets/img/win-moods.webp" width="1440" height="900" alt="Convx for Windows: Moods and Genres tiles"></figure>
-                <span class="glare" aria-hidden="true"></span>
               </div>
           </div>
           <img class="mac-frame" src="assets/img/macbook.webp" width="974" height="588" alt="">
@@ -719,13 +709,12 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
             <div class="mock-screen">
               <img class="scr is-on" src="assets/img/phone-home.webp" width="640" height="1378" alt="Convx on Android: the Home page with Top Picks and Listen again">
               <img class="scr" src="assets/img/phone-now-playing.webp" width="640" height="1399" alt="Convx on Android: the now playing screen">
-              <span class="glare" aria-hidden="true"></span>
             </div>
             <img class="mock-frame" src="assets/img/iphone-front.webp" width="772" height="1600" alt="">
           </div>
         </div>
       </div>
-      <p class="stage-cap mono" aria-live="polite"><span class="hint" data-hint>Hover the screens</span><b data-cap>Home</b><span class="stage-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span><button class="tour-zoom" type="button" data-hero-zoom><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Full size</button></p>
+      <p class="stage-cap" aria-live="polite"><span class="hint" data-hint>Hover the screens</span><b data-cap>Home</b><span class="stage-dots" aria-hidden="true"><i class="on"></i><i></i><i></i><i></i></span><button class="tour-zoom" type="button" data-hero-zoom><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M9.5 2.5h4v4M6.5 13.5h-4v-4M13.5 2.5 9 7M2.5 13.5 7 9" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Full size</button></p>
     </div>
   </div>
 </header>
@@ -734,7 +723,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <section class="band" id="lyrics">
     <div class="wrap split">
       <div>
-        <p class="eyebrow">Lyrics</p>
         <h2>Every word lands right on time.</h2>
         <p class="lede" style="margin-top:22px">Convx asks every lyrics source at once and shows the first good answer straight away. When a word-timed version arrives, it takes over: letters fill as they are sung, words lift, and the line you are on sits on a strip of glass.</p>
         <ul class="ticks">
@@ -761,9 +749,8 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <section class="band" id="apps">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow" style="margin:0">One Convx</p>
-        <h2>On your phone, and on your PC.</h2>
-        <p class="lede">The same glass, the same red, the same library. Convx on Windows is built from the Android app's own code, so both fetch music, lyrics and artwork the same way.</p>
+        <h2>On your phone, and on your computer.</h2>
+        <p class="lede">The same glass, the same red, the same library. Convx for Windows and Mac is built from the Android app's own code, so they all fetch music, lyrics and artwork the same way.</p>
       </div>
       <div class="platforms">
         <article class="plat plat-android">
@@ -784,18 +771,18 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         </article>
         <article class="plat plat-windows">
           <div>
-            <span class="plat-tag"><svg aria-hidden="true"><use href="#i-pc"/></svg>Windows</span>
-            <h3>The official Windows version.</h3>
+            <span class="plat-tag"><svg aria-hidden="true"><use href="#i-pc"/></svg>Windows and Mac</span>
+            <h3>The official desktop version.</h3>
             <p>The phone's layout, sized for a big screen: a glass top bar, a simple side bar and a now playing bar that follows you everywhere.</p>
           </div>
           <ul>
             <li><svg aria-hidden="true"><use href="#i-check"/></svg>Media keys and play controls on the taskbar</li>
             <li><svg aria-hidden="true"><use href="#i-check"/></svg>Several player designs, including a vinyl record</li>
             <li><svg aria-hidden="true"><use href="#i-check"/></svg>Disc Studio, made for a mouse and a big screen</li>
-            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Updates itself from inside the app</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>For Windows 10 and later, and for Macs with Apple silicon or Intel</li>
           </ul>
           <div class="plat-foot">
-            <a class="btn btn-glass glass" data-dl="windows" href="https://github.com/m33md/convx-desktop/releases/latest"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download for Windows</span></a>
+            <a class="btn btn-glass glass" data-dl="desktop" href="#download"><svg aria-hidden="true"><use href="#i-down"/></svg><span data-desk-name>Download for Windows</span></a>
             <span class="credit">Maintained by <a href="https://github.com/m33md">m33md</a>, with Aryan</span>
           </div>
           <figure class="screen"><img src="assets/img/win-player.webp" width="1440" height="900" loading="lazy" alt="Convx for Windows: the full-screen player with the vinyl design and a blurred cover background"></figure>
@@ -807,7 +794,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <section class="band" id="tour">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow" style="margin:0">Tour</p>
         <h2>Fourteen things to try first.</h2>
         <p class="lede">Scroll, and the screen follows along. Everything here is Convx for Windows, running for real.</p>
       </div>
@@ -841,20 +827,20 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
           </div>
         </div>
         <ol class="tour-steps">
-        <li class="tour-step is-on"><span class="tour-num mono">01 <b>Home</b></span><h3>A Home that learns your taste.</h3><p>Top Picks, Speed dial and mood chips, built from what you play. Sign in to YouTube Music and your own mixes and playlists show up too.</p></li>
-        <li class="tour-step"><span class="tour-num mono">02 <b>Search</b></span><h3>Find anything in one search.</h3><p>Songs, videos, albums, artists and playlists come back together, with the best match on top.</p></li>
-        <li class="tour-step"><span class="tour-num mono">03 <b>Song menu</b></span><h3>Right-click any song.</h3><p>Play it next, start a radio, pin it to Speed dial, or turn it into an AI DJ Mix. Track insights tell you more about it.</p></li>
-        <li class="tour-step"><span class="tour-num mono">04 <b>Moods &amp; Genres</b></span><h3>A mood for every moment.</h3><p>Chill, Focus, Workout, Sleep and dozens of genres, each a shelf of playlists picked for the moment.</p></li>
-        <li class="tour-step"><span class="tour-num mono">05 <b>Player</b></span><h3>Pick your player.</h3><p>Card, Vinyl, Clover and two more designs, each with the cover’s colours filling the screen behind it. This one spins like a record.</p></li>
-        <li class="tour-step"><span class="tour-num mono">06 <b>Make your own</b></span><h3>Decorate the player.</h3><p>Drop stickers and emoji around the artwork, then size, turn and flip them until it feels like yours.</p></li>
-        <li class="tour-step"><span class="tour-num mono">07 <b>Sound</b></span><h3>Tune the sound.</h3><p>A simple three-way dial or ten bands with a preamp. Import a ParametricEQ profile for your headphones, or add spatial audio.</p></li>
-        <li class="tour-step"><span class="tour-num mono">08 <b>AI DJ Mix</b></span><h3>One song, a whole set.</h3><p>Start from a song, add a vibe if you like, and get a set. Concert mode shapes it like a show: an opener, rising energy, a peak and a closer.</p></li>
-        <li class="tour-step"><span class="tour-num mono">09 <b>Recognize</b></span><h3>What’s this song?</h3><p>Click the mic and Convx listens, names the song and keeps a history of everything it found.</p></li>
-        <li class="tour-step"><span class="tour-num mono">10 <b>Stats &amp; Replay</b></span><h3>See what you really play.</h3><p>Your top songs, artists and albums for a week, a month or all time, and a Replay that sums up your year.</p></li>
-        <li class="tour-step"><span class="tour-num mono">11 <b>Library</b></span><h3>Your library, on CDs.</h3><p>Every playlist gets a jewel-case cover Convx draws for it. Liked Songs, downloads and your mixes sit up top.</p></li>
-        <li class="tour-step"><span class="tour-num mono">12 <b>Disc Studio</b></span><h3>Design the disc.</h3><p>Make a CD or a vinyl for any playlist with pictures, words, patterns, a brush and over 4,000 stickers. The playlist wears it as its cover.</p></li>
-        <li class="tour-step"><span class="tour-num mono">13 <b>Listen Together</b></span><h3>Press play together.</h3><p>Start a party and share the code. Everyone who joins hears the same song at the same moment, on phones and PCs.</p></li>
-        <li class="tour-step"><span class="tour-num mono">14 <b>Accounts</b></span><h3>Bring your accounts, if you want.</h3><p>Link YouTube Music, Spotify playlists, Last.fm, ListenBrainz and Discord. Every one is optional. Convx works without an account.</p></li>
+        <li class="tour-step is-on" data-name="Home"><h3>A Home that learns your taste.</h3><p>Top Picks, Speed dial and mood chips, built from what you play. Sign in to YouTube Music and your own mixes and playlists show up too.</p></li>
+        <li class="tour-step" data-name="Search"><h3>Find anything in one search.</h3><p>Songs, videos, albums, artists and playlists come back together, with the best match on top.</p></li>
+        <li class="tour-step" data-name="Song menu"><h3>Right-click any song.</h3><p>Play it next, start a radio, pin it to Speed dial, or turn it into an AI DJ Mix. Track insights tell you more about it.</p></li>
+        <li class="tour-step" data-name="Moods &amp; Genres"><h3>A mood for every moment.</h3><p>Chill, Focus, Workout, Sleep and dozens of genres, each a shelf of playlists picked for the moment.</p></li>
+        <li class="tour-step" data-name="Player"><h3>Pick your player.</h3><p>Card, Vinyl, Clover and two more designs, each with the cover’s colours filling the screen behind it. This one spins like a record.</p></li>
+        <li class="tour-step" data-name="Make your own"><h3>Decorate the player.</h3><p>Drop stickers and emoji around the artwork, then size, turn and flip them until it feels like yours.</p></li>
+        <li class="tour-step" data-name="Sound"><h3>Tune the sound.</h3><p>A simple three-way dial or ten bands with a preamp. Import a ParametricEQ profile for your headphones, or add spatial audio.</p></li>
+        <li class="tour-step" data-name="AI DJ Mix"><h3>One song, a whole set.</h3><p>Start from a song, add a vibe if you like, and get a set. Concert mode shapes it like a show: an opener, rising energy, a peak and a closer.</p></li>
+        <li class="tour-step" data-name="Recognize"><h3>What’s this song?</h3><p>Click the mic and Convx listens, names the song and keeps a history of everything it found.</p></li>
+        <li class="tour-step" data-name="Stats &amp; Replay"><h3>See what you really play.</h3><p>Your top songs, artists and albums for a week, a month or all time, and a Replay that sums up your year.</p></li>
+        <li class="tour-step" data-name="Library"><h3>Your library, on CDs.</h3><p>Every playlist gets a jewel-case cover Convx draws for it. Liked Songs, downloads and your mixes sit up top.</p></li>
+        <li class="tour-step" data-name="Disc Studio"><h3>Design the disc.</h3><p>Make a CD or a vinyl for any playlist with pictures, words, patterns, a brush and over 4,000 stickers. The playlist wears it as its cover.</p></li>
+        <li class="tour-step" data-name="Listen Together"><h3>Press play together.</h3><p>Start a party and share the code. Everyone who joins hears the same song at the same moment, on phones and PCs.</p></li>
+        <li class="tour-step" data-name="Accounts"><h3>Bring your accounts, if you want.</h3><p>Link YouTube Music, Spotify playlists, Last.fm, ListenBrainz and Discord. Every one is optional. Convx works without an account.</p></li>
         </ol>
       </div>
     </div>
@@ -863,12 +849,10 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <section class="band" id="features">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow" style="margin:0">Features</p>
         <h2>Made for people who listen all day.</h2>
       </div>
       <div class="bento">
         <article class="tile t-mix">
-          <span class="kicker">AutoMix</span>
           <h3>Songs that blend like a DJ set.</h3>
           <p>AutoMix measures each song's tempo and key, then plans the handover: beats lined up, filters swept, and creative transitions with reverb, delay or a tape stop.</p>
           <div class="mix" aria-hidden="true">
@@ -887,7 +871,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         </article>
 
         <article class="tile t-replay">
-          <span class="kicker">Replay</span>
           <h3>Your year in music.</h3>
           <p>Minutes listened, top songs and top artists, told as a story you tap through. Then save it as a playlist.</p>
           <div class="swipe-dots" aria-hidden="true"><i></i><i></i><i></i><i></i><i class="on"></i></div>
@@ -901,7 +884,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         </article>
 
         <article class="tile t-modules">
-          <span class="kicker">Modules</span>
           <h3>More places to play from.</h3>
           <p>Add a module and Convx asks it first, often for lossless FLAC. YouTube Music stays as the fallback.</p>
           <ol class="sources" aria-label="Example order of music sources">
@@ -912,7 +894,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         </article>
 
         <article class="tile t-party">
-          <span class="kicker">Listen Together</span>
           <h3>Same song, same second.</h3>
           <p>Start a party and share the code. Everyone who joins hears the same moment, on a phone or a PC.</p>
           <div class="party" aria-hidden="true">
@@ -926,7 +907,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         </article>
 
         <article class="tile t-links">
-          <span class="kicker">Connected</span>
           <h3>Bring your music with you.</h3>
           <p>Sign in to YouTube Music for your library and mixes, show what you're playing on Discord, scrobble every song, and import your Spotify playlists.</p>
           <div class="chips">
@@ -939,7 +919,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         </article>
 
         <article class="tile t-small">
-          <span class="kicker">The little things</span>
           <h3>Everything else you reach for.</h3>
           <p>An equalizer, speed and pitch, a sleep timer, song recognition, offline downloads, and moods and genres to wander through.</p>
           <div class="chips">
@@ -958,15 +937,9 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     <div class="wrap">
       <div class="studio-grid">
         <div>
-          <span class="badge">New in Convx for Windows</span>
           <h2>Disc Studio. A record for every playlist.</h2>
-          <p class="lede" style="margin-top:22px">Design a CD or a vinyl from layers of pictures, text, shapes, patterns and your own brush strokes. Give it a holographic, liquid chrome or paint-swirl finish, lay your songs' covers round it as photo prints, and the playlist wears it as its cover.</p>
-          <p class="body-2" style="margin-top:14px">Share a design as a <span class="file">.convxdisc</span> file and anyone with Convx can open it.</p>
-          <div class="studio-facts">
-            <div class="fact"><b>4,300</b><span>stickers, emoji and icons</span></div>
-            <div class="fact"><b>CD &amp; vinyl</b><span>with grooves, labels and shine</span></div>
-            <div class="fact"><b>Brush</b><span>pen, marker, ink, spray, neon</span></div>
-          </div>
+          <p class="lede" style="margin-top:22px">In Convx for Windows and Mac, design a CD or a vinyl from layers of pictures, text, shapes, patterns and your own brush strokes. Give it a holographic, liquid chrome or paint-swirl finish, lay your songs' covers round it as photo prints, and the playlist wears it as its cover.</p>
+          <p class="body-2" style="margin-top:14px">Over 4,300 stickers, emoji and icons, a brush that paints in pen, marker, ink or spray, and grooves, labels and shine on every disc. Share a design as a <span class="file">.convxdisc</span> file and anyone with Convx can open it.</p>
         </div>
         <div class="studio-shot">
           <figure class="screen"><img src="assets/img/disc-editor.webp" width="1600" height="1000" loading="lazy" alt="Disc Studio editor: a cream record with mountains, pines and birds drawn into its grooves, with the shape and layer panels"></figure>
@@ -995,40 +968,58 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <section class="band" id="download">
     <div class="wrap">
       <div class="section-head">
-        <p class="eyebrow" style="margin:0">Download</p>
         <h2>Get Convx. It's free.</h2>
       </div>
-      <div class="dl-grid">
-        <article class="dl glass">
-          <div class="dl-top">
+      <div class="dl-list glass" data-dl-list>
+        <article class="dl" data-os="android">
+          <div class="dl-id">
             <span class="dl-icon"><svg aria-hidden="true"><use href="#i-phone"/></svg></span>
-            <div><h3>Android</h3><span class="dl-ver mono" data-ver="android">Android 8.0 or later</span></div>
+            <div><h3>Android</h3><span class="dl-ver" data-ver="android">Android 8.0 or later</span></div>
           </div>
-          <ol>
+          <ol class="dl-steps">
             <li>Download the newest APK from GitHub Releases.</li>
             <li>Open it, and let your browser install apps if Android asks.</li>
             <li>If your phone says “app not compatible”, pick the <span class="file">arm32</span> APK from the same release.</li>
           </ol>
-          <a class="btn btn-red" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download for Android<small data-label="android">APK · Android 8.0+</small></span></a>
-        </article>
-        <article class="dl glass">
-          <div class="dl-top">
-            <span class="dl-icon"><svg aria-hidden="true"><use href="#i-pc"/></svg></span>
-            <div><h3>Windows</h3><span class="dl-ver mono" data-ver="windows">Windows 10 or later, 64-bit</span></div>
+          <div class="dl-act">
+            <a class="btn btn-glass glass" data-dl="android" href="https://github.com/cosmictaserdev-creator/Convx/releases"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Get the APK<small data-label="android">Android 8.0+</small></span></a>
           </div>
-          <ol>
+        </article>
+        <article class="dl" data-os="windows">
+          <div class="dl-id">
+            <span class="dl-icon"><svg aria-hidden="true"><use href="#i-pc"/></svg></span>
+            <div><h3>Windows</h3><span class="dl-ver" data-ver="windows">Windows 10 or later, 64-bit</span></div>
+          </div>
+          <ol class="dl-steps">
             <li>Download <span class="file">Convx-Setup.exe</span> and run it.</li>
             <li>If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.</li>
             <li>That's it. Convx keeps itself up to date.</li>
           </ol>
-          <a class="btn btn-red" data-dl="windows" href="https://github.com/m33md/convx-desktop/releases/latest"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download for Windows<small data-label="windows">Setup · Windows 10+</small></span></a>
-          <p class="dl-also">Prefer an <a href="https://github.com/m33md/convx-desktop/releases/latest">.msi or a portable .zip</a>? They're on the same page.</p>
+          <div class="dl-act">
+            <a class="btn btn-glass glass" data-dl="windows" data-file href="https://github.com/m33md/convx-desktop/releases/latest"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download<small data-label="windows">Setup for Windows</small></span></a>
+            <p class="dl-also">Or the <a href="https://github.com/m33md/convx-desktop/releases/latest" data-alt="msi">.msi</a> or a <a href="https://github.com/m33md/convx-desktop/releases/latest" data-alt="zip">portable .zip</a>.</p>
+          </div>
+        </article>
+        <article class="dl" data-os="mac">
+          <div class="dl-id">
+            <span class="dl-icon"><svg aria-hidden="true"><use href="#i-laptop"/></svg></span>
+            <div><h3>Mac</h3><span class="dl-ver" data-ver="mac">Apple silicon or Intel</span></div>
+          </div>
+          <ol class="dl-steps">
+            <li>Download the <span class="file">.dmg</span> for your Mac, open it and drag Convx into Applications.</li>
+            <li>The first time, macOS says it can't check Convx for malware. Click <b>Done</b>.</li>
+            <li>Open <b>System Settings › Privacy &amp; Security</b> and click <b>Open Anyway</b>.</li>
+          </ol>
+          <div class="dl-act">
+            <a class="btn btn-glass glass" data-dl="mac" data-file href="https://github.com/m33md/convx-desktop/releases/latest"><svg aria-hidden="true"><use href="#i-down"/></svg><span>Download<small data-label="mac">Apple silicon (M1 or newer)</small></span></a>
+            <p class="dl-also">Older Mac? Get the <a href="https://github.com/m33md/convx-desktop/releases/latest" data-alt="intel">Intel version</a>.</p>
+          </div>
         </article>
       </div>
       <div class="oss">
         <span>Convx is free software under the GPL-3.0. Read the code:</span>
         <a href="https://github.com/cosmictaserdev-creator/Convx">Android app</a>
-        <a href="https://github.com/m33md/convx-desktop">Windows app</a>
+        <a href="https://github.com/m33md/convx-desktop">Desktop app</a>
       </div>
     </div>
   </section>
@@ -1037,7 +1028,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     <div class="wrap">
       <div class="community glass">
         <div>
-          <p class="eyebrow">Community</p>
           <h2>Say hi, ask for features, share your discs.</h2>
           <p class="body-2" style="margin-top:14px">The Convx Discord is where updates land first, for both apps.</p>
         </div>
@@ -1060,7 +1050,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <div class="wrap foot">
     <div>
       <svg class="brand-word" viewBox="0 0 796 152" role="img" aria-label="Convx"><use href="#word"/></svg>
-      <p style="margin-top:18px">Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
+      <p style="margin-top:18px">Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows and Mac is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
       <p>Convx is an independent project and is not affiliated with, endorsed by, or connected to YouTube, Google, or their affiliates. Album art in the screenshots belongs to its owners.</p>
     </div>
     <nav class="foot-links" aria-label="Footer">
@@ -1069,7 +1059,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       <a href="faq.html">Q&amp;A</a>
       <a href="privacy.html">Privacy</a>
       <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
-      <a href="https://github.com/m33md/convx-desktop">Windows source</a>
+      <a href="https://github.com/m33md/convx-desktop">Desktop source</a>
       <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
       <a href="https://ko-fi.com/cosmictaser">Ko-fi</a>
       <a href="https://cosmictaser.de5.net">Cosmic Taser</a>
@@ -1097,29 +1087,92 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   toTop();
   addEventListener('load', toTop);
 
-  /* Platform: put the visitor's own download first. */
+  /* Platform: the visitor's own system goes first, in the hero and in the download list. */
   const ua = navigator.userAgent || '';
+  const os = /Android/i.test(ua) ? 'android' : /iPhone|iPad|iPod/i.test(ua) ? 'ios'
+    : /Mac OS X|Macintosh/i.test(ua) ? (navigator.maxTouchPoints > 1 ? 'ios' : 'mac') : /Windows/i.test(ua) ? 'windows' : 'other';
+  const desk = os === 'mac' ? 'mac' : 'windows';
+  const setAll = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
   const cta = document.querySelector('[data-cta]');
-  if (/Windows/i.test(ua) && !/Android/i.test(ua) && cta) {
-    const [a, w] = [cta.querySelector('[data-dl="android"]'), cta.querySelector('[data-dl="windows"]')];
-    a.classList.replace('btn-red', 'btn-glass'); a.classList.add('glass');
-    w.classList.replace('btn-glass', 'btn-red'); w.classList.remove('glass');
-    cta.prepend(w);
+  if (cta) {
+    const a = cta.querySelector('[data-dl="android"]'), w = cta.querySelector('[data-dl="windows"]');
+    if (desk === 'mac') {
+      w.dataset.dl = 'mac';
+      w.querySelector('use').setAttribute('href', '#i-laptop');
+      w.querySelector('span').firstChild.textContent = 'Download for Mac';
+      w.querySelector('small').dataset.label = 'mac';
+      w.querySelector('small').textContent = 'Apple silicon (M1 or newer)';
+    }
+    w.dataset.file = '';
+    if (os === 'windows' || os === 'mac') {
+      a.classList.replace('btn-red', 'btn-glass'); a.classList.add('glass');
+      w.classList.replace('btn-glass', 'btn-red'); w.classList.remove('glass');
+      cta.prepend(w);
+    }
+  }
+  setAll('[data-desk-name]', el => el.textContent = desk === 'mac' ? 'Download for Mac' : 'Download for Windows');
+  const dlList = document.querySelector('[data-dl-list]');
+  if (dlList) {
+    const mine = dlList.querySelector('[data-os="' + (os === 'ios' || os === 'other' ? 'android' : os) + '"]');
+    if (os !== 'ios' && os !== 'other') dlList.prepend(mine);
+    const btn = mine.querySelector('.btn');
+    btn.classList.replace('btn-glass', 'btn-red'); btn.classList.remove('glass');
   }
 
-  /* Latest versions from GitHub, when the page can reach it. */
-  const setAll = (sel, fn) => document.querySelectorAll(sel).forEach(fn);
+  /* Latest versions and file sizes from GitHub, when the page can reach it. */
+  const mb = n => Math.round(n / 1048576) + ' MB';
   fetch('https://api.github.com/repos/m33md/convx-desktop/releases/latest')
     .then(r => r.ok ? r.json() : null).then(j => {
       if (!j) return;
-      const v = ((j.name || '') + ' ' + (j.body || '')).match(/\d+\.\d+\.\d+/);
-      const exe = (j.assets || []).find(a => /^Convx-Setup-.*\.exe$/i.test(a.name));
-      if (v) {
-        setAll('[data-label="windows"]', el => el.textContent = 'Version ' + v[0] + ' · Windows 10+');
-        setAll('[data-ver="windows"]', el => el.textContent = 'Version ' + v[0] + ' · Windows 10 or later, 64-bit');
+      const v = ((j.name || '') + ' ' + (j.body || '')).match(/\b\d+\.\d+(?:\.\d+)?\b/);
+      const find = re => (j.assets || []).find(x => re.test(x.name));
+      const exe = find(/^Convx-Setup-.*\.exe$/i), msi = find(/\.msi$/i), zip = find(/portable\.zip$/i);
+      const arm = find(/apple-silicon\.dmg$/i), intel = find(/intel\.dmg$/i);
+      const ver = v ? 'Version ' + v[0] + ' · ' : '';
+      if (exe) {
+        setAll('[data-dl="windows"][data-file]', el => el.href = exe.browser_download_url);
+        setAll('[data-label="windows"]', el => el.textContent = ver + mb(exe.size));
+        setAll('[data-ver="windows"]', el => el.textContent = ver + 'Windows 10 or later, 64-bit');
       }
-      if (exe) setAll('.dl [data-dl="windows"]', el => el.href = exe.browser_download_url);
+      if (msi) setAll('[data-alt="msi"]', el => el.href = msi.browser_download_url);
+      if (zip) setAll('[data-alt="zip"]', el => el.href = zip.browser_download_url);
+      if (arm) {
+        setAll('[data-dl="mac"][data-file]', el => el.href = arm.browser_download_url);
+        setAll('[data-label="mac"]', el => el.textContent = 'Apple silicon · ' + mb(arm.size));
+        setAll('[data-ver="mac"]', el => el.textContent = ver + 'Apple silicon or Intel');
+      }
+      if (intel) setAll('[data-alt="intel"]', el => el.href = intel.browser_download_url);
+      /* An Intel Mac that tells us so gets the Intel file straight away. */
+      if (os === 'mac' && intel && navigator.userAgentData && navigator.userAgentData.getHighEntropyValues) {
+        navigator.userAgentData.getHighEntropyValues(['architecture']).then(h => {
+          if (h.architecture !== 'x86') return;
+          setAll('[data-dl="mac"][data-file]', el => el.href = intel.browser_download_url);
+          setAll('[data-label="mac"]', el => el.textContent = 'Intel · ' + mb(intel.size));
+        }).catch(() => {});
+      }
     }).catch(() => {});
+
+  /* After a download starts: the arrow becomes a tick, and the hero says what to do next. */
+  const dlNext = document.querySelector('[data-dl-next]');
+  const afterSteps = {
+    windows: 'When it finishes, open <b>Convx-Setup</b>. If Windows says it protected your PC, choose <b>More info</b>, then <b>Run anyway</b>.',
+    mac: 'When it finishes, open the <b>.dmg</b> and drag Convx into Applications. The first time, click <b>Done</b>, then <b>Open Anyway</b> in System Settings › Privacy &amp; Security.'
+  };
+  document.querySelectorAll('[data-file]').forEach(btn => {
+    const tick = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    tick.setAttribute('class', 'tick'); tick.setAttribute('aria-hidden', 'true');
+    tick.innerHTML = '<use href="#i-check"/>';
+    btn.querySelector('svg').after(tick);
+    btn.addEventListener('click', () => {
+      if (!/\.(exe|dmg|msi|zip)$/i.test(btn.href)) return;
+      btn.classList.add('is-done');
+      clearTimeout(btn._t); btn._t = setTimeout(() => btn.classList.remove('is-done'), 2400);
+      if (dlNext && btn.closest('[data-cta]') && afterSteps[btn.dataset.dl]) {
+        dlNext.innerHTML = '<span>' + afterSteps[btn.dataset.dl] + '</span>';
+        dlNext.classList.add('on');
+      }
+    });
+  });
   fetch('https://api.github.com/repos/cosmictaserdev-creator/Convx/releases?per_page=10')
     .then(r => r.ok ? r.json() : null).then(list => {
       if (!Array.isArray(list)) return;
@@ -1150,7 +1203,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       setTimeout(() => {
         front.classList.add('snap'); front.dataset.pos = order.length; void front.offsetWidth;
         front.classList.remove('snap'); front.dataset.pos = order.length - 1;
-      }, reduce ? 0 : 520);
+      }, reduce ? 0 : 600);
       const idx = cards.indexOf(order[0]);
       cap.textContent = order[0].dataset.name;
       dots.forEach((d, i) => d.classList.toggle('on', i === idx));
@@ -1180,8 +1233,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         cx += (tx - cx) * 0.075; cy += (ty - cy) * 0.075;
         scene.style.setProperty('--ry', (cx * 9).toFixed(2) + 'deg');
         scene.style.setProperty('--rx', (-cy * 7).toFixed(2) + 'deg');
-        stage.style.setProperty('--gx', (50 + cx * 55).toFixed(1) + '%');
-        stage.style.setProperty('--gy', (35 + cy * 55).toFixed(1) + '%');
         raf = Math.abs(tx - cx) + Math.abs(ty - cy) > 0.002 ? requestAnimationFrame(tick) : 0;
       };
       const kick = () => { if (!raf) raf = requestAnimationFrame(tick); };
@@ -1189,9 +1240,9 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         const r = stage.getBoundingClientRect();
         tx = Math.max(-1, Math.min(1, (e.clientX - r.left - r.width / 2) / (r.width / 2)));
         ty = Math.max(-1, Math.min(1, (e.clientY - r.top - r.height / 2) / (r.height / 2)));
-        stage.style.setProperty('--glare', '1'); kick();
+        kick();
       });
-      hero.addEventListener('pointerleave', () => { tx = 0; ty = 0; stage.style.setProperty('--glare', '0.5'); kick(); });
+      hero.addEventListener('pointerleave', () => { tx = 0; ty = 0; kick(); });
     }
 
     /* On touch screens nothing hovers, so the screens take turns on their own while in view. */
@@ -1407,12 +1458,9 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     }).observe(swipe);
   }
 
-  /* Feature tiles: a soft light follows the pointer. */
-  document.querySelectorAll('.tile').forEach(t => t.addEventListener('pointermove', e => {
-    const r = t.getBoundingClientRect();
-    t.style.setProperty('--mx', (e.clientX - r.left).toFixed(0) + 'px');
-    t.style.setProperty('--my', (e.clientY - r.top).toFixed(0) + 'px');
-  }));
+  /* Endless loops (the spinning disc, the party's level meters) rest while they're off screen. */
+  const away = new IntersectionObserver(es => es.forEach(e => e.target.classList.toggle('is-away', !e.isIntersecting)));
+  document.querySelectorAll('.studio-shot, .party').forEach(el => away.observe(el));
 
   /* Listen Together: a new party code shuffles in on hover. */
   const party = document.querySelector('.t-party'), code = party && party.querySelector('.party-code b');
@@ -1471,7 +1519,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   if (tour) {
     const steps = [...tour.querySelectorAll('.tour-step')], shots = [...tour.querySelectorAll('.tour-shot')], n = steps.length;
     const stageEl = tour.querySelector('.tour-stage'), num = tour.querySelector('[data-tour-n]'), nameEl = tour.querySelector('[data-tour-name]'), bar = tour.querySelector('[data-tour-bar]');
-    const names = steps.map(s => s.querySelector('.tour-num b').textContent);
+    const names = steps.map(s => s.dataset.name.replace(/&amp;/g, '&'));
     const wide = matchMedia('(min-width: 960px)');
     const focus = () => wide.matches || getComputedStyle(stageEl).position !== 'sticky' ? innerHeight / 2 : (stageEl.offsetHeight + innerHeight) / 2;
     let cur = 0;
@@ -1527,60 +1575,16 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     tour.querySelector('[data-tour-zoom]').addEventListener('click', openShot);
   }
 
-  /* GSAP: sections rise in as they arrive, and the hero drifts back as you leave it. */
-  if (gs && !reduce) {
-    const rise = (sel, from, stagger) => {
-      const els = gs.utils.toArray(sel);
-      if (!els.length) return;
-      gs.set(els, { opacity: 0, ...from });
-      const show = batch => gs.to(batch, { opacity: 1, x: 0, y: 0, scale: 1, rotationX: 0, duration: 1.1, ease: 'expo.out', stagger, overwrite: true, clearProps: 'transform,opacity' });
-      ScrollTrigger.batch(els, { start: 'top 90%', once: true, onEnter: show, onEnterBack: show, onLeave: show });
-    };
-    rise('.section-head > :not(h2), #lyrics .split > div:first-child > :not(h2), .plat, .studio-grid > div:first-child > :not(h2), .studio-shot, .oss, .community, .foot', { y: 56, scale: 0.97 }, 0.12);
-    rise('.tile, .dl', { y: 64, scale: 0.96 }, 0.09);
-    rise('.tour-stage', { y: 40 }, 0);
-    rise('.lyrics-demo, .studio-shot .screen', { y: 50, scale: 0.94, rotationX: 18, transformPerspective: 1400 }, 0);
-    gs.to('.stage', { y: -70, scale: 0.94, opacity: 0.25, ease: 'none', scrollTrigger: { trigger: '.stage', start: 'center 45%', end: 'bottom top', scrub: 0.4 } });
-    gs.to('.hero-copy', { y: -40, opacity: 0.2, ease: 'none', scrollTrigger: { trigger: '.hero-copy', start: 'center 40%', end: 'bottom top', scrub: 0.4 } });
-
-    /* Headlines: each word rises out of its own line as the heading arrives. */
-    gs.utils.toArray('main h2').forEach(h => {
-      const walk = node => [...node.childNodes].forEach(n => {
-        if (n.nodeType === 3) {
-          const frag = document.createDocumentFragment();
-          n.textContent.split(/(\s+)/).forEach(part => {
-            if (!part) return;
-            if (/^\s+$/.test(part)) { frag.append(part); return; }
-            const outer = document.createElement('span'), inner = document.createElement('span');
-            outer.className = 'ww'; inner.textContent = part; outer.append(inner); frag.append(outer);
-          });
-          n.replaceWith(frag);
-        } else if (n.nodeType === 1 && n.tagName !== 'BR') walk(n);
-      });
-      h.setAttribute('aria-label', h.textContent.replace(/\s+/g, ' ').trim());
-      walk(h);
-      const words = h.querySelectorAll('.ww > span');
-      words.forEach(w => w.setAttribute('aria-hidden', 'true'));
-      gs.set(words, { yPercent: 115 });
-      ScrollTrigger.create({ trigger: h, start: 'top 88%', once: true,
-        onEnter: () => gs.to(words, { yPercent: 0, duration: 1.05, ease: 'expo.out', stagger: 0.055, delay: 0.08, clearProps: 'transform' }) });
-    });
-
-    /* Numbers count up the first time you see them. */
-    gs.utils.toArray('.fact b').forEach(b => {
-      const end = parseInt(b.textContent.replace(/[^0-9]/g, ''), 10);
-      if (!end || !/^[\d,]+$/.test(b.textContent.trim())) return;
-      const fmt = n => Math.round(n).toLocaleString('en-US'), o = { n: 0 };
-      b.style.minWidth = b.offsetWidth + 'px'; b.textContent = '0';
-      ScrollTrigger.create({ trigger: b, start: 'top 90%', once: true,
-        onEnter: () => gs.to(o, { n: end, duration: 1.6, ease: 'power3.out', onUpdate: () => { b.textContent = fmt(o.n); } }) });
+  /* Disc rack: the row slides past as you scroll by, so you see every disc without anything looping on its own. */
+  const rack = document.querySelector('[data-rack]');
+  if (gs && !reduce && rack) {
+    gs.fromTo(rack, { x: () => innerWidth * 0.12 }, {
+      x: () => -(rack.scrollWidth - innerWidth * 0.88), ease: 'none',
+      scrollTrigger: { trigger: rack.parentElement, start: 'top bottom', end: 'bottom top', scrub: 0.6, invalidateOnRefresh: true }
     });
   }
   if (gs && document.fonts) document.fonts.ready.then(() => { ScrollTrigger.refresh(); toTop(); });
 
-  /* Disc rack: repeat the discs so the slide loops without a gap. */
-  const rack = document.querySelector('[data-rack]');
-  if (rack) [...rack.children].forEach(f => { const c = f.cloneNode(true); c.setAttribute('aria-hidden', 'true'); rack.append(c); });
 })();
 </script>
 </body>
