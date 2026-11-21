@@ -241,6 +241,7 @@ object YouTubeSync {
     /**
      * Adds what's new on the account (in its order, newest first) and drops what the account
      * had last time but no longer does. Ids you changed yourself during the sync are left alone.
+     * YouTube Music can list one thing twice (its pages overlap); each is added once.
      */
     private inline fun <L, R> merge(
         local: List<L>,
@@ -255,7 +256,7 @@ object YouTubeSync {
         val kept = local.filterNot { val id = localId(it); id in known && id !in remoteIds && !mine(id) }
         val have = kept.mapTo(HashSet(), localId)
         val added = remote.withIndex()
-            .filter { (_, item) -> remoteId(item).let { it !in have && !mine(it) } }
+            .filter { (_, item) -> remoteId(item).let { it !in have && !mine(it) && have.add(it) } }
             .map { (index, item) -> create(item, index) }
         return added + kept
     }

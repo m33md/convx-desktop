@@ -83,24 +83,36 @@ object SpotifyMatcher {
      * The YouTube Music song closest to a title, its artists and length (0 if unknown), or null if
      * nothing scores [MinScore]. Playlist files are matched with this too.
      */
-    suspend fun bestMatch(title: String, artists: List<String>, durationMs: Long): SongItem? = withContext(Dispatchers.IO) {
+    suspend fun bestMatch(title: String, artists: List<String>, durationMs: Long): SongItem? =
+        findMatch(title, artists, durationMs).getOrNull()
+
+    /** [bestMatch], but a failed search is a failure rather than no match, so it can be tried again. */
+    suspend fun findMatch(title: String, artists: List<String>, durationMs: Long): Result<SongItem?> = withContext(Dispatchers.IO) {
         val artist = artists.firstOrNull().orEmpty()
         val query = if (artist.isEmpty()) title else "$artist $title"
-        val candidates = YouTube.search(query, SearchFilter.FILTER_SONG)
+        YouTube.search(query, SearchFilter.FILTER_SONG)
             .onFailure { Log.w(Tag, "Search for \"$query\" failed", it) }
-            .getOrNull()?.items.orEmpty()
-            .filterIsInstance<SongItem>()
-            .distinctBy { it.id }
-        val wanted = artists.joinToString(" ")
-        val best = candidates
-            .map { it to score(title, wanted, durationMs, it.title, it.artists.joinToString(" ") { a -> a.name }, it.duration) }
-            .maxByOrNull { it.second }
-        if (best == null || best.second < MinScore) {
-            Log.w(Tag, "No YouTube Music match for \"$query\" (best ${best?.second})")
-            null
-        } else {
-            best.first
-        }
+            .map { result ->
+                val candidates = result.items.filterIsInstance<SongItem>().distinctBy { it.id }
+                val wanted = artists.joinToString(" ")
+                val best = candidates
+                    .map { it to score(title, wanted, durationMs, it.title, it.artists.joinToString(" ") { a -> a.name }, it.duration) }
+                    .maxByOrNull { it.second }
+                if (best == null || best.second < MinScore) {
+                    Log.w(Tag, "No YouTube Music match for \"$query\" (best ${best?.second})")
+                    null
+                } else {
+                    best.first
+                }
+            }
+    }
+
+    /** The song a Spotify track was matched to before, if it was. */
+    fun known(trackId: String): Song? = matches.value[trackId]
+
+    /** Keeps a batch of matches in one go; a big import would otherwise rewrite the file after every song. */
+    fun remember(found: Map<String, Song>) {
+        if (found.isNotEmpty()) matches.update { it + found }
     }
 
     fun score(title: String, artist: String, durationMs: Long, candidateTitle: String, candidateArtist: String, candidateSeconds: Int?): Double {

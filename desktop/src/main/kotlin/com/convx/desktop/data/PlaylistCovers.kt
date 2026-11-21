@@ -102,10 +102,13 @@ object PlaylistCovers {
 
     /** Deletes picture files no playlist (nor Liked Songs) uses any more, and CD covers of playlists that are gone. */
     fun prune(playlists: List<LocalPlaylist>) {
+        // Disc covers on playlists that aren't yours (Library.worn) are kept too.
+        val worn = Library.value.worn
         val used = playlists.mapNotNullTo(HashSet()) { p -> p.cover?.takeIf(::isOwn)?.removePrefix(Prefix) }
+        worn.values.forEach { w -> w.cover.takeIf(::isOwn)?.let { used += it.removePrefix(Prefix) } }
         AppSettings.value.likedSongsCover?.takeIf(::isOwn)?.let { used += it.removePrefix(Prefix) }
         dir.listFiles()?.filter { it.isFile && it.name !in used }?.forEach { runCatching { it.delete() } }
-        val owners = playlists.mapTo(HashSet()) { discName(it.id) }
+        val owners = playlists.mapTo(HashSet()) { discName(it.id) } + worn.keys.map(::discName)
         discDir.listFiles()?.filter { it.isFile && discOwner(it) !in owners }?.forEach { runCatching { it.delete() } }
     }
 }

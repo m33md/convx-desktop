@@ -5,7 +5,21 @@
 
 package com.convx.desktop.ui.shell
 
+import com.convx.desktop.ui.studio.DiscCoverMenuItems
+import com.convx.desktop.ui.studio.DiscTargets
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
+import androidx.compose.ui.unit.IntSize
+import com.convx.desktop.ui.glass.LocalElasticGlass
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.keyframes
 import androidx.compose.runtime.DisposableEffect
@@ -113,6 +127,7 @@ import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.ui.glass.GlassShapes
 import com.convx.desktop.ui.glass.liquidGlass
 import com.convx.desktop.ui.screens.SpotifyGreen
+import com.convx.desktop.ui.theme.ConvxColors
 import com.convx.desktop.ui.theme.ConvxMotion
 import com.convx.desktop.ui.theme.ConvxType
 import com.convx.desktop.ui.theme.LocalAccent
@@ -244,13 +259,15 @@ private fun spotifyEntries(playlists: List<SpotifyPlaylist>, likedCount: Int?): 
 
 /** The phone's "My top", "Cached" and "Uploaded" auto playlists, when switched on and there's something in them. */
 private fun autoEntries(library: LibraryData, settings: com.convx.desktop.data.Settings, cached: List<Song>): List<LibraryEntry> = buildList {
+    // A disc design put on one shows instead of its tile.
+    fun worn(key: String) = library.worn[key]?.cover?.let(com.convx.desktop.data.PlaylistCovers::url)
     if (settings.showTopPlaylist && library.history.isNotEmpty()) {
         val count = library.history.distinctBy { it.song.id }.size.coerceAtMost(settings.topSize)
         add(
             LibraryEntry(
                 key = "my-top", kind = Kind.Top, id = "my-top", title = "My top ${settings.topSize}",
                 owner = if (count == 1) "1 song" else "$count songs",
-                thumbnail = null, mosaic = emptyList(), screen = Screen.MyTop, added = 0L, recent = library.history.first().at,
+                thumbnail = worn(DiscTargets.Top), mosaic = emptyList(), screen = Screen.MyTop, added = 0L, recent = library.history.first().at,
             ),
         )
     }
@@ -260,7 +277,7 @@ private fun autoEntries(library: LibraryData, settings: com.convx.desktop.data.S
             LibraryEntry(
                 key = "cached", kind = Kind.Cached, id = "cached", title = "Cached",
                 owner = if (cached.size == 1) "1 song" else "${cached.size} songs",
-                thumbnail = null, mosaic = emptyList(), screen = Screen.Cached,
+                thumbnail = worn(DiscTargets.Cached), mosaic = emptyList(), screen = Screen.Cached,
                 added = 0L, recent = library.history.firstOrNull { it.song.id in ids }?.at ?: 0L,
             ),
         )
@@ -271,7 +288,7 @@ private fun autoEntries(library: LibraryData, settings: com.convx.desktop.data.S
             LibraryEntry(
                 key = "uploaded", kind = Kind.Uploaded, id = "uploaded", title = "Uploaded",
                 owner = if (library.uploaded.size == 1) "1 song" else "${library.uploaded.size} songs",
-                thumbnail = null, mosaic = emptyList(), screen = Screen.Uploaded,
+                thumbnail = worn(DiscTargets.Uploaded), mosaic = emptyList(), screen = Screen.Uploaded,
                 added = 0L, recent = library.history.firstOrNull { it.song.id in ids }?.at ?: 0L,
             ),
         )
@@ -294,7 +311,8 @@ private fun LibraryData.playlistEntries(): List<LibraryEntry> {
             )
         }
         playlists.forEach { p ->
-            add(LibraryEntry("playlist:${p.id}", Kind.Playlist, p.id, p.title, p.author.orEmpty(), p.thumbnail, emptyList(), Screen.Playlist(p.id), p.savedAt, p.savedAt))
+            val cover = worn[DiscTargets.youTube(p.id)]?.cover?.let(com.convx.desktop.data.PlaylistCovers::url) ?: p.thumbnail
+            add(LibraryEntry("playlist:${p.id}", Kind.Playlist, p.id, p.title, p.author.orEmpty(), cover, emptyList(), Screen.Playlist(p.id), p.savedAt, p.savedAt))
         }
     }
 }
@@ -335,8 +353,9 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
     val autoSettings = listOf(settings.showTopPlaylist, settings.showCachedPlaylist, settings.showUploadedPlaylist, settings.topSize)
     val all = remember(library, spotifyLists, spotifyLiked, downloaded, autoSettings) {
         val cached = if (settings.showCachedPlaylist) com.convx.desktop.ui.screens.cachedSongs(library, downloaded.values) else emptyList()
-        autoEntries(library, settings, cached) + library.playlistEntries() +
-            (spotifyLists?.let { spotifyEntries(it, spotifyLiked) } ?: emptyList())
+        // Each row once: the list needs every row to be its own, and a playlist listed twice would stop it.
+        (autoEntries(library, settings, cached) + library.playlistEntries() +
+            (spotifyLists?.let { spotifyEntries(it, spotifyLiked) } ?: emptyList())).distinctBy { it.key }
     }
     val sort = LibrarySort.of(settings.librarySort)
     val pins = settings.pinnedLibrary
@@ -378,7 +397,25 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
         if (localIndex.tracks.isNotEmpty()) add(NavItem("local", "Local Files", "storage", screen == Screen.LocalFiles) { navigator.navigate(Screen.LocalFiles) })
         add(NavItem("stats", "Stats", "stats", screen == Screen.Stats) { navigator.navigate(Screen.Stats) })
     }
-    val allPlaylists = NavItem("all-playlists", "All Playlists", "grid_view", onTab(LibraryTab.Playlists)) { openTab(LibraryTab.Playlists) }
+    // Under All Playlists, a group for each place your playlists come from that you have any of.
+    val groups = remember(library, spotifyLists) {
+        val spotifyMade = library.localPlaylists.count { PlaylistSource.ofLocal(it.id) == PlaylistSource.Spotify }
+        listOf(
+            PlaylistSource.Spotify to spotifyMade + spotifyLists.orEmpty().size,
+            PlaylistSource.YouTube to library.playlists.size,
+            PlaylistSource.Convx to library.localPlaylists.size - spotifyMade,
+        ).filter { it.second > 0 }
+    }
+    val groupsOpen = settings.playlistGroupsOpen && groups.isNotEmpty()
+    fun openSource(source: PlaylistSource) {
+        UiState.libraryTab = LibraryTab.Playlists
+        UiState.playlistSource = source
+        navigator.navigate(Screen.Library)
+    }
+    // A group's page lights its own row while the groups are open, and All Playlists while they're shut.
+    val allPlaylists = NavItem("all-playlists", "All Playlists", "grid_view", onTab(LibraryTab.Playlists) && (UiState.playlistSource == null || !groupsOpen)) {
+        openTab(LibraryTab.Playlists)
+    }
     fun create() {
         Overlays.prompt("New playlist", confirm = "Create") { name ->
             navigator.navigate(Screen.LocalPlaylist(Library.createPlaylist(name)))
@@ -436,6 +473,9 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
             group("Playlists")
             add(MacItem("new", MacKind.Row, "New Playlist", "plus.circle", false, null) { create() })
             add(row(allPlaylists))
+            groups.forEach { (source, _) ->
+                add(MacItem("group:${source.name}", MacKind.Row, source.label, macSymbol(source.icon), onTab(LibraryTab.Playlists) && UiState.playlistSource == source, null) { openSource(source) })
+            }
             shown.forEach { e ->
                 add(MacItem(e.key, MacKind.Row, e.title, "music.note.list", screen == e.screen, e.thumbnail ?: e.mosaic.firstOrNull()) { navigator.navigate(e.screen) })
             }
@@ -504,7 +544,16 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
                 item(key = "heading:playlists") {
                     Heading("Playlists", collapsed) { HeadingButton("add") { create() } }
                 }
-                item(key = "nav:all-playlists") { NavRow(allPlaylists, collapsed, spot) }
+                item(key = "nav:all-playlists") {
+                    NavRow(allPlaylists, collapsed, spot) {
+                        if (groups.isNotEmpty()) GroupsArrow(groupsOpen) { AppSettings.update { it.copy(playlistGroupsOpen = !groupsOpen) } }
+                    }
+                }
+                if (!collapsed && groups.isNotEmpty()) {
+                    item(key = "playlist-groups") {
+                        PlaylistGroups(groupsOpen, groups, UiState.playlistSource.takeIf { onTab(LibraryTab.Playlists) }, spot, ::openSource)
+                    }
+                }
                 items(rows, key = { it.key }) { entry ->
                     val held = reorder.held == entry.key
                     Box(
@@ -686,7 +735,7 @@ private fun Modifier.selectionSpot(key: String, selected: Boolean, spot: Selecti
 }
 
 @Composable
-private fun NavRow(item: NavItem, collapsed: Boolean, spot: SelectionSpot? = null) {
+private fun NavRow(item: NavItem, collapsed: Boolean, spot: SelectionSpot? = null, trailing: (@Composable () -> Unit)? = null) {
     val accent = LocalAccent.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -718,10 +767,112 @@ private fun NavRow(item: NavItem, collapsed: Boolean, spot: SelectionSpot? = nul
                 color = if (item.selected) Color.White else Color.White.copy(alpha = 0.9f),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
+                modifier = if (trailing != null) Modifier.weight(1f) else Modifier,
             )
+            trailing?.invoke()
         }
     }
 }
+
+/** The little arrow on All Playlists that opens and shuts its groups; it turns down while they're open. */
+@Composable
+private fun GroupsArrow(open: Boolean, onClick: () -> Unit) {
+    val motion = LocalElasticGlass.current
+    val turn by animateFloatAsState(if (open) 90f else 0f, if (motion) spring(dampingRatio = 0.7f, stiffness = 500f) else snap(), label = "groups arrow")
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Box(
+        Modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(if (hovered) Color.White.copy(alpha = 0.08f) else Color.Transparent)
+            .hoverable(interaction)
+            .pressable(onClick, interaction = interaction),
+        contentAlignment = Alignment.Center,
+    ) {
+        ConvxIcon(
+            "chevron_right_px",
+            tint = Color.White.copy(alpha = if (hovered || open) 0.8f else 0.5f),
+            size = 12.dp,
+            contentDescription = if (open) "Hide playlist groups" else "Show playlist groups",
+            modifier = Modifier.graphicsLayer { rotationZ = turn },
+        )
+    }
+}
+
+/**
+ * Spotify, YT Music and Convx playlists, each a short row tucked under All Playlists that opens
+ * the Playlists page on just that source's. Unfolds with Button motion on, or at once with it off.
+ */
+@Composable
+private fun PlaylistGroups(
+    open: Boolean,
+    groups: List<Pair<PlaylistSource, Int>>,
+    selected: PlaylistSource?,
+    spot: SelectionSpot?,
+    onOpen: (PlaylistSource) -> Unit,
+) {
+    val motion = LocalElasticGlass.current
+    AnimatedVisibility(
+        visible = open,
+        enter = if (motion) {
+            expandVertically(spring(dampingRatio = 0.86f, stiffness = 520f, visibilityThreshold = IntSize.VisibilityThreshold), expandFrom = Alignment.Top) +
+                fadeIn(tween(180, delayMillis = 40))
+        } else {
+            EnterTransition.None
+        },
+        exit = if (motion) {
+            shrinkVertically(spring(stiffness = 700f, visibilityThreshold = IntSize.VisibilityThreshold), shrinkTowards = Alignment.Top) + fadeOut(tween(110))
+        } else {
+            ExitTransition.None
+        },
+    ) {
+        Column(Modifier.fillMaxWidth().padding(bottom = 4.dp)) {
+            groups.forEach { (source, count) ->
+                GroupRow(source, count, selected == source, spot) { onOpen(source) }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GroupRow(source: PlaylistSource, count: Int, selected: Boolean, spot: SelectionSpot?, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    Row(
+        Modifier
+            .fillMaxWidth()
+            // Tucked in under All Playlists' icon.
+            .padding(start = 22.dp)
+            .height(GroupRowHeight)
+            .selectionSpot("group:${source.name}", selected, spot)
+            .clip(RowShape)
+            .background(rowWash(selected, hovered, spot != null))
+            .hoverable(interaction)
+            .pressable(onClick, interaction = interaction)
+            .padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        when (source) {
+            PlaylistSource.Spotify -> ConvxIcon("spotify", tint = SpotifyGreen, size = 15.dp)
+            // YouTube Music's mark keeps its own red and white.
+            PlaylistSource.YouTube -> ConvxIcon("ytmusic", tint = Color.Unspecified, size = 15.dp)
+            PlaylistSource.Convx -> ConvxIcon("convx_logo", tint = ConvxColors.AccentRed, size = 15.dp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Text(
+            source.label,
+            style = rowText(if (selected) FontWeight.SemiBold else FontWeight.Medium).copy(fontSize = 13.sp),
+            color = if (selected) Color.White else Color.White.copy(alpha = 0.82f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.weight(1f),
+        )
+        Text(count.toString(), style = rowText(FontWeight.Medium).copy(fontSize = 12.sp), color = Color.White.copy(alpha = 0.4f))
+    }
+}
+
+private val GroupRowHeight = 34.dp
 
 @Composable
 private fun PlaylistRow(
@@ -861,6 +1012,8 @@ private fun SettingsButton(lit: Boolean, accent: Color, onClick: () -> Unit) {
     }
 }
 
+private val AutoKinds = setOf(Kind.Top, Kind.Cached, Kind.Uploaded)
+
 @Composable
 private fun EntryArt(entry: LibraryEntry, size: Dp) {
     val shape = RoundedCornerShape(if (size < 28.dp) 5.dp else 6.dp)
@@ -874,6 +1027,11 @@ private fun EntryArt(entry: LibraryEntry, size: Dp) {
         Box(Modifier.size(size).clip(shape).background(Color.White.copy(alpha = 0.1f)), contentAlignment = Alignment.Center) {
             ConvxIcon(glyph, tint = Color.White.copy(alpha = 0.6f), size = size * 0.55f)
         }
+        return
+    }
+    // An auto playlist wearing a disc design shows it; otherwise its tile.
+    if (entry.thumbnail != null && entry.kind in AutoKinds) {
+        Artwork(entry.thumbnail, Modifier.size(size), size = 96, shape = shape, iconSize = size * 0.5f)
         return
     }
     when (entry.kind) {
@@ -968,11 +1126,17 @@ private fun EntryMenu(entry: LibraryEntry, pinned: Boolean, dismiss: () -> Unit)
                 }
             }
         }
-        Kind.Playlist -> MenuItem("Remove from Your Library", "delete", destructive = true) {
-            dismiss()
-            Library.state.value.playlists.firstOrNull { it.id == entry.id }?.let { Library.togglePlaylist(it) }
+        Kind.Playlist -> {
+            DiscCoverMenuItems(DiscTargets.youTube(entry.id), dismiss = dismiss)
+            MenuItem("Remove from Your Library", "delete", destructive = true) {
+                dismiss()
+                Library.state.value.playlists.firstOrNull { it.id == entry.id }?.let { Library.togglePlaylist(it) }
+            }
         }
-        Kind.Top, Kind.Cached, Kind.Uploaded, Kind.SpotifyLiked, Kind.SpotifyPlaylist -> Unit
+        Kind.Top -> DiscCoverMenuItems(DiscTargets.Top, dismiss = dismiss)
+        Kind.Cached -> DiscCoverMenuItems(DiscTargets.Cached, dismiss = dismiss)
+        Kind.Uploaded -> DiscCoverMenuItems(DiscTargets.Uploaded, dismiss = dismiss)
+        Kind.SpotifyLiked, Kind.SpotifyPlaylist -> Unit
     }
 }
 

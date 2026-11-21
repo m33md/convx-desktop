@@ -15,6 +15,7 @@ import androidx.compose.ui.text.AnnotatedString
 import com.convx.desktop.core.AppScope
 import com.convx.desktop.core.Log
 import com.convx.desktop.data.Library
+import com.convx.desktop.data.hasPlaylist
 import com.convx.desktop.data.toSpeedDial
 import com.convx.desktop.data.Song
 import com.convx.desktop.data.toSaved
@@ -199,7 +200,7 @@ fun ItemMenuContent(item: YTItem, dismiss: () -> Unit) {
             }
         }
         is PlaylistItem -> {
-            val saved = library.playlists.any { it.id == item.id }
+            val saved = library.hasPlaylist(item.id)
             MenuItem(if (saved) "Remove from Library" else "Save to Library", if (saved) "library_add_check" else "library_add") {
                 Library.togglePlaylist(item.toSaved())
                 Overlays.toast(if (saved) "Removed from Library" else "Saved to Library")

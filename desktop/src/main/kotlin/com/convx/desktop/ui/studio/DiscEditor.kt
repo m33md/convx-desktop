@@ -137,8 +137,15 @@ object DiscEditor {
     var dirty by mutableStateOf(false)
         private set
 
-    /** The playlist it was opened for: "Use on" goes there, and its songs' covers are offered as pictures. */
+    /**
+     * The playlist it was opened for, one of yours or a saved YouTube Music or auto playlist
+     * (DiscTargets): "Use on" goes there, and its songs' covers are offered as pictures.
+     */
     var playlistId by mutableStateOf<String?>(null)
+        private set
+
+    /** That playlist's songs, for their covers. */
+    var songs by mutableStateOf<List<com.convx.desktop.data.Song>>(emptyList())
         private set
     var spinning by mutableStateOf(false)
 
@@ -164,9 +171,10 @@ object DiscEditor {
 
     val selected: DiscLayer? get() = design.layer(selectedId)
 
-    fun open(start: DiscDesign, forPlaylist: String? = null) {
+    fun open(start: DiscDesign, forPlaylist: String? = null, playlistSongs: List<com.convx.desktop.data.Song>? = null) {
         design = start
         playlistId = forPlaylist
+        songs = forPlaylist?.let { playlistSongs ?: DiscTargets.songs(it) }.orEmpty()
         undo.clear()
         redo.clear()
         selectedId = null
@@ -180,8 +188,8 @@ object DiscEditor {
     }
 
     /** A new design from [preset], named after the playlist it's for. */
-    fun openPreset(preset: DiscPresets.Preset, forPlaylist: String? = null) {
-        open(DiscPresets.start(preset, forPlaylist?.let { Library.playlist(it) }?.name), forPlaylist)
+    fun openPreset(preset: DiscPresets.Preset, forPlaylist: String? = null, playlistSongs: List<com.convx.desktop.data.Song>? = null) {
+        open(DiscPresets.start(preset, forPlaylist?.let { DiscTargets.name(it) }), forPlaylist, playlistSongs)
         dirty = true
         coversInto(preset)
     }
@@ -191,9 +199,8 @@ object DiscEditor {
      * cover collage shows its songs. The sample pictures stand in until then.
      */
     private fun coversInto(preset: DiscPresets.Preset) {
-        val playlist = playlistId?.let { Library.playlist(it) } ?: return
-        if (!DiscPresets.usesCovers(preset)) return
-        val urls = playlist.songs.mapNotNull { it.thumbnail }.distinct().take(9)
+        if (playlistId == null || !DiscPresets.usesCovers(preset)) return
+        val urls = songs.mapNotNull { it.thumbnail }.distinct().take(9)
         if (urls.isEmpty()) return
         val id = design.id
         AppScope.launch(Dispatchers.Main) {
@@ -208,15 +215,19 @@ object DiscEditor {
         }
     }
 
-    /** The playlist's own design if it has one, or a new one for it. */
-    fun openFor(playlistId: String) {
-        val linked = DiscDesigns.get(Library.playlist(playlistId)?.design)
+    /**
+     * The playlist's own design if it has one, or a new one for it. [playlistId] is one of yours or a
+     * DiscTargets key; [playlistSongs] are its songs when the page showing it has them (a YouTube
+     * Music playlist's aren't kept on this PC).
+     */
+    fun openFor(playlistId: String, playlistSongs: List<com.convx.desktop.data.Song>? = null) {
+        val linked = DiscDesigns.get(DiscTargets.design(playlistId))
         if (linked != null) {
-            open(linked, playlistId)
+            open(linked, playlistId, playlistSongs)
         } else {
             // A playlist with covers starts as a ring of them; one without, as a holographic CD.
-            val covers = Library.playlist(playlistId)?.songs.orEmpty().any { it.thumbnail != null }
-            openPreset(DiscPresets.of(if (covers) "cover-collage" else "holographic") ?: DiscPresets.all.first(), playlistId)
+            val covers = (playlistSongs ?: DiscTargets.songs(playlistId)).any { it.thumbnail != null }
+            openPreset(DiscPresets.of(if (covers) "cover-collage" else "holographic") ?: DiscPresets.all.first(), playlistId, playlistSongs)
         }
     }
 
@@ -258,7 +269,7 @@ object DiscEditor {
         save { saved ->
             AppScope.launch(Dispatchers.Main) {
                 val done = withContext(Dispatchers.IO) { DiscDesigns.applyTo(saved, playlist) }
-                val name = Library.playlist(playlist)?.name ?: "the playlist"
+                val name = DiscTargets.name(playlist) ?: "the playlist"
                 if (done) Overlays.toast("\"${saved.name}\" is now the cover of $name") else Overlays.toast("Couldn't put it on $name", "error")
             }
         }
@@ -605,21 +616,17 @@ private fun EditorTopBar() {
         IconButton("ios_share", { DiscEditor.export() })
         Spacer(Modifier.width(6.dp))
         Box {
-            val target = DiscEditor.playlistId?.let { id -> library.localPlaylists.firstOrNull { it.id == id } }
+            val target = remember(DiscEditor.playlistId, library) { DiscEditor.playlistId?.let { DiscTargets.find(it) } }
             PillButton(
                 if (target != null) "Use on ${target.name.take(18)}" else "Use on playlist",
                 { if (target != null) DiscEditor.useOn(target.id) else playlistMenu.expanded = true },
                 icon = "playlist_add",
             )
+            // Any playlist: your own, saved YouTube Music ones and the auto playlists.
             AppMenu(playlistMenu) {
-                if (library.localPlaylists.isEmpty()) {
-                    MenuItem("No playlists yet", enabled = false) {}
-                }
-                library.localPlaylists.take(40).forEach { playlist ->
-                    MenuItem(playlist.name, "queue_music") {
-                        playlistMenu.expanded = false
-                        DiscEditor.useOn(playlist.id)
-                    }
+                DiscTargetItems(DiscEditor.design.id) { picked ->
+                    playlistMenu.expanded = false
+                    DiscEditor.useOn(picked.id)
                 }
             }
         }

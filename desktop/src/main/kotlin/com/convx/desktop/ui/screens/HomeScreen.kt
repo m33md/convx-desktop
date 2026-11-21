@@ -118,7 +118,7 @@ fun HomeScreen() {
     val charts = rememberPage("charts") { YouTube.getChartsPage().getOrThrow() }
     val explore = rememberPage("explore") { YouTube.explore().getOrThrow() }
     val chips = if (settings.homeMoodFilters) feed.homePage?.chips.orEmpty().filter { it.endpoint?.browseId?.isNotBlank() == true } else emptyList()
-    val chipTitles = chips.map { it.title }
+    val chipTitles = chips.map { it.title }.distinct()
     LaunchedEffect(chipTitles) {
         UiState.homeChips = chipTitles
         if (selectedChip != null && selectedChip !in chipTitles) UiState.homeChip = null

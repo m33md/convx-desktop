@@ -67,7 +67,7 @@ fun CommentsPanel(videoId: String, modifier: Modifier = Modifier) {
     var open by remember(videoId) { mutableStateOf<CommentThreadRenderer?>(null) }
     LaunchedEffect(videoId) {
         YouTube.comments(videoId).onSuccess { (first, token) ->
-            comments = first
+            comments = first.distinctBy { it.comment?.commentRenderer?.commentId ?: it.hashCode() }
             next = token
         }
         loading = false

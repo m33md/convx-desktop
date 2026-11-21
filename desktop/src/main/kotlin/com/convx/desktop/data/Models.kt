@@ -85,6 +85,19 @@ data class LocalPlaylist(
     val design: String? = null,
 )
 
+/**
+ * A Disc Studio design's picture on a playlist that isn't one of your own: a saved YouTube Music
+ * playlist, an auto playlist like My top or Liked Songs. Kept by the playlist's key (DiscTargets),
+ * since those playlists live on YouTube or are made up as they're shown.
+ */
+@Serializable
+data class WornCover(
+    /** The picture, as PlaylistCovers keeps it. */
+    val cover: String,
+    /** The design it was drawn from, so saving the design redraws it; null once the design is deleted. */
+    val design: String? = null,
+)
+
 @Serializable
 data class LikedSong(val song: Song, val likedAt: Long = System.currentTimeMillis())
 
@@ -113,7 +126,43 @@ data class LibraryData(
     val uploaded: List<Song> = emptyList(),
     /** Songs Recognize Music found, newest first: the phone's recognition history. */
     val recognitions: List<Recognition> = emptyList(),
+    /** Disc designs worn by playlists that aren't your own, by the playlist's key (DiscTargets). */
+    val worn: Map<String, WornCover> = emptyMap(),
 )
+
+/**
+ * The library with each saved thing in it once, keeping the first: a playlist an account or an
+ * import listed twice would otherwise be in your library twice, and the lists that show it need
+ * each one once. A saved playlist with and without YouTube's "VL" is the same playlist. Gives
+ * back this same library when nothing is in it twice.
+ */
+fun LibraryData.withoutRepeats(): LibraryData {
+    var changed = false
+    fun <T> List<T>.once(id: (T) -> Any): List<T> {
+        val seen = HashSet<Any>(size * 2)
+        if (all { seen.add(id(it)) }) return this
+        changed = true
+        return distinctBy(id)
+    }
+    val tidy = copy(
+        liked = liked.once { it.song.id },
+        albums = albums.once { it.browseId },
+        playlists = playlists.once { it.id.removePrefix("VL") },
+        artists = artists.once { it.id },
+        localPlaylists = localPlaylists.once { it.id },
+        searchHistory = searchHistory.once { it.lowercase() },
+        speedDial = speedDial.once { it.id },
+        uploaded = uploaded.once { it.id },
+        recognitions = recognitions.once { it.at },
+    )
+    return if (changed) tidy else this
+}
+
+/** Whether the playlist [id] is saved, with or without YouTube's "VL". */
+fun LibraryData.hasPlaylist(id: String): Boolean {
+    val key = id.removePrefix("VL")
+    return playlists.any { it.id.removePrefix("VL") == key }
+}
 
 /** A song Recognize Music found, with what Shazam said about it, as the phone keeps one. */
 @Serializable
@@ -230,6 +279,8 @@ data class GlassSettings(
     val surfaceOpacity: Float = 0.40f,
     /** The light rim along the glass' edge. */
     val highlightOpacity: Float = 0.55f,
+    /** Glass buttons swell, lean and spring back under the pointer. */
+    val buttonMotion: Boolean = true,
 )
 
 /**
@@ -275,7 +326,11 @@ data class Settings(
     val librarySort: String = "recents",
     /** Your Library's Custom order, by [libraryKey]; what isn't in it shows on top. */
     val libraryOrder: List<String> = emptyList(),
+    /** The side bar's playlist groups (Spotify, YT Music, Convx) open under All Playlists. */
+    val playlistGroupsOpen: Boolean = false,
     val rightPanel: String? = "nowPlaying",
+    /** The lyrics card in the Now Playing view on the right. */
+    val nowPlayingLyrics: Boolean = true,
     val lyricsWordSync: Boolean = true,
     /** The phone's lyric source order by its ids; empty is the phone's default order. */
     val lyricsProviders: List<String> = emptyList(),
@@ -323,6 +378,8 @@ data class Settings(
     /** Folders scanned for music files; the Windows Music folder until you choose. */
     val localFolders: List<String> = com.convx.desktop.player.LocalMusic.defaultFolders(),
     val excludedFolders: List<String> = emptyList(),
+    /** Music folders that are also playlists of their own, kept in step with the folder by each scan (FolderPlaylists). */
+    val folderPlaylists: List<String> = emptyList(),
     val scanLocalOnStart: Boolean = true,
     /** The phone's Network & proxy page; the proxy password lives in Secrets. */
     val ipVersion: String = "IPV4",

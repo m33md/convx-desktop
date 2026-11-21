@@ -218,7 +218,7 @@ fun MoodGrid(title: String, moods: List<MoodAndGenres.Item>, onTitleClick: (() -
             verticalArrangement = Arrangement.spacedBy(TileGap),
             modifier = Modifier.bleedStart(bleed).fillMaxWidth().height(tileWidth / TileAspect * 2 + TileGap),
         ) {
-            items(moods, key = { it.key }) { mood ->
+            items(moods.distinctBy { it.key }, key = { it.key }) { mood ->
                 MoodTile(mood, Modifier.width(tileWidth)) { navigator.navigate(Screen.Browse(mood.endpoint.browseId, mood.endpoint.params, mood.title)) }
             }
         }

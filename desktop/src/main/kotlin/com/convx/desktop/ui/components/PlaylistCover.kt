@@ -69,17 +69,29 @@ fun chooseLikedSongsCover() {
     }
 }
 
-/** Sets (or, with null, clears) Liked Songs' picture and drops the old file. */
+/** Sets (or, with null, clears) Liked Songs' picture and drops the old file. A disc design on it comes off. */
 fun setLikedSongsCover(cover: String?) {
     AppSettings.update { it.copy(likedSongsCover = cover) }
+    Library.removeWornCover(com.convx.desktop.ui.studio.DiscTargets.Liked)
     PlaylistCovers.prune(Library.state.value.localPlaylists)
 }
 
-/** Liked Songs' picture: the one you chose, or the phone's heart tile. */
+/** The disc design's picture on a playlist that isn't yours, by its DiscTargets key, or null. */
+@Composable
+fun wornCover(key: String): String? = Library.state.collectAsState().value.worn[key]?.cover?.let(PlaylistCovers::url)
+
+/** An auto playlist's tile (My top, Downloaded, Cached, Uploaded), or the disc design put on it. */
+@Composable
+fun AutoPlaylistArt(key: String, icon: String, colors: List<androidx.compose.ui.graphics.Color>, size: Dp, shape: Shape) {
+    val worn = wornCover(key)
+    if (worn != null) Artwork(worn, Modifier.size(size), size = 600, shape = shape) else GradientTile(icon, size, colors, shape)
+}
+
+/** Liked Songs' picture: a disc design put on it, the picture you chose, or the phone's heart tile. */
 @Composable
 fun LikedSongsArt(size: Dp, shape: Shape) {
     val chosen = AppSettings.state.collectAsState().value.likedSongsCover
-    val cover = PlaylistCovers.url(chosen)
+    val cover = wornCover(com.convx.desktop.ui.studio.DiscTargets.Liked) ?: PlaylistCovers.url(chosen)
     if (cover != null) {
         Artwork(cover, Modifier.size(size), size = 600, shape = shape)
     } else {

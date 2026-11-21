@@ -55,6 +55,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.ui.glass.of
 import com.convx.desktop.ui.glass.LocalGlassConfig
+import com.convx.desktop.ui.glass.LocalElasticGlass
 import com.convx.desktop.ui.glass.GlassConfig
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.lyrics.LyricsService
@@ -168,6 +169,7 @@ fun AppShell(navigator: Navigator) {
             LocalPlayback provides playback,
             LocalMenuBackdrop provides appBackdrop,
             LocalGlassConfig provides glass,
+            LocalElasticGlass provides settings.glass.buttonMotion,
             LocalCardWidth provides settings.cardWidth(),
         ) {
             BoxWithConstraints(Modifier.fillMaxSize().then(if (IsMacShell) Modifier else Modifier.background(Color.Black))) {

@@ -229,8 +229,10 @@ private fun NowPlayingPanel(state: PlayerState) {
             Spacer(Modifier.height(10.dp))
             QualityBadge(it.badge, it.detail, ConvxColors.SecondaryLabel)
         }
-        Spacer(Modifier.height(18.dp))
-        LyricsCard(song)
+        if (settings.nowPlayingLyrics) {
+            Spacer(Modifier.height(18.dp))
+            LyricsCard(song)
+        }
         song.album?.let { album ->
             Spacer(Modifier.height(12.dp))
             InfoCard("From the album") {

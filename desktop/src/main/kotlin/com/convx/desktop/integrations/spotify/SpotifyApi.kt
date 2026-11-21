@@ -129,7 +129,7 @@ object SpotifyApi {
                 trackCount = count,
                 description = obj.str("description").orEmpty(),
             )
-        }
+        }.distinctBy { it.id }
         playlists = items
         return items
     }

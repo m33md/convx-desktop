@@ -100,7 +100,9 @@ fun SearchScreen() {
             return@LaunchedEffect
         }
         delay(220)
+        // Each suggestion once: YouTube can suggest the same search, or the same song, twice.
         suggestions = withContext(Dispatchers.IO) { YouTube.searchSuggestions(query).getOrNull() }
+            ?.let { it.copy(queries = it.queries.distinct(), recommendedItems = it.recommendedItems.distinctBy { item -> item.id }) }
     }
     LaunchedEffect(Unit) { runCatching { UiState.searchFocus.requestFocus() } }
 

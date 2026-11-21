@@ -46,23 +46,25 @@ object WindowTitleBar {
     var leftInset by mutableStateOf(0.dp)
         private set
 
+    private var frame: Frame? = null
+    private var height = 0.dp
+    private var detached = false
+
+    /** Full screen: no title bar at all, so no buttons in the corner and nothing to drag. */
+    var fullscreen by mutableStateOf(false)
+        private set
+
     fun install(frame: Frame, height: Dp) {
         if (!System.getProperty("os.name").lowercase().contains("win")) return
+        this.frame = frame
+        this.height = height
         runCatching {
             if (!JBR.isAvailable() || !JBR.isWindowDecorationsSupported()) {
                 Log.i(Tag, "Runtime has no custom title bar (${System.getProperty("java.vm.vendor")}); keeping the Windows one")
                 return
             }
-            val decorations = JBR.getWindowDecorations()
-            val titleBar = decorations.createCustomTitleBar()
-            // Logical pixels, which are Compose's dp on the desktop.
-            titleBar.height = height.value * scale
-            titleBar.putProperty("controls.dark", true)
-            decorations.setCustomTitleBar(frame, titleBar)
-            bar = titleBar
-            active = true
-            updateInsets()
-            Log.i(Tag, "Custom title bar on, buttons take ${titleBar.rightInset}px")
+            attach(frame)
+            Log.i(Tag, "Custom title bar on, buttons take ${bar?.rightInset}px")
         }.onFailure {
             bar = null
             active = false
@@ -70,9 +72,60 @@ object WindowTitleBar {
         }
     }
 
+    private fun attach(frame: Frame) {
+        val decorations = JBR.getWindowDecorations()
+        val titleBar = decorations.createCustomTitleBar()
+        // Logical pixels, which are Compose's dp on the desktop.
+        titleBar.height = height.value * scale
+        titleBar.putProperty("controls.dark", true)
+        decorations.setCustomTitleBar(frame, titleBar)
+        bar = titleBar
+        active = true
+        updateInsets()
+    }
+
+    /**
+     * Called once the window covers the screen (see WindowsChrome.fullscreen in Main.kt), and
+     * again before it goes back. The title bar comes off while it's full screen and a new one goes
+     * on after, as the runtime ties each one to its window.
+     */
+    fun showFullscreen(on: Boolean) {
+        if (fullscreen == on) return
+        fullscreen = on
+        val window = frame ?: return
+        val titleBar = bar ?: return
+        if (on) {
+            active = false
+            runCatching {
+                JBR.getWindowDecorations().setCustomTitleBar(window, null)
+                detached = true
+            }.onFailure {
+                Log.w(Tag, "Couldn't take the title bar off for full screen", it)
+                // Still out of the way: the buttons hidden, and the top bar no longer drags the window.
+                runCatching { titleBar.putProperty("controls.visible", false) }
+            }
+        } else if (detached) {
+            detached = false
+            runCatching { attach(window) }.onFailure {
+                // Windows' own (darkened) title bar then, as on a runtime without this.
+                Log.w(Tag, "Couldn't put the title bar back after full screen", it)
+                bar = null
+            }
+        } else {
+            runCatching { titleBar.putProperty("controls.visible", true) }
+            active = true
+        }
+        updateInsets()
+    }
+
     /** The buttons' width is known once the window is on screen; call again after it shows. */
     fun updateInsets() {
-        val titleBar = bar ?: return
+        val titleBar = bar
+        if (titleBar == null || fullscreen) {
+            rightInset = 0.dp
+            leftInset = 0.dp
+            return
+        }
         runCatching {
             rightInset = (titleBar.rightInset / scale).dp
             leftInset = (titleBar.leftInset / scale).dp
@@ -82,6 +135,7 @@ object WindowTitleBar {
     /** Display density changed: the top bar is [height] in the app's dp, so this many of Windows'. */
     fun rescale(scale: Float, height: Dp) {
         this.scale = scale
+        this.height = height
         val titleBar = bar ?: return
         runCatching { titleBar.height = height.value * scale }
         updateInsets()
@@ -89,7 +143,7 @@ object WindowTitleBar {
 
     /** True: the pointer is over a control of ours. False: it is over empty title bar. */
     internal fun hitTest(client: Boolean) {
-        bar?.forceHitTest(client)
+        if (active) bar?.forceHitTest(client)
     }
 }
 

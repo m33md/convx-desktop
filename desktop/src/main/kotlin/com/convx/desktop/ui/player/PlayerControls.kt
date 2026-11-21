@@ -46,6 +46,7 @@ import com.convx.desktop.data.SeekBarStyle
 import com.convx.desktop.data.Song
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.player.PlayerState
+import com.convx.desktop.ui.glass.rememberGlyphPress
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.ArtistLinks
 import com.convx.desktop.ui.components.Artwork
@@ -116,12 +117,14 @@ fun TransportControls(
                 ended = state.ended,
             )
         } else {
-            // The phone's v2: a bare glyph, no disc, popping between play and pause.
+            // The phone's v2: a bare glyph, no disc, popping between play and pause, that dips under a press.
+            val motion = rememberGlyphPress()?.takeIf { state.current != null }
             Box(
                 Modifier
                     .size(play)
                     .clip(CircleShape)
-                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null),
+                    .pressable({ PlayerController.togglePlay() }, enabled = state.current != null)
+                    .then(if (motion != null) motion.input.then(motion.layer) else Modifier),
                 contentAlignment = Alignment.Center,
             ) {
                 AnimatedPlayGlyph(

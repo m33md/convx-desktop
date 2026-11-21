@@ -19,7 +19,7 @@ object Library {
     const val HistoryLimit = 10_000
     private const val SearchHistoryLimit = 30
 
-    private val store = JsonFile(File(AppDirs.data, "library.json"), LibraryData.serializer()) { LibraryData() }
+    private val store = JsonFile(File(AppDirs.data, "library.json"), LibraryData.serializer(), LibraryData::withoutRepeats) { LibraryData() }
 
     val state: StateFlow<LibraryData> = store.state
     val value: LibraryData get() = store.value
@@ -67,12 +67,13 @@ object Library {
         _changes.tryEmit(Change.Album(album, saved))
     }
 
-    fun isPlaylistSaved(id: String) = value.playlists.any { it.id == id }
+    fun isPlaylistSaved(id: String) = value.hasPlaylist(id)
 
     fun togglePlaylist(playlist: SavedPlaylist) {
         val saved = !isPlaylistSaved(playlist.id)
+        val key = playlist.id.removePrefix("VL")
         store.update { data ->
-            if (data.playlists.any { it.id == playlist.id }) data.copy(playlists = data.playlists.filterNot { it.id == playlist.id })
+            if (data.hasPlaylist(playlist.id)) data.copy(playlists = data.playlists.filterNot { it.id.removePrefix("VL") == key })
             else data.copy(playlists = listOf(playlist) + data.playlists)
         }
         _changes.tryEmit(Change.Playlist(playlist, saved))
@@ -98,8 +99,11 @@ object Library {
         }
     }
 
-    /** Applies what an account sync found, without echoing it back as changes of yours. */
-    internal fun applySync(transform: (LibraryData) -> LibraryData) = store.update(transform)
+    /**
+     * Applies what an account sync, an import or a restore brought, without echoing it back as
+     * changes of yours. What they bring can name something twice; it's kept once.
+     */
+    internal fun applySync(transform: (LibraryData) -> LibraryData) = store.update { transform(it).withoutRepeats() }
 
     // Local playlists
 
@@ -128,6 +132,43 @@ object Library {
         }
     }
 
+    /**
+     * Makes the playlists whose ids start with [prefix] the ones in [wanted] (id to name and songs),
+     * as folder playlists follow their folders. A playlist that's already there keeps its name,
+     * picture and your order: songs still in the folder stay where you put them, new ones go at the
+     * end, gone ones leave. One that isn't wanted any more is deleted. Nothing changes, and
+     * "Recently updated" stays, when the songs are the same.
+     */
+    fun syncFolderPlaylists(prefix: String, wanted: Map<String, Pair<String, List<Song>>>) {
+        var removed = false
+        store.update { data ->
+            var changed = false
+            removed = false
+            val kept = data.localPlaylists.mapNotNull { playlist ->
+                if (!playlist.id.startsWith(prefix)) return@mapNotNull playlist
+                val (_, songs) = wanted[playlist.id] ?: run {
+                    changed = true
+                    removed = true
+                    return@mapNotNull null
+                }
+                val fresh = songs.associateBy { it.id }
+                val ordered = playlist.songs.mapNotNull { fresh[it.id] }.distinctBy { it.id }
+                val placed = ordered.mapTo(HashSet()) { it.id }
+                val next = ordered + songs.filterNot { it.id in placed }
+                if (next == playlist.songs) {
+                    playlist
+                } else {
+                    changed = true
+                    playlist.copy(songs = next, updatedAt = System.currentTimeMillis())
+                }
+            }
+            val have = kept.mapTo(HashSet()) { it.id }
+            val added = wanted.filterKeys { it !in have }.map { (id, list) -> LocalPlaylist(id, list.first, list.second) }
+            if (!changed && added.isEmpty()) data else data.copy(localPlaylists = kept + added)
+        }
+        if (removed) PlaylistCovers.prune(value.localPlaylists)
+    }
+
     /** Sets the playlist's picture, or takes it off with null; a picture file nothing uses any more is deleted. */
     fun setPlaylistCover(id: String, cover: String?) {
         updatePlaylist(id) { it.copy(cover = cover, design = null) }
@@ -142,7 +183,23 @@ object Library {
 
     /** A deleted design's playlists keep its picture, no longer tied to it. */
     fun forgetDesign(design: String) = store.update { data ->
-        data.copy(localPlaylists = data.localPlaylists.map { if (it.design == design) it.copy(design = null) else it })
+        data.copy(
+            localPlaylists = data.localPlaylists.map { if (it.design == design) it.copy(design = null) else it },
+            worn = data.worn.mapValues { (_, worn) -> if (worn.design == design) worn.copy(design = null) else worn },
+        )
+    }
+
+    /** Puts a disc design's picture on a playlist that isn't one of yours, by its key (DiscTargets). */
+    fun setWornCover(key: String, cover: String, design: String) {
+        store.update { it.copy(worn = it.worn + (key to WornCover(cover, design))) }
+        PlaylistCovers.prune(value.localPlaylists)
+    }
+
+    /** Gives a playlist that isn't yours its own cover back. */
+    fun removeWornCover(key: String) {
+        if (key !in value.worn) return
+        store.update { it.copy(worn = it.worn - key) }
+        PlaylistCovers.prune(value.localPlaylists)
     }
 
     fun renamePlaylist(id: String, name: String) = updatePlaylist(id) { it.copy(name = name) }
@@ -153,6 +210,8 @@ object Library {
     }
 
     fun deletePlaylist(id: String) {
+        // A folder's playlist stops following the folder, or the next scan would bring it back.
+        com.convx.desktop.player.FolderPlaylists.deleted(id)
         store.update { data -> data.copy(localPlaylists = data.localPlaylists.filterNot { it.id == id }) }
         PlaylistCovers.prune(value.localPlaylists)
     }

@@ -59,7 +59,6 @@ import com.convx.desktop.data.DiscDesigns
 import com.convx.desktop.data.DiscFormat
 import com.convx.desktop.data.DiscPresets
 import com.convx.desktop.data.Library
-import com.convx.desktop.data.LocalPlaylist
 import com.convx.desktop.ui.components.AppMenu
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Gutter
@@ -119,7 +118,7 @@ fun DiscStudioScreen() {
                 EmptyDesigns()
             } else {
                 CardGrid(designs) { design, width ->
-                    DesignCard(design, library.localPlaylists.filter { it.design == design.id }, library.localPlaylists, width)
+                    DesignCard(design, remember(library, design.id) { DiscTargets.wearing(design.id, library).mapNotNull { DiscTargets.name(it) } }, width)
                 }
             }
         }
@@ -156,13 +155,13 @@ internal fun importDesignFile() {
 }
 
 /** Puts [design] on a playlist from the studio page, without opening the editor. */
-private fun applyDesign(design: DiscDesign, playlist: LocalPlaylist, open: (String) -> Unit) {
+private fun applyDesign(design: DiscDesign, target: DiscTargets.Target, open: () -> Unit) {
     AppScope.launch(Dispatchers.Main) {
-        val done = withContext(Dispatchers.IO) { DiscDesigns.applyTo(design, playlist.id) }
+        val done = withContext(Dispatchers.IO) { DiscDesigns.applyTo(design, target.id) }
         if (done) {
-            Overlays.toast("\"${design.name}\" is now the cover of ${playlist.name}", action = "View") { open(playlist.id) }
+            Overlays.toast("\"${design.name}\" is now the cover of ${target.name}", action = "View") { open() }
         } else {
-            Overlays.toast("Couldn't put it on ${playlist.name}", "error")
+            Overlays.toast("Couldn't put it on ${target.name}", "error")
         }
     }
 }
@@ -290,7 +289,7 @@ private fun CoverImage(key: String, design: () -> DiscDesign, modifier: Modifier
 }
 
 @Composable
-private fun DesignCard(design: DiscDesign, wornBy: List<LocalPlaylist>, playlists: List<LocalPlaylist>, width: Dp) {
+private fun DesignCard(design: DiscDesign, wornBy: List<String>, width: Dp) {
     val navigator = LocalNavigator.current
     val interaction = remember { MutableInteractionSource() }
     val hovered by interaction.collectIsHoveredAsState()
@@ -359,13 +358,11 @@ private fun DesignCard(design: DiscDesign, wornBy: List<LocalPlaylist>, playlist
                     }
                 }
             }
+            // Any playlist: your own, saved YouTube Music ones (like LOSER) and the auto playlists (like My top).
             AppMenu(useMenu) {
-                if (playlists.isEmpty()) MenuItem("No playlists yet", enabled = false) {}
-                playlists.take(40).forEach { playlist ->
-                    MenuItem(playlist.name, if (playlist.design == design.id) "check" else "queue_music") {
-                        useMenu.expanded = false
-                        applyDesign(design, playlist) { navigator.navigate(Screen.LocalPlaylist(it)) }
-                    }
+                DiscTargetItems(design.id) { target ->
+                    useMenu.expanded = false
+                    applyDesign(design, target) { navigator.navigate(target.screen) }
                 }
             }
         }
@@ -379,7 +376,7 @@ private fun DesignCard(design: DiscDesign, wornBy: List<LocalPlaylist>, playlist
         val kind = if (design.format == DiscFormat.CD) "CD" else "Vinyl"
         val where = when (wornBy.size) {
             0 -> null
-            1 -> "on ${wornBy.first().name}"
+            1 -> "on ${wornBy.first()}"
             else -> "on ${wornBy.size} playlists"
         }
         Text(

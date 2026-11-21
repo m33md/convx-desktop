@@ -15,7 +15,6 @@ import com.convx.desktop.data.toSong
 import com.convx.desktop.integrations.spotify.SpotifyApi
 import com.convx.desktop.integrations.spotify.SpotifyMatcher
 import com.convx.desktop.integrations.spotify.SpotifyPlaylist
-import com.convx.desktop.integrations.spotify.SpotifyTrack
 import com.convx.music.canvas.AppleMusicCatalog
 import com.convx.music.canvas.AppleMusicPlaylist
 import com.convx.music.canvas.ApplePlaylist
@@ -34,8 +33,12 @@ import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * The phone's playlist imports: Spotify playlists and Liked Songs mirrored into Convx playlists,
@@ -222,14 +225,17 @@ object PlaylistImport {
             var skippedTotal = 0
             var lastId: String? = null
             val slugs = HashSet<String>()
+            // Export All repeats a song in Liked Songs and in every playlist that has it; each is looked up once.
+            val found = HashMap<String, Song?>()
             try {
                 wanted.forEachIndexed { index, parsed ->
-                    val (songs, skipped) = matchFile(parsed, source, index + 1, wanted.size)
+                    val (songs, skipped) = matchFile(parsed, source, index + 1, wanted.size, found)
                     // Two lists whose names make the same slug ("......." and "!!!", say) each keep their own.
                     val base = slugOf(parsed.title)
                     val slug = generateSequence(2) { it + 1 }.map { "$base-$it" }.let { sequenceOf(base) + it }.first { slugs.add(it) }
                     val liked = slug == "liked-songs" || slug == "liked"
                     val id = if (liked) "local-spotify-liked" else "local-import-$slug"
+                    // Each list goes into the library as soon as its songs are matched.
                     Library.upsertPlaylist(id, if (liked) "Spotify Liked Songs" else parsed.title, songs.distinctBy { it.id })
                     matchedTotal += songs.size
                     skippedTotal += skipped
@@ -247,48 +253,151 @@ object PlaylistImport {
         }
     }
 
+    /** How many songs are searched for at once. */
+    private const val Searchers = 4
+
+    /** The least time between two searches starting, so a long import doesn't hammer YouTube Music. */
+    private const val SearchGapMs = 120L
+
+    /** Matches go into the Spotify match file this many at a time, not after every song. */
+    private const val KeepEvery = 250
+
     /**
      * One file's songs on YouTube Music, and how many had no match. The phone takes YouTube's first
      * search result for each line; here each is scored on title, artist and length, and a poor match
-     * is skipped. A line with a Spotify id goes through the Spotify matcher, so it shares its matches.
+     * is skipped. A line with a Spotify id shares its match with Spotify imports.
+     *
+     * A song already matched (by an earlier import, or in [found] by another list of this one) isn't
+     * searched again, and the rest are searched [Searchers] at a time, spaced out by [Pace].
      */
-    private suspend fun matchFile(parsed: PlaylistFiles.Parsed, source: String, list: Int, lists: Int): Pair<List<Song>, Int> = coroutineScope {
+    private suspend fun matchFile(
+        parsed: PlaylistFiles.Parsed,
+        source: String,
+        list: Int,
+        lists: Int,
+        found: MutableMap<String, Song?> = HashMap(),
+    ): Pair<List<Song>, Int> = coroutineScope {
         val tracks = parsed.tracks
+        val keys = tracks.map(::keyOf)
         // Lines that already name a YouTube song are looked up together, not searched.
-        val linked = tracks.mapNotNull { it.videoId }.distinct().chunked(50).flatMap { ids ->
-            ensureActive()
-            YouTube.queue(ids, null).onFailure { Log.w(Tag, "Couldn't look up ${ids.size} linked songs", it) }.getOrNull().orEmpty()
-        }.associateBy { it.id }
-        val matched = mutableListOf<Song>()
-        var skipped = 0
-        tracks.forEachIndexed { index, track ->
-            ensureActive()
-            _state.value = State.Matching(source, parsed.title, index, tracks.size, list, lists)
+        val linked = tracks.withIndex().filter { (i, track) -> track.videoId != null && keys[i] !in found }
+            .mapNotNull { it.value.videoId }.distinct().chunked(50).flatMap { ids ->
+                ensureActive()
+                YouTube.queue(ids, null).onFailure { Log.w(Tag, "Couldn't look up ${ids.size} linked songs", it) }.getOrNull().orEmpty()
+            }.associateBy { it.id }
+        val todo = ArrayList<Int>()
+        tracks.forEachIndexed { i, track ->
+            val key = keys[i]
+            if (key in found) return@forEachIndexed
             val id = track.videoId
-            val spotifyId = track.spotifyId
-            val song = when {
-                id != null -> linked[id]?.toSong() ?: Song(
+            val known = track.spotifyId?.let(SpotifyMatcher::known)?.takeIf { !SpotifyMatcher.isSpotify(it) }
+            when {
+                id != null -> found[key] = linked[id]?.toSong() ?: Song(
                     id = id,
                     title = track.title.ifBlank { id },
                     artists = track.artists.map { ArtistRef(null, it) },
                     duration = (track.durationMs / 1000).toInt().takeIf { it > 0 },
                     thumbnail = "https://i.ytimg.com/vi/$id/hqdefault.jpg",
                 )
-                spotifyId != null -> {
-                    val standIn = SpotifyMatcher.toSong(
-                        SpotifyTrack(spotifyId, track.title, track.artists, null, null, track.durationMs, false),
-                    )
-                    if (SpotifyMatcher.isSpotify(standIn)) {
-                        SpotifyMatcher.resolve(standIn).also { delay(150) }?.takeIf { !SpotifyMatcher.isSpotify(it) }
-                    } else {
-                        standIn
+                known != null -> found[key] = known
+                else -> {
+                    // Claimed now, so a song listed twice in this file is searched once.
+                    found[key] = null
+                    todo += i
+                }
+            }
+        }
+
+        val total = tracks.size
+        val done = AtomicInteger(total - todo.size)
+        _state.value = State.Matching(source, parsed.title, done.get(), total, list, lists)
+        val results = arrayOfNulls<Song>(todo.size)
+        val next = AtomicInteger()
+        val pending = ConcurrentLinkedQueue<Pair<String, Song>>()
+        fun keep() {
+            val batch = HashMap<String, Song>()
+            while (true) pending.poll()?.let { batch[it.first] = it.second } ?: break
+            SpotifyMatcher.remember(batch)
+        }
+        val pace = Pace(SearchGapMs)
+        try {
+            List(minOf(Searchers, todo.size)) {
+                launch {
+                    while (true) {
+                        val n = next.getAndIncrement()
+                        if (n >= todo.size) break
+                        val track = tracks[todo[n]]
+                        val song = search(track, pace)
+                        results[n] = song
+                        val spotifyId = track.spotifyId
+                        if (song != null && spotifyId != null) pending += spotifyId to song
+                        val count = done.incrementAndGet()
+                        if (count % KeepEvery == 0) keep()
+                        // Several searchers finish at once; the count only goes up.
+                        _state.update { now ->
+                            if (now is State.Matching && now.list == list && now.done >= count) now
+                            else State.Matching(source, parsed.title, count, total, list, lists)
+                        }
                     }
                 }
-                else -> SpotifyMatcher.bestMatch(track.title, track.artists, track.durationMs)?.toSong().also { delay(150) }
-            }
-            if (song != null) matched += song else skipped++
+            }.joinAll()
+        } finally {
+            // Stopped part way, the songs matched so far are still kept for next time.
+            keep()
         }
+        todo.forEachIndexed { n, i -> found[keys[i]] = results[n] }
+
+        val matched = ArrayList<Song>(tracks.size)
+        var skipped = 0
+        keys.forEach { key -> found[key]?.let { matched += it } ?: skipped++ }
         matched to skipped
+    }
+
+    /** What makes two lines the same song: its Spotify or YouTube id, or else its words and length. */
+    private fun keyOf(track: PlaylistFiles.FileTrack): String = when {
+        track.videoId != null -> "yt:" + track.videoId
+        track.spotifyId != null -> "sp:" + track.spotifyId
+        else -> "text:" + track.artists.joinToString(",").lowercase() + "|" + track.title.lowercase() + "|" + track.durationMs / 1000
+    }
+
+    /** One line's song on YouTube Music: null when nothing is close, or YouTube Music kept failing. */
+    private suspend fun search(track: PlaylistFiles.FileTrack, pace: Pace): Song? {
+        repeat(3) {
+            pace.await()
+            val result = SpotifyMatcher.findMatch(track.title, track.artists, track.durationMs)
+            if (result.isSuccess) {
+                pace.ok()
+                return result.getOrNull()?.toSong()
+            }
+            pace.failed()
+        }
+        return null
+    }
+
+    /**
+     * Spaces searches out: one starts at most every [gapMs], and after YouTube Music fails one they
+     * all wait and slow down for a while, so a long import isn't turned away.
+     */
+    private class Pace(private val gapMs: Long) {
+        private var gap = gapMs
+        private var next = 0L
+
+        suspend fun await() {
+            val wait = synchronized(this) {
+                val now = System.currentTimeMillis()
+                val at = maxOf(now, next)
+                next = at + gap
+                at - now
+            }
+            if (wait > 0) delay(wait)
+        }
+
+        fun ok() = synchronized(this) { gap = maxOf(gapMs, gap * 9 / 10) }
+
+        fun failed() = synchronized(this) {
+            gap = minOf(5_000L, gap * 3)
+            next = maxOf(next, System.currentTimeMillis() + gap * 4)
+        }
     }
 
     /** Puts a matched Apple playlist or playlist file into a new Convx playlist, or adds it to [playlistId]. */

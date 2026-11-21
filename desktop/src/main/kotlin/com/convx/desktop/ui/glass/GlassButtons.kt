@@ -48,7 +48,8 @@ fun Modifier.chromeShadow(shape: Shape): Modifier = dropShadow(
 
 /**
  * The phone's GlassCircleButton: a round drop of liquid glass with its icon composited into the
- * material and the soft chrome shadow. It holds still under a press.
+ * material, the soft chrome shadow, and the elastic swell, light and jiggle under the pointer
+ * ([ElasticGlass]).
  */
 @Composable
 fun GlassCircleButton(
@@ -61,12 +62,15 @@ fun GlassCircleButton(
     content: @Composable () -> Unit,
 ) {
     val interaction = remember { MutableInteractionSource() }
+    val glass = rememberElasticGlass()
     Box(
         modifier
+            .elastic(glass, enabled = enabled)
             .size(size)
             .chromeShadow(GlassCircleShape)
             .clip(GlassCircleShape)
             .liquidGlass(GlassCircleShape, highlightAlpha = GlassTokens.PluckAlphaNeutral)
+            .then(glass?.takeIf { enabled }?.sheen ?: Modifier)
             .pointerHoverIcon(if (enabled) PointerIcon.Hand else PointerIcon.Default)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
@@ -79,13 +83,14 @@ fun GlassCircleButton(
 
 /**
  * Any control made of the glass: the material, or [fill] for the white and red pills that keep
- * their paint. Like GlassCircleButton it holds still under the pointer. The caller adds its own
- * click handling after this.
+ * their paint, moving under the pointer as GlassCircleButton does. The motion is a couple of dp,
+ * so the target stays under the pointer. The caller adds its own click handling after this.
  */
 @Composable
 fun Modifier.glassControl(
     shape: CornerBasedShape,
     fill: Color? = null,
+    enabled: Boolean = true,
     shadow: Boolean = false,
     highlightAlpha: Float = GlassTokens.PluckAlphaNeutral,
     /** The lit and dark rims; small discs among plain glyphs read cleaner without them. */
@@ -99,10 +104,13 @@ fun Modifier.glassControl(
         // With nothing to refract it keeps the light wash these controls always had, now with the rim.
         Modifier.liquidGlass(shape, if (backdrop == null) tuned.onPage() else tuned, highlightAlpha = highlightAlpha, applyEdgeEffects = rims, backdrop = backdrop)
     }
+    val glass = rememberElasticGlass()?.takeIf { enabled }
     return this
+        .elastic(glass)
         .then(if (shadow) Modifier.chromeShadow(shape) else Modifier)
         .clip(shape)
         .then(surface)
+        .then(glass?.sheen ?: Modifier)
 }
 
 

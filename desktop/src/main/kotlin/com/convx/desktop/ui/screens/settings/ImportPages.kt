@@ -243,7 +243,7 @@ private fun ImportStages(state: PlaylistImport.State, source: String, idle: @Com
             if (choosing) {
                 Spacer(Modifier.height(10.dp))
                 ScrollbarColumn(Modifier.heightIn(max = 300.dp)) {
-                    library.localPlaylists.forEachIndexed { index, playlist ->
+                    library.localPlaylists.filterNot { com.convx.desktop.player.FolderPlaylists.isFolderPlaylist(it.id) }.forEachIndexed { index, playlist ->
                         if (index > 0) RowDivider()
                         SettingsRow(playlist.name, "${playlist.songs.size} songs", icon = "queue_music", tint = SystemColors.Red, onClick = {
                             PlaylistImport.save(playlist.id)

@@ -124,6 +124,10 @@ fun LiquidGlassSettings() {
             update { it.copy(blurRadius = v) }
         }
         RowDivider(PlainInset)
+        SwitchRow("Button motion", "Glass buttons swell under the pointer and spring back when you let go. Off saves a little CPU.", glass.buttonMotion) { v ->
+            update { it.copy(buttonMotion = v) }
+        }
+        RowDivider(PlainInset)
         SwitchRow("Advanced glass settings", "Vibrancy, lens, tint and the light rim.", advanced) { advanced = it }
     }
 

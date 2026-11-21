@@ -401,16 +401,17 @@ object Backup {
         var newSaved = 0
         Library.applySync { data ->
             val likedIds = data.liked.mapTo(HashSet()) { it.song.id }
-            val addLiked = phone.liked.filter { it.song.id !in likedIds }
+            val addLiked = phone.liked.filter { likedIds.add(it.song.id) }
             newLiked = addLiked.size
             val albumIds = data.albums.mapTo(HashSet()) { it.browseId }
-            val addAlbums = phone.albums.filter { it.browseId !in albumIds }
+            val addAlbums = phone.albums.filter { albumIds.add(it.browseId) }
             newAlbums = addAlbums.size
             val artistIds = data.artists.mapTo(HashSet()) { it.id }
-            val addArtists = phone.artists.filter { it.id !in artistIds }
+            val addArtists = phone.artists.filter { artistIds.add(it.id) }
             newArtists = addArtists.size
-            val savedIds = data.playlists.mapTo(HashSet()) { it.id }
-            val addSaved = phone.savedPlaylists.filter { it.id !in savedIds }
+            // The phone can keep one YouTube playlist in two rows (with and without "VL"); it's added once.
+            val savedIds = data.playlists.mapTo(HashSet()) { it.id.removePrefix("VL") }
+            val addSaved = phone.savedPlaylists.filter { savedIds.add(it.id.removePrefix("VL")) }
             newSaved = addSaved.size
             // A phone playlist imported again replaces its earlier copy.
             val phoneIds = phone.playlists.mapTo(HashSet()) { it.id }

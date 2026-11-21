@@ -241,22 +241,81 @@ object Downloads {
         it + (song.id to DownloadedSong(song, file.name, stream.mimeType, stream.bitrate, stream.sampleRate, stream.loudnessDb, stream.durationMs, file.length()))
     }
 
-    /** The phone's DownloadExporter: the audio as Artist - Title, its lyrics as .lrc, its cover in a hidden folder. */
-    private suspend fun exportToMusic(song: Song, file: File) {
+    /**
+     * The phone's DownloadExporter: the audio as Artist - Title, its lyrics as .lrc and its cover in
+     * a hidden folder. The copy also carries the title, artist, album, lyrics and cover inside it,
+     * so File Explorer, Windows Media Player and phones show who it is. Gives back the copy.
+     */
+    private suspend fun exportToMusic(song: Song, file: File): File {
         val folder = exportDir.apply { mkdirs() }
         val base = exportBaseName(song.artistText, song.title)
-        file.copyTo(File(folder, "$base.${file.extension}"), overwrite = true)
-        lyricsText(song)?.let { File(folder, "$base.lrc").writeText(it) }
-        song.thumbnail?.let { url ->
+        val lyrics = lyricsText(song)
+        val cover = song.thumbnail?.let { url ->
             runCatching {
-                val art = File(folder, ".artwork").apply { mkdirs() }
-                runCatching { Files.setAttribute(art.toPath(), "dos:hidden", true) }
                 val request = Request.Builder().url(url.replace(CoverSize, "=w1200-h1200-l90-rj")).build()
                 Http.client.newCall(request).execute().use { response ->
                     check(response.isSuccessful) { "HTTP ${response.code}" }
-                    File(art, "$base.jpg").outputStream().use { response.body.byteStream().copyTo(it) }
+                    response.body.bytes()
                 }
+            }.onFailure { Log.w(Tag, "Couldn't get the cover of ${song.title}", it) }.getOrNull()
+        }
+        val ext = TagWriter.extensionFor(file)
+        val tagged = File(folder, "$base.$ext")
+        val copy = if (TagWriter.canTag(ext)) {
+            runCatching {
+                TagWriter.write(
+                    file,
+                    tagged,
+                    TagWriter.Tags(
+                        title = song.title,
+                        artist = song.artistText,
+                        album = song.album?.name,
+                        albumArtist = song.artists.firstOrNull()?.name,
+                        lyrics = lyrics,
+                        cover = cover,
+                    ),
+                )
+                tagged
+            }.onFailure { Log.w(Tag, "Couldn't write the tags of ${song.title}; copying it as it is", it) }.getOrNull()
+        } else {
+            null
+        } ?: File(folder, "$base.${file.extension}").also { file.copyTo(it, overwrite = true) }
+        // A copy from before tags were written, under the stream's own extension, goes: the song is there once.
+        if (copy.extension != file.extension) File(folder, "$base.${file.extension}").takeIf { it.isFile }?.delete()
+        lyrics?.let { File(folder, "$base.lrc").writeText(it) }
+        cover?.let { bytes ->
+            runCatching {
+                val art = File(folder, ".artwork").apply { mkdirs() }
+                runCatching { Files.setAttribute(art.toPath(), "dos:hidden", true) }
+                File(art, "$base.jpg").writeBytes(bytes)
             }.onFailure { Log.w(Tag, "Couldn't save the cover of ${song.title}", it) }
+        }
+        return copy
+    }
+
+    /** Where adding tags to the songs already in Music\Convx is: how many are done, of how many. */
+    data class Retag(val done: Int, val total: Int, val failed: Int = 0, val finished: Boolean = false)
+
+    private val _retag = MutableStateFlow<Retag?>(null)
+    val retag: StateFlow<Retag?> = _retag.asStateFlow()
+
+    /**
+     * Copies every download to Music\Convx again, this time with its tags and cover, for songs
+     * saved there before Convx wrote them. The untagged copies are replaced.
+     */
+    fun retagMusicFolder() {
+        if (_retag.value?.finished == false) return
+        val songs = store.value.values.filter { File(dir, it.file).isFile }
+        _retag.value = Retag(0, songs.size)
+        AppScope.launch(Dispatchers.IO) {
+            var failed = 0
+            songs.forEachIndexed { i, entry ->
+                runCatching { exportToMusic(entry.song, File(dir, entry.file)) }
+                    .onFailure { failed++; Log.w(Tag, "Couldn't tag ${entry.song.title} in the Music folder", it) }
+                _retag.value = Retag(i + 1, songs.size, failed)
+            }
+            _retag.value = Retag(songs.size, songs.size, failed, finished = true)
+            Log.i(Tag, "Tagged ${songs.size - failed} of ${songs.size} songs in ${exportDir.name}")
         }
     }
 

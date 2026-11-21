@@ -87,7 +87,7 @@ object DiscDesigns {
         tmp.writeText(StoreJson.encodeToString(DiscDesign.serializer(), saved))
         Files.move(tmp.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE)
         _all.update { list -> (list.filterNot { it.id == saved.id } + saved).sortedByDescending { it.updatedAt } }
-        playlistsWearing(saved.id).forEach { applyTo(saved, it.id) }
+        playlistsWearing(saved.id).forEach { applyTo(saved, it) }
         return saved
     }
 
@@ -112,7 +112,9 @@ object DiscDesigns {
         )
     }
 
-    fun playlistsWearing(id: String): List<LocalPlaylist> = Library.value.localPlaylists.filter { it.design == id }
+    /** The playlists wearing design [id]: your own by id, saved YouTube Music and auto playlists by their key (Library.worn). */
+    fun playlistsWearing(id: String): List<String> =
+        Library.value.localPlaylists.filter { it.design == id }.map { it.id } + Library.value.worn.filterValues { it.design == id }.keys
 
     // ---- Pictures ----------------------------------------------------------------------------
 
@@ -226,14 +228,22 @@ object DiscDesigns {
 
     // ---- Playlists ---------------------------------------------------------------------------
 
-    /** Puts [design] on the playlist as its cover: a CD in its case, or a record on its sleeve. */
+    /**
+     * Puts [design] on the playlist as its cover: a CD in its case, or a record on its sleeve.
+     * [playlistId] is one of your playlists, or the key of a saved YouTube Music or auto playlist,
+     * which keep theirs in Library.worn.
+     */
     fun applyTo(design: DiscDesign, playlistId: String): Boolean {
         val bytes = runCatching { DiscArt.jpeg(DiscArt.renderCover(design, Resources, 900)) }
             .onFailure { Log.w(Tag, "Couldn't draw ${design.name}", it) }
             .getOrNull() ?: return false
         return when (val result = PlaylistCovers.save(playlistId, bytes, "jpg")) {
             is PlaylistCovers.Result.Done -> {
-                Library.setPlaylistDesign(playlistId, result.cover, design.id)
+                if (Library.playlist(playlistId) != null) {
+                    Library.setPlaylistDesign(playlistId, result.cover, design.id)
+                } else {
+                    Library.setWornCover(playlistId, result.cover, design.id)
+                }
                 true
             }
             is PlaylistCovers.Result.Failed -> {

@@ -55,7 +55,12 @@ object LocalMusic {
         val sampleRate: Int? = null,
         val track: Int? = null,
         val year: Int? = null,
-    )
+        /** The file has no artist tag, and [artists] came from its name ("Artist - Title"). */
+        val named: Boolean = false,
+    ) {
+        /** No artist tag was found when the file was last read. */
+        val untagged: Boolean get() = artists.isEmpty() || named
+    }
 
     @Serializable
     data class Index(val tracks: Map<String, Track> = emptyMap())
@@ -119,10 +124,20 @@ object LocalMusic {
     fun defaultFolders(): List<String> =
         listOf(File(System.getProperty("user.home"), "Music")).filter { it.isDirectory }.map { it.absolutePath }
 
-    /** Looks through the chosen folders again; unchanged files keep what was read before. */
-    fun scan() {
-        if (job?.isActive == true) return
+    /**
+     * Looks through the chosen folders again. A file is read again when its size or date changed,
+     * so tags edited since are picked up by themselves. [untagged] also reads again the files that
+     * gave no artist last time, as Scan now does: a tag editor can keep the file's date. [everything]
+     * reads every file again ("Read tags again"). Folder playlists follow what was found.
+     */
+    fun scan(untagged: Boolean = false, everything: Boolean = false) {
+        val running = job
+        if (running?.isActive == true) {
+            if (!untagged && !everything) return
+            running.cancel()
+        }
         job = AppScope.launch(Dispatchers.IO) {
+            running?.join()
             val settings = AppSettings.value
             val folders = settings.localFolders.map(::File).filter { it.isDirectory }
             val excluded = settings.excludedFolders.map { File(it).absolutePath.lowercase().trimEnd('\\', '/') }
@@ -142,8 +157,9 @@ object LocalMusic {
                             val id = idOf(file)
                             if (id in found) return@forEach
                             val old = before[id]
-                            found[id] = if (old != null && old.modified == file.lastModified() && old.size == file.length()) {
-                                old
+                            val same = old != null && old.modified == file.lastModified() && old.size == file.length()
+                            found[id] = if (same && !everything && !(untagged && old!!.untagged)) {
+                                old!!
                             } else {
                                 read++
                                 readTrack(id, file) ?: return@forEach
@@ -152,6 +168,7 @@ object LocalMusic {
                         }
                 }
                 store.update { Index(found) }
+                runCatching { FolderPlaylists.sync(store.value) }.onFailure { Log.w(Tag, "Couldn't update the folder playlists", it) }
                 val added = found.keys.count { it !in before }
                 val removed = before.keys.count { it !in found }
                 _status.value = Status.Done(System.currentTimeMillis(), found.size, added, removed)
@@ -180,17 +197,22 @@ object LocalMusic {
             val tags = (grabber.metadata.orEmpty() + grabber.audioMetadata.orEmpty())
                 .mapKeys { it.key.lowercase() }
                 .filterValues { it.isNotBlank() }
-            val artists = (tags["artist"] ?: tags["album_artist"] ?: tags["albumartist"])
+            val tagged = (tags["artist"] ?: tags["album_artist"] ?: tags["albumartist"] ?: tags["author"] ?: tags["performer"])
                 ?.split(";", " / ", "\u0000")
                 ?.map { it.trim() }
                 ?.filter { it.isNotEmpty() }
                 .orEmpty()
+            // No artist tag: a name like "Artist - Title" or "01 - Artist - Title" still says who it is.
+            val name = if (tagged.isEmpty()) fromName(file.nameWithoutExtension) else null
+            val title = tags["title"] ?: name?.second ?: file.nameWithoutExtension
+            val named = name?.first?.takeIf { tags["title"] == null || tags["title"].equals(name.second, ignoreCase = true) }
             Track(
                 path = file.absolutePath,
                 modified = file.lastModified(),
                 size = file.length(),
-                title = tags["title"] ?: file.nameWithoutExtension,
-                artists = artists,
+                title = title,
+                artists = tagged.ifEmpty { listOfNotNull(named) },
+                named = tagged.isEmpty() && named != null,
                 album = tags["album"],
                 durationMs = grabber.lengthInTime / 1000,
                 cover = embeddedCover(id, grabber) ?: folderCover(file.parentFile),
@@ -206,6 +228,19 @@ object LocalMusic {
         } finally {
             runCatching { grabber.release() }
         }
+    }
+
+    private val LeadingNumber = Regex("^\\d{1,3}\\s*[-._)]\\s*")
+    private val NameSplit = Regex("\\s+[-\u2013\u2014]\\s+")
+
+    /**
+     * What a file's name says when it has no tags: "Artist - Title" gives both, and a track number
+     * in front ("01 - ", "01. ") is dropped. Null artist when the name doesn't name one.
+     */
+    internal fun fromName(name: String): Pair<String?, String> {
+        val bare = name.replace(LeadingNumber, "").trim().ifEmpty { name }
+        val parts = bare.split(NameSplit, limit = 2).map { it.trim() }
+        return if (parts.size == 2 && parts.all { it.isNotEmpty() }) parts[0] to parts[1] else null to bare
     }
 
     /** The picture inside the file (ID3 APIC, FLAC PICTURE, MP4 covr), saved once next to the cache. */

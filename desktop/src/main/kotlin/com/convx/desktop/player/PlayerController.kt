@@ -552,6 +552,13 @@ object PlayerController : AudioEngine.Listener {
         engine.pitch = 2f.pow(semitones / 12f)
     }
 
+    /** Turns the volume up or down by [delta] from where it is now, as the mouse wheel does; it unmutes. */
+    fun nudgeVolume(delta: Float) = scope.launch {
+        _state.update { it.copy(volume = ((if (it.muted) 0f else it.volume) + delta).coerceIn(0f, 1f), muted = false) }
+        applyVolume()
+        persistSettings()
+    }
+
     fun toggleMute() = scope.launch {
         _state.update { it.copy(muted = !it.muted) }
         applyVolume()
@@ -704,7 +711,8 @@ object PlayerController : AudioEngine.Listener {
     private fun seekNow(positionMs: Long): Long? {
         val s = _state.value
         if (s.current == null) return null
-        val target = if (s.durationMs > 0) positionMs.coerceIn(0, s.durationMs - 500) else positionMs
+        // Half a second short of the end, or the start of a song shorter than that.
+        val target = if (s.durationMs > 0) positionMs.coerceIn(0, (s.durationMs - 500).coerceAtLeast(0)) else positionMs
         AutoMix.interrupt(autoMixHost)
         _position.value = target
         if (engineToken == 0L) loadCurrent(target, playWhenReady = s.isPlaying) else engine.seek(target)

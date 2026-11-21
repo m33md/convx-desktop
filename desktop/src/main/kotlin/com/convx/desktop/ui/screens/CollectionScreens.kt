@@ -66,6 +66,7 @@ import com.convx.desktop.core.formatTotal
 import com.convx.desktop.core.pluralize
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.Library
+import com.convx.desktop.data.hasPlaylist
 import com.convx.desktop.data.Song
 import com.convx.desktop.data.toSaved
 import com.convx.desktop.data.toSong
@@ -508,7 +509,7 @@ fun PlaylistScreen(id: String) {
         PageContent(page, Modifier.padding(top = LocalPageInsets.current.top)) { data ->
             val songs = remember(data) { data.songs.map { it.toSong() } }
             val playlist = data.playlist
-            val saved = library.playlists.any { it.id == playlist.id }
+            val saved = library.hasPlaylist(playlist.id)
             LaunchedEffect(playlist.id, playlist.isEditable) { if (playlist.isEditable) Library.markPlaylistEditable(playlist.id) }
             val isThisPlaying = playback.isPlaying && songs.any { it.id == playback.currentId }
             val complete = data.songsContinuation == null
@@ -529,7 +530,11 @@ fun PlaylistScreen(id: String) {
             ) {
                 collectionHeader(
                     title = playlist.title,
-                    art = { size -> Artwork(playlist.thumbnail, Modifier.size(size), size = 600, shape = RoundedCornerShape(12.dp), iconSize = 64.dp) },
+                    // A disc design you put on it shows instead of YouTube's picture.
+                    art = { size ->
+                        val cover = com.convx.desktop.ui.components.wornCover(com.convx.desktop.ui.studio.DiscTargets.youTube(playlist.id)) ?: playlist.thumbnail
+                        Artwork(cover, Modifier.size(size), size = 600, shape = RoundedCornerShape(12.dp), iconSize = 64.dp)
+                    },
                     metadata = listOfNotNull(
                         playlist.songCountText ?: pluralize(songs.size, "song"),
                         if (complete) songs.totalLine().getOrNull(1) else null,
@@ -580,6 +585,7 @@ fun PlaylistScreen(id: String) {
                                     com.convx.desktop.ui.components.ItemActions.radio(playlist)
                                     close()
                                 }
+                                com.convx.desktop.ui.studio.DiscCoverMenuItems(com.convx.desktop.ui.studio.DiscTargets.youTube(playlist.id), songs, close)
                             },
                         )
                     },
@@ -628,12 +634,18 @@ fun LocalPlaylistScreen(id: String) {
     LaunchedEffect(playlist.songs) { reorder.settled(playlist.songs.map { songKey("local", it) }) }
     val songs = reorder.arrange(playlist.songs) { songKey("local", it) }
     val isThisPlaying = playback.isPlaying && songs.any { it.id == playback.currentId }
+    // A music folder's own playlist: it holds what's in the folder, so songs come and go with the files.
+    val folderLists = AppSettings.state.collectAsState().value.folderPlaylists
+    val folder = remember(id, folderLists) { com.convx.desktop.player.FolderPlaylists.folderOf(id) }
     Box(Modifier.fillMaxSize().background(pageColor)) {
         PageList(state = listState, tint = pageColor, topPadding = 0.dp, listModifier = Modifier.reorderGestures(reorder)) {
             collectionHeader(
                 title = playlist.name,
                 art = { size -> com.convx.desktop.ui.components.EditablePlaylistCover(playlist, size, RoundedCornerShape(12.dp)) },
-                metadata = (songs.totalLine() + ("Updated " + DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(playlist.updatedAt)))).joinToString(" · "),
+                metadata = (
+                    listOfNotNull(folder?.let { "From the folder ${com.convx.desktop.player.FolderPlaylists.nameOf(it)}" }) + songs.totalLine() +
+                        ("Updated " + DateFormat.getDateInstance(DateFormat.MEDIUM).format(Date(playlist.updatedAt)))
+                    ).joinToString(" · "),
                 playing = isThisPlaying,
                 enabled = songs.isNotEmpty(),
                 onPlay = { if (isThisPlaying) PlayerController.pause() else if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, playlist.name, shuffle = false) },
@@ -670,20 +682,33 @@ fun LocalPlaylistScreen(id: String) {
                     }
                     // The whole playlist for listening offline; songs already on this PC are skipped.
                     DownloadMenuItems(songs, dismiss)
-                    MenuItem("Modify with AI", "sparks") {
-                        dismiss()
-                        editPlaylistWithAi(id)
+                    if (folder == null) {
+                        MenuItem("Modify with AI", "sparks") {
+                            dismiss()
+                            editPlaylistWithAi(id)
+                        }
                     }
                     MenuItem("Delete playlist", "delete", destructive = true) {
                         dismiss()
-                        Overlays.confirm("Delete playlist?", "\"${playlist.name}\" will be removed from your library.", "Delete") {
+                        val note = if (folder != null) " The folder and its files stay; it just stops being a playlist." else ""
+                        Overlays.confirm("Delete playlist?", "\"${playlist.name}\" will be removed from your library.$note", "Delete") {
                             navigator.back()
                             Library.deletePlaylist(id)
                         }
                     }
                 },
             )
-            if (songs.isEmpty()) {
+            if (songs.isEmpty() && folder != null) {
+                item {
+                    MessageState(
+                        "No music files in this folder yet",
+                        "Songs you put in ${folder} show up here after the next scan.",
+                        icon = "storage",
+                        actionText = "Scan now",
+                        onAction = { com.convx.desktop.player.LocalMusic.scan(untagged = true) },
+                    )
+                }
+            } else if (songs.isEmpty()) {
                 item {
                     MessageState(
                         "Let's find something for your playlist",
@@ -712,9 +737,11 @@ fun LocalPlaylistScreen(id: String) {
                                 dismiss()
                             }
                         }
-                        MenuItem("Remove from this playlist", "remove", destructive = true) {
-                            Library.removeFromPlaylist(id, song.id)
-                            dismiss()
+                        if (folder == null) {
+                            MenuItem("Remove from this playlist", "remove", destructive = true) {
+                                Library.removeFromPlaylist(id, song.id)
+                                dismiss()
+                            }
                         }
                     },
                 )
@@ -749,6 +776,7 @@ fun LikedScreen() {
                 onPlay = { if (isThisPlaying) PlayerController.pause() else if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Liked Songs", shuffle = false) },
                 onShuffle = { if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Liked Songs", shuffle = true) },
                 download = songs,
+                menu = { dismiss -> com.convx.desktop.ui.studio.DiscCoverMenuItems(com.convx.desktop.ui.studio.DiscTargets.Liked, songs, dismiss) },
             )
             if (songs.isEmpty()) {
                 item {
@@ -793,6 +821,32 @@ fun LocalFilesScreen() {
                 enabled = songs.isNotEmpty(),
                 onPlay = { if (isThisPlaying) PlayerController.pause() else if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Local files", shuffle = false) },
                 onShuffle = { if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Local files", shuffle = true) },
+                menu = { dismiss ->
+                    val settings = AppSettings.value
+                    val folders = settings.localFolders
+                    // Each music folder as a playlist of its own, as asked for on Discord.
+                    if (folders.any { f -> settings.folderPlaylists.none { it.equals(f, ignoreCase = true) } }) {
+                        MenuItem(if (folders.size == 1) "Make a playlist from this folder" else "Make a playlist from each folder", "playlist_add") {
+                            dismiss()
+                            val made = com.convx.desktop.player.FolderPlaylists.all()
+                            Overlays.toast(if (made == 1) "1 folder playlist made" else "$made folder playlists made")
+                        }
+                    }
+                    MenuItem("Music folders", "storage") {
+                        dismiss()
+                        openFolders()
+                    }
+                    MenuItem("Read tags again", "refresh", enabled = songs.isNotEmpty() && status !is com.convx.desktop.player.LocalMusic.Status.Scanning) {
+                        dismiss()
+                        com.convx.desktop.player.LocalMusic.scan(everything = true)
+                        Overlays.toast("Reading your files again")
+                    }
+                    MenuItem("Add to queue", "queue_music", enabled = songs.isNotEmpty()) {
+                        PlayerController.addToQueue(songs)
+                        Overlays.toast("Added to queue")
+                        dismiss()
+                    }
+                },
             )
             if (songs.isEmpty()) {
                 item {
@@ -833,14 +887,14 @@ fun DownloadsScreen() {
         PageList(state = rememberLazyListState(), tint = tint, topPadding = 0.dp) {
             collectionHeader(
                 title = "Downloaded",
-                art = { size -> GradientTile("download", size, com.convx.desktop.ui.shell.DownloadsGradient, RoundedCornerShape(12.dp)) },
+                art = { size -> com.convx.desktop.ui.components.AutoPlaylistArt(com.convx.desktop.ui.studio.DiscTargets.Downloaded, "download", com.convx.desktop.ui.shell.DownloadsGradient, size, RoundedCornerShape(12.dp)) },
                 metadata = (songs.totalLine() + listOfNotNull(bytes.takeIf { it > 0 }?.let { com.convx.desktop.ui.screens.settings.formatBytes(it) }))
                     .joinToString(" · "),
                 playing = isThisPlaying,
                 enabled = songs.isNotEmpty(),
                 onPlay = { if (isThisPlaying) PlayerController.pause() else if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Downloaded", shuffle = false) },
                 onShuffle = { if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Downloaded", shuffle = true) },
-                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss) },
+                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss, extra = { close -> com.convx.desktop.ui.studio.DiscCoverMenuItems(com.convx.desktop.ui.studio.DiscTargets.Downloaded, songs, close) }) },
             )
             if (pending.isNotEmpty()) {
                 item(key = "pending-title") {
@@ -956,13 +1010,13 @@ fun MyTopScreen() {
         PageList(state = rememberLazyListState(), tint = PageBlack, topPadding = 0.dp) {
             collectionHeader(
                 title = title,
-                art = { size -> GradientTile("trending_up", size, TopGradient, RoundedCornerShape(12.dp)) },
+                art = { size -> com.convx.desktop.ui.components.AutoPlaylistArt(com.convx.desktop.ui.studio.DiscTargets.Top, "trending_up", TopGradient, size, RoundedCornerShape(12.dp)) },
                 metadata = (listOf(filter.label) + songs.totalLine()).joinToString(" · "),
                 playing = isThisPlaying,
                 enabled = songs.isNotEmpty(),
                 onPlay = { if (isThisPlaying) PlayerController.pause() else if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, title, shuffle = false) },
                 onShuffle = { if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, title, shuffle = true) },
-                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss) },
+                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss, extra = { close -> com.convx.desktop.ui.studio.DiscCoverMenuItems(com.convx.desktop.ui.studio.DiscTargets.Top, songs, close) }) },
             )
             item(key = "filter") {
                 // The phone's sort header, with its periods in place of sort orders.
@@ -1009,14 +1063,14 @@ fun CachedScreen() {
         PageList(state = rememberLazyListState(), tint = PageBlack, topPadding = 0.dp) {
             collectionHeader(
                 title = "Cached",
-                art = { size -> GradientTile("cached", size, CachedGradient, RoundedCornerShape(12.dp)) },
+                art = { size -> com.convx.desktop.ui.components.AutoPlaylistArt(com.convx.desktop.ui.studio.DiscTargets.Cached, "cached", CachedGradient, size, RoundedCornerShape(12.dp)) },
                 metadata = (songs.totalLine() + listOfNotNull(bytes.takeIf { it > 0 }?.let { com.convx.desktop.ui.screens.settings.formatBytes(it) }))
                     .joinToString(" · "),
                 playing = isThisPlaying,
                 enabled = songs.isNotEmpty(),
                 onPlay = { if (isThisPlaying) PlayerController.pause() else if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Cached", shuffle = false) },
                 onShuffle = { if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Cached", shuffle = true) },
-                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss) },
+                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss, extra = { close -> com.convx.desktop.ui.studio.DiscCoverMenuItems(com.convx.desktop.ui.studio.DiscTargets.Cached, songs, close) }) },
             )
             if (songs.isEmpty()) {
                 item(key = "empty") { MessageState("Nothing cached yet", "Songs you play are kept here, so they start at once next time.", icon = "cached") }
@@ -1052,13 +1106,13 @@ fun UploadedScreen() {
         PageList(state = rememberLazyListState(), tint = PageBlack, topPadding = 0.dp) {
             collectionHeader(
                 title = "Uploaded",
-                art = { size -> GradientTile("cloud", size, UploadedGradient, RoundedCornerShape(12.dp)) },
+                art = { size -> com.convx.desktop.ui.components.AutoPlaylistArt(com.convx.desktop.ui.studio.DiscTargets.Uploaded, "cloud", UploadedGradient, size, RoundedCornerShape(12.dp)) },
                 metadata = (listOf("YouTube Music") + songs.totalLine()).joinToString(" · "),
                 playing = isThisPlaying,
                 enabled = songs.isNotEmpty(),
                 onPlay = { if (isThisPlaying) PlayerController.pause() else if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Uploaded", shuffle = false) },
                 onShuffle = { if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, "Uploaded", shuffle = true) },
-                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss) },
+                menu = { dismiss -> CollectionMenuContent(songs = { songs }, dismiss = dismiss, extra = { close -> com.convx.desktop.ui.studio.DiscCoverMenuItems(com.convx.desktop.ui.studio.DiscTargets.Uploaded, songs, close) }) },
             )
             when {
                 songs.isNotEmpty() -> songTable(songs, "Uploaded", "uploaded")

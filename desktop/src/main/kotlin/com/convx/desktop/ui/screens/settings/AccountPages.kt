@@ -118,6 +118,13 @@ fun SpotifySettings() {
         }
     }
 
+    // Not with a Spotify app of your own, which has its own allowance.
+    val ownApp = AppSettings.state.collectAsState().value.spotifyClientId.trim().length == 32
+    if (!ownApp) {
+        SectionGap()
+        SpotifyLimitNote()
+    }
+
     if (state is SpotifyAccount.State.SignedIn) {
         var liked by remember { mutableStateOf<Int?>(null) }
         var playlists by remember { mutableStateOf<Int?>(null) }
@@ -169,6 +176,21 @@ fun SpotifySettings() {
         "Spotify doesn't let other apps play its audio, so Convx finds each Spotify song on YouTube Music by its title, " +
             "artist and length, as the phone's Spotify import does, and remembers the match. A song with no close match is skipped.",
     )
+}
+
+/** Spotify is holding back the shared access Convx signs in with; until that's fixed, Exportify is the way in. */
+@Composable
+private fun SpotifyLimitNote() {
+    SettingsSection(
+        "Spotify is limiting Convx for now",
+        footer = "Spotify is limiting the shared access Convx uses to talk to it, so connecting, loading your library or " +
+            "importing from here may fail. We're working on a proper fix. Until then, import with Exportify: it needs neither " +
+            "this connection nor Premium, and brings every playlist and your Liked Songs.",
+    ) {
+        LinkRow("Import with Exportify", icon = "playlist_add", tint = SystemColors.Green) { importExportifyFiles() }
+        RowDivider()
+        LinkRow("Open exportify.net", icon = "link", tint = SystemColors.Gray) { openUrl("https://exportify.net") }
+    }
 }
 
 /**

@@ -39,6 +39,20 @@ enum class LibraryTab(val label: String, val title: String) {
     Artists("Artists", "Artists"),
 }
 
+/** Where a playlist comes from: the groups under the side bar's All Playlists. */
+enum class PlaylistSource(val label: String, val icon: String) {
+    Spotify("Spotify playlists", "spotify"),
+    YouTube("YT Music playlists", "ytmusic"),
+    Convx("Convx playlists", "convx_logo"),
+    ;
+
+    companion object {
+        /** A Convx playlist made by a Spotify or Exportify import is one of your Spotify ones. */
+        fun ofLocal(id: String): PlaylistSource =
+            if (id.startsWith("local-spotify-") || id.startsWith("local-import-")) Spotify else Convx
+    }
+}
+
 /** The places the side bar leads to, the phone's tabs; each can be hidden in Controls & layout. */
 enum class Section(val label: String, val icon: String, val root: Screen) {
     Home("Home", "sf_house_fill", Screen.Home),
@@ -111,7 +125,18 @@ object UiState {
     }
 
     /** Opens on the phone's default library view, from Controls & layout. */
-    var libraryTab by mutableStateOf(LibraryTab.entries.firstOrNull { it.name == AppSettings.value.defaultLibraryTab } ?: LibraryTab.All)
+    private var tab by mutableStateOf(LibraryTab.entries.firstOrNull { it.name == AppSettings.value.defaultLibraryTab } ?: LibraryTab.All)
+
+    /** The library page's filter. Choosing one shows playlists from every source again. */
+    var libraryTab: LibraryTab
+        get() = tab
+        set(value) {
+            tab = value
+            playlistSource = null
+        }
+
+    /** The playlists of one source on the Playlists filter, as the side bar's groups open it; null is all of them. */
+    var playlistSource by mutableStateOf<PlaylistSource?>(null)
 
     /** Home's mood chips: the titles the feed offers and the one picked. */
     var homeChips by mutableStateOf<List<String>>(emptyList())

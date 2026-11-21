@@ -65,6 +65,8 @@ import com.convx.desktop.ui.components.SongShelf
 import com.convx.desktop.ui.components.pressable
 import com.convx.desktop.ui.components.GradientTile
 import com.convx.desktop.ui.shell.LibraryTab
+import com.convx.desktop.ui.shell.PlaylistSource
+import com.convx.desktop.ui.studio.DiscTargets
 import com.convx.desktop.ui.shell.LocalNavigator
 import com.convx.desktop.ui.components.MosaicArt
 import com.convx.desktop.ui.shell.Screen
@@ -173,11 +175,24 @@ fun LibraryScreen() {
     val settings by com.convx.desktop.data.AppSettings.state.collectAsState()
     val downloaded by com.convx.desktop.player.Downloads.done.collectAsState()
     val tab = UiState.libraryTab
+    // One source's playlists, from the side bar's groups under All Playlists.
+    val source = UiState.playlistSource.takeIf { tab == LibraryTab.Playlists }
     val grid = rememberCardGrid()
     val cached = remember(library, downloaded) { cachedSongs(library, downloaded.values) }
+    // Your Spotify account's own lists, with the ones Spotify and Exportify imports made.
+    val spotifyAccount by com.convx.desktop.integrations.spotify.SpotifyAccount.state.collectAsState()
+    val spotifySignedIn = spotifyAccount is com.convx.desktop.integrations.spotify.SpotifyAccount.State.SignedIn
+    var spotifyLists by remember { mutableStateOf<List<com.convx.desktop.integrations.spotify.SpotifyPlaylist>>(emptyList()) }
+    LaunchedEffect(source, spotifySignedIn) {
+        spotifyLists = if (source == PlaylistSource.Spotify && spotifySignedIn) {
+            com.convx.desktop.integrations.spotify.SpotifyApi.playlists().getOrNull().orEmpty()
+        } else {
+            emptyList()
+        }
+    }
     // The page's cards in order; the list below builds only the rows on screen.
     val cards = buildList<@Composable () -> Unit> {
-        if (tab == LibraryTab.All || tab == LibraryTab.Playlists) {
+        if ((tab == LibraryTab.All || tab == LibraryTab.Playlists) && source == null) {
             // The phone's auto playlists first, each as its Settings switch says.
             if (settings.showLikedPlaylist) {
                 val liked = library.liked.map { it.song }
@@ -197,7 +212,11 @@ fun LibraryScreen() {
                     SavedCard(
                         "Downloaded",
                         pluralize(songs.size, "song"),
-                        art = { size -> GradientTile("download", size, com.convx.desktop.ui.shell.DownloadsGradient, RoundedCornerShape(8.dp)) },
+                        art = { size ->
+                            com.convx.desktop.ui.components.AutoPlaylistArt(
+                                DiscTargets.Downloaded, "download", com.convx.desktop.ui.shell.DownloadsGradient, size, RoundedCornerShape(8.dp),
+                            )
+                        },
                         onClick = { navigator.navigate(Screen.Downloads) },
                         onPlay = { PlayerController.playSongs(songs, 0, "Downloaded") },
                     )
@@ -209,7 +228,7 @@ fun LibraryScreen() {
                     SavedCard(
                         title,
                         "Playlist",
-                        art = { size -> GradientTile("trending_up", size, TopGradient, RoundedCornerShape(8.dp)) },
+                        art = { size -> com.convx.desktop.ui.components.AutoPlaylistArt(DiscTargets.Top, "trending_up", TopGradient, size, RoundedCornerShape(8.dp)) },
                         onClick = { navigator.navigate(Screen.MyTop) },
                         onPlay = { PlayerController.playSongs(myTopSongs(TopFilter.AllTime, settings).map { it.value }, 0, title) },
                     )
@@ -221,7 +240,7 @@ fun LibraryScreen() {
                         SavedCard(
                             "Cached",
                             pluralize(cached.size, "song"),
-                            art = { size -> GradientTile("cached", size, CachedGradient, RoundedCornerShape(8.dp)) },
+                            art = { size -> com.convx.desktop.ui.components.AutoPlaylistArt(DiscTargets.Cached, "cached", CachedGradient, size, RoundedCornerShape(8.dp)) },
                             onClick = { navigator.navigate(Screen.Cached) },
                             onPlay = { PlayerController.playSongs(cached, 0, "Cached") },
                         )
@@ -233,7 +252,7 @@ fun LibraryScreen() {
                     SavedCard(
                         "Uploaded",
                         pluralize(library.uploaded.size, "song"),
-                        art = { size -> GradientTile("cloud", size, UploadedGradient, RoundedCornerShape(8.dp)) },
+                        art = { size -> com.convx.desktop.ui.components.AutoPlaylistArt(DiscTargets.Uploaded, "cloud", UploadedGradient, size, RoundedCornerShape(8.dp)) },
                         onClick = { navigator.navigate(Screen.Uploaded) },
                         onPlay = { PlayerController.playSongs(library.uploaded, 0, "Uploaded") },
                     )
@@ -248,7 +267,9 @@ fun LibraryScreen() {
                     onClick = { navigator.navigate(Screen.AiDj()) },
                 )
             }
-            library.localPlaylists.forEach { p ->
+        }
+        if (tab == LibraryTab.All || tab == LibraryTab.Playlists) {
+            library.localPlaylists.filter { source == null || PlaylistSource.ofLocal(it.id) == source }.forEach { p ->
                 add {
                     SavedCard(
                         p.name,
@@ -259,12 +280,23 @@ fun LibraryScreen() {
                     )
                 }
             }
-            library.playlists.forEach { p ->
+            spotifyLists.forEach { p ->
+                add {
+                    SavedCard(
+                        p.name,
+                        listOfNotNull("Spotify", p.owner.takeIf { it.isNotBlank() }).joinToString(" • "),
+                        thumbnail = p.image,
+                        onClick = { navigator.navigate(Screen.SpotifyPlaylist(p.id)) },
+                    )
+                }
+            }
+            if (source == null || source == PlaylistSource.YouTube) library.playlists.forEach { p ->
                 add {
                     SavedCard(
                         p.title,
                         listOfNotNull("Playlist", p.author).joinToString(" • "),
-                        thumbnail = p.thumbnail,
+                        // A disc design you put on it shows instead of YouTube's picture.
+                        thumbnail = com.convx.desktop.ui.components.wornCover(DiscTargets.youTube(p.id)) ?: p.thumbnail,
                         onClick = { navigator.navigate(Screen.Playlist(p.id)) },
                     )
                 }
@@ -291,11 +323,14 @@ fun LibraryScreen() {
     PageList {
         // The filters live in Library's strip under the top bar.
         item(key = "title") {
-            Text(tab.title, style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
+            Text(source?.label ?: tab.title, style = ConvxType.LargeTitle, modifier = Modifier.padding(horizontal = Gutter, vertical = 8.dp))
         }
         item(key = "above-cards") { Spacer(Modifier.height(8.dp)) }
         cardGrid(grid, cards, key = { it.first }) { it.second() }
         item(key = "below-cards") { Spacer(Modifier.height(8.dp)) }
+        if (source != null && cards.isEmpty()) {
+            item { MessageState("No ${source.label} yet", "They show up here once you have some.", icon = "queue_music") }
+        }
         val empty = when (tab) {
             LibraryTab.All -> false
             LibraryTab.Playlists -> false

@@ -393,7 +393,8 @@ fun SongMenuContent(
             }
         }
         MenuDivider()
-        for (playlist in library.localPlaylists) {
+        // A folder's playlist holds what's in the folder, so songs can't be put in it by hand.
+        for (playlist in library.localPlaylists.filterNot { com.convx.desktop.player.FolderPlaylists.isFolderPlaylist(it.id) }) {
             MenuItem(playlist.name, "queue_music") {
                 Library.addToPlaylist(playlist.id, listOf(song))
                 Overlays.toast("Added to ${playlist.name}")
@@ -512,7 +513,8 @@ fun CollectionMenuContent(
             }
         }
         MenuDivider()
-        for (playlist in library.localPlaylists) {
+        // A folder's playlist holds what's in the folder, so songs can't be put in it by hand.
+        for (playlist in library.localPlaylists.filterNot { com.convx.desktop.player.FolderPlaylists.isFolderPlaylist(it.id) }) {
             MenuItem(playlist.name, "queue_music") {
                 Library.addToPlaylist(playlist.id, songs())
                 Overlays.toast("Added to ${playlist.name}")

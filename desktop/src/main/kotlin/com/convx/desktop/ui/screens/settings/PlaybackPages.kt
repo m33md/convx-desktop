@@ -11,6 +11,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.unit.dp
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.AudioQuality
 import com.convx.desktop.player.AudioEngine
@@ -225,10 +226,28 @@ fun QueueSettings() {
         RowDivider(PlainInset)
         SwitchRow(
             "Save downloads to Music folder",
-            "Also keep each download in Music\\Convx as Artist - Title, with its lyrics, playable in any app",
+            "Also keep each download in Music\\Convx as Artist - Title, tagged with its title, artist, album, lyrics and cover, playable in any app",
             settings.saveDownloadsToMusic,
         ) { v ->
             AppSettings.update { it.copy(saveDownloadsToMusic = v) }
+        }
+        if (settings.saveDownloadsToMusic) {
+            val retag by com.convx.desktop.player.Downloads.retag.collectAsState()
+            val downloaded by com.convx.desktop.player.Downloads.done.collectAsState()
+            RowDivider(PlainInset)
+            SettingsRow(
+                "Tag the songs already there",
+                when (val r = retag) {
+                    null -> "Write the tags and cover into songs saved before Convx did"
+                    else -> if (!r.finished) {
+                        "Tagging ${r.done} of ${r.total}…"
+                    } else {
+                        "Tagged ${r.total - r.failed} songs" + if (r.failed > 0) ", ${r.failed} couldn't be" else ""
+                    }
+                },
+                enabled = downloaded.isNotEmpty() && retag?.finished != false,
+                onClick = { com.convx.desktop.player.Downloads.retagMusicFolder() },
+            ) { com.convx.desktop.ui.components.ConvxIcon("edit", tint = SystemColors.Blue, size = 18.dp) }
         }
     }
 }

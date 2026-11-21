@@ -11,6 +11,7 @@ import com.convx.desktop.data.AppSettings
 import com.convx.desktop.data.Library
 import com.convx.desktop.data.Settings
 import com.convx.desktop.data.Song
+import com.convx.desktop.player.LocalMusic
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.artworkUrl
 import kotlinx.coroutines.Dispatchers
@@ -89,7 +90,7 @@ object DiscordPresence {
 
     /** What Discord is showing now, so an unchanged state isn't sent again. */
     /** [link] is where clicking the song goes: its Spotify page, or Spotify's search for it until that's found. */
-    private data class Shown(val songId: String?, val startMs: Long, val look: Look?, val link: String? = null)
+    private data class Shown(val songId: String?, val startMs: Long, val look: Look?, val link: String? = null, val cover: String? = null)
 
     /** The parts of the status Settings can change. */
     data class Look(
@@ -205,13 +206,16 @@ object DiscordPresence {
             // At another tempo the song takes longer or shorter in real time, as the phone tells Discord.
             val position = (PlayerController.position.value / player.tempo).toLong()
             com.convx.desktop.integrations.spotify.SpotifyLinks.lookUp(song)
-            Shown(song.id, now - position, Look.of(settings), com.convx.desktop.integrations.spotify.SpotifyLinks.now(song))
+            Shown(song.id, now - position, Look.of(settings), com.convx.desktop.integrations.spotify.SpotifyLinks.now(song), cover(song))
         } else {
             null
         }
         val same = when {
             want == null -> shown?.songId == null && shown != null
-            else -> shown?.let { it.songId == want.songId && it.look == want.look && it.link == want.link && abs(it.startMs - want.startMs) < 2_500 } == true
+            // A local file's cover found on the web a moment later is sent too.
+            else -> shown?.let {
+                it.songId == want.songId && it.look == want.look && it.link == want.link && it.cover == want.cover && abs(it.startMs - want.startMs) < 2_500
+            } == true
         }
         if (same) return
         // Discord takes five updates in twenty seconds; space them so a burst of skips settles.
@@ -219,7 +223,7 @@ object DiscordPresence {
 
         val activity = if (want?.look != null && song != null) {
             val durationMs = player.durationMs.takeIf { it > 0 } ?: ((song.duration ?: 0) * 1000L)
-            activity(song, want.startMs, (durationMs / player.tempo).toLong(), want.look, want.link)
+            activity(song, want.startMs, (durationMs / player.tempo).toLong(), want.look, want.link, want.cover)
         } else {
             null
         }
@@ -228,7 +232,7 @@ object DiscordPresence {
         if (setActivity(connected, activity)) shown = want ?: Shown(null, 0, null)
     }
 
-    private fun activity(song: Song, startMs: Long, durationMs: Long, look: Look, link: String?): JsonObject = buildJsonObject {
+    private fun activity(song: Song, startMs: Long, durationMs: Long, look: Look, link: String?, cover: String?): JsonObject = buildJsonObject {
         // Listening unless advanced mode picked another verb; older Discord builds only know Listening and Playing.
         if (trimLevel < 2 || look.typeCode == 0) put("type", look.typeCode) else put("type", 2)
         put("details", fit(song.title))
@@ -242,7 +246,7 @@ object DiscordPresence {
             if (durationMs > 0) put("end", startMs + durationMs)
         }
         putJsonObject("assets") {
-            cover(song)?.let { put("large_image", it) }
+            cover?.let { put("large_image", it) }
             put("large_text", fit(song.album?.name ?: song.title))
             // The phone's small picture: the first artist's, with their name.
             val artist = song.artists.firstOrNull { it.id != null && Library.artistPicture(it.id!!) != null }
@@ -273,10 +277,16 @@ object DiscordPresence {
     /**
      * The cover as a web address Discord fetches itself. Discord takes up to 256 characters there,
      * and some covers' addresses are longer, so those fall back to YouTube's picture of the song.
+     * A file on this PC has its cover in the file, which Discord can't reach, so it borrows the
+     * cover of the same song on YouTube Music when one is found (LocalSongCovers).
      */
     private fun cover(song: Song): String? =
         artworkUrl(song.thumbnail, 512)?.let(::webImage)
-            ?: song.id.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+            ?: if (LocalMusic.isLocal(song.id)) {
+                LocalSongCovers.cover(song)?.let { artworkUrl(it, 512) }?.let(::webImage)
+            } else {
+                song.id.takeIf { it.matches(Regex("[A-Za-z0-9_-]{11}")) }?.let { "https://i.ytimg.com/vi/$it/hqdefault.jpg" }
+            }
 
     private fun webImage(url: String): String? = url.takeIf { it.startsWith("https://") && it.length <= 256 }
 

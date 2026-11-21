@@ -183,6 +183,12 @@ fun LyricsStyleSettings() {
             "The lyrics button opens and closes full-screen lyrics in one click. Off uses the classic two steps: open the lyrics, then the expand button for full screen",
             settings.oneTapFullscreenLyrics,
         ) { v -> AppSettings.update { it.copy(oneTapFullscreenLyrics = v) } }
+        RowDivider(PlainInset)
+        SwitchRow(
+            "Lyrics in the Now Playing view",
+            "The lyrics card in the panel on the right. Off hides it; the Lyrics tab and the player still show lyrics",
+            settings.nowPlayingLyrics,
+        ) { v -> AppSettings.update { it.copy(nowPlayingLyrics = v) } }
     }
 }
 

@@ -236,7 +236,9 @@ private class LineLook(
 private fun LyricLine.spacedWords(): List<Triple<String, Long, Long>> {
     val spans = wordSpans
     return words.mapIndexed { i, word ->
-        val from = if (i == 0) 0 else spans[i].first
+        // A word the line's text doesn't hold is placed past where the last one ended, which
+        // can run past the end of the text: it's kept to the text here.
+        val from = (if (i == 0) 0 else spans[i].first).coerceAtMost(text.length)
         val to = (spans.getOrNull(i + 1)?.first ?: text.length).coerceIn(from, text.length)
         Triple(text.substring(from, to).ifEmpty { word.text }, word.startMs, word.endMs)
     }

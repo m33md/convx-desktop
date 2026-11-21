@@ -546,7 +546,7 @@ private object Smtc {
     private fun timelineNow() {
         val c2 = controls2 ?: return
         val s = PlayerController.state.value
-        val duration = s.durationMs.takeIf { it > 0 } ?: s.current?.duration?.times(1000L) ?: return
+        val duration = s.durationMs.takeIf { it > 0 } ?: s.current?.duration?.takeIf { it > 0 }?.times(1000L) ?: return
         val instance = PointerByReference()
         val hr = withHString("Windows.Media.SystemMediaTransportControlsTimelineProperties") { combase.RoActivateInstance(it, instance) }
         if (!hr.ok() || instance.value == null) return

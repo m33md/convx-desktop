@@ -1054,8 +1054,8 @@ private fun ImagePicker() {
         }
         val label = vinyl && onLabel
         PickerRow("From your PC…") { addImageFromPc(label) }
-        val playlist = DiscEditor.playlistId?.let { id -> Library.state.collectAsState().value.localPlaylists.firstOrNull { it.id == id } }
-        val covers = remember(playlist?.songs) { playlist?.songs?.mapNotNull { it.thumbnail }?.distinct()?.take(16).orEmpty() }
+        val songs = DiscEditor.songs
+        val covers = remember(songs) { songs.mapNotNull { it.thumbnail }.distinct().take(16) }
         if (covers.isNotEmpty()) {
             Spacer(Modifier.height(10.dp))
             Text("From this playlist's songs", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel)
