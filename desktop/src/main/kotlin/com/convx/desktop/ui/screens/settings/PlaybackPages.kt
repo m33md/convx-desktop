@@ -216,9 +216,11 @@ fun QueueSettings() {
         }
     }
     SectionGap()
+    val modulesOn = settings.enabledModules.isNotEmpty() && settings.moduleSources.isNotEmpty()
     SettingsSection(
         "Downloads",
-        footer = "Downloads play with no connection. They're in Library under Downloaded, and Privacy & Storage shows how much room they take.",
+        footer = "Downloads play with no connection. They're in Library under Downloaded, and Privacy & Storage shows how much room they take." +
+            if (modulesOn) " Songs come from your modules first, as they do when they play, so a module that has a song in lossless gives a FLAC file." else "",
     ) {
         SwitchRow("Auto download on like", "Automatically download songs when you like them", settings.autoDownloadOnLike) { v ->
             AppSettings.update { it.copy(autoDownloadOnLike = v) }
@@ -249,8 +251,29 @@ fun QueueSettings() {
                 onClick = { com.convx.desktop.player.Downloads.retagMusicFolder() },
             ) { com.convx.desktop.ui.components.ConvxIcon("edit", tint = SystemColors.Blue, size = 18.dp) }
         }
+        val lossless by com.convx.desktop.player.Downloads.lossless.collectAsState()
+        val downloaded by com.convx.desktop.player.Downloads.done.collectAsState()
+        val fromYouTube = remember(downloaded) { com.convx.desktop.player.Downloads.fromYouTube(downloaded.values).size }
+        if (modulesOn && (fromYouTube > 0 || lossless != null)) {
+            RowDivider(PlainInset)
+            SettingsRow(
+                "Download again from your modules",
+                when (val l = lossless) {
+                    null -> "Swap the ${songCount(fromYouTube)} downloaded from YouTube for your modules' copies, in lossless when they have it. Songs no module has stay as they are"
+                    else -> if (!l.finished) {
+                        "Checking ${l.done} of ${l.total}… ${l.swapped} swapped so far"
+                    } else {
+                        "Swapped ${songCount(l.swapped)}" + if (l.total > l.swapped) ", ${l.total - l.swapped} aren't on your modules" else ""
+                    }
+                },
+                enabled = fromYouTube > 0 && lossless?.finished != false,
+                onClick = { com.convx.desktop.player.Downloads.downloadAgainFromModules() },
+            ) { com.convx.desktop.ui.components.ConvxIcon("download", tint = SystemColors.Blue, size = 18.dp) }
+        }
     }
 }
+
+private fun songCount(n: Int) = if (n == 1) "1 song" else "$n songs"
 
 /** The PC's answer to the phone's Bluetooth & output: pick the speakers or headphones. */
 @Composable

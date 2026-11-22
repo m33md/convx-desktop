@@ -255,7 +255,7 @@ fun NowPlayingPill(modifier: Modifier = Modifier) {
             PillVolume(state, controlSize, iconSize, slider = roomy)
         }
         AppMenu(menu) {
-            SongMenuContent(song, { menu.expanded = false }) { dismiss ->
+            SongMenuContent(song, { menu.expanded = false }, lead = { dismiss -> TempoPitchMenuItem(dismiss) }) { dismiss ->
                 // The phone's player menu opens the party from here.
                 MenuItem("Listen together", "group") {
                     dismiss()

@@ -51,14 +51,19 @@ data class DownloadedSong(
     val durationMs: Long? = null,
     val bytes: Long = 0,
     val at: Long = System.currentTimeMillis(),
+    /** Bits per sample of a lossless copy: 16 for CD quality, 24 for hi-res. */
+    val bitDepth: Int? = null,
+    /** The module the song was downloaded from, by name; null for YouTube's copy. */
+    val module: String? = null,
 )
 
 /**
  * The phone's downloads: songs kept on this PC so they play with no connection. Two download at
  * a time (the phone runs three over a phone's connection, which is usually slower to reach). A
- * download goes through the same ranged fetch as playback, so a song that's playing isn't fetched
- * twice. With "Save downloads to Music folder" on, as on the phone, each download is also copied
- * to Music\Convx as Artist - Title, with its lyrics beside it.
+ * download takes the song from the same sources as playback, the modules that are on first (FLAC
+ * when they have it) and YouTube otherwise, through the same fetch, so a song that's playing isn't
+ * fetched twice. With "Save downloads to Music folder" on, as on the phone, each download is also
+ * copied to Music\Convx as Artist - Title, with its lyrics beside it.
  */
 object Downloads {
     private const val Tag = "Downloads"
@@ -193,6 +198,8 @@ object Downloads {
             durationMs = entry.durationMs,
             client = "Downloaded",
             expiresAt = Long.MAX_VALUE,
+            module = entry.module,
+            bitDepth = entry.bitDepth,
         )
         return stream to file
     }
@@ -211,19 +218,22 @@ object Downloads {
         try {
             setStatus(id, Status.Running(0, 0))
             val export = AppSettings.value.saveDownloadsToMusic
-            val stream = StreamResolver.resolve(id, AppSettings.value.audioQuality, preferAac = export).getOrThrow()
-            val source = AudioCache.fetchComplete(stream) { got, total ->
-                setStatus(id, Status.Running(got, total))
-            }
+            val progress = { got: Long, total: Long -> setStatus(id, Status.Running(got, total)) }
+            val (stream, source) = fromModules(song, progress)
+                ?: StreamResolver.resolve(id, AppSettings.value.audioQuality, preferAac = export).getOrThrow()
+                    .let { it to AudioCache.fetchComplete(it, progress) }
             val target = File(dir, "$id.${stream.container}")
             part = File(dir, target.name + ".part").also { source.copyTo(it, overwrite = true) }
             Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
             part = null
+            finish(target)
             record(song, target, stream)
             _active.update { it - id }
-            Log.i(Tag, "Downloaded ${song.title} (${stream.badge})")
+            Log.i(Tag, "Downloaded ${song.title} (${stream.badge}${stream.module?.let { " from $it" } ?: ""})")
             if (export) {
-                runCatching { exportToMusic(song, target) }.onFailure { Log.w(Tag, "Couldn't copy ${song.title} to the Music folder", it) }
+                // A module's copy takes the place of one saved from YouTube before.
+                runCatching { exportToMusic(song, target, replaces = if (stream.module != null) YouTubeCopies else emptySet()) }
+                    .onFailure { Log.w(Tag, "Couldn't copy ${song.title} to the Music folder", it) }
             }
         } catch (error: Throwable) {
             part?.delete()
@@ -236,17 +246,131 @@ object Downloads {
         }
     }
 
-    /** Notes a file in [dir] as [song]'s download. */
-    internal fun record(song: Song, file: File, stream: ResolvedStream) = store.update {
-        it + (song.id to DownloadedSong(song, file.name, stream.mimeType, stream.bitrate, stream.sampleRate, stream.loudnessDb, stream.durationMs, file.length()))
+    /**
+     * [song] from the modules that are on, as playback gets it: a copy already saved while it
+     * played, or the first module in the user's order that has it, usually in lossless FLAC. Null
+     * when none is on, none has the song, or its file wouldn't come; YouTube's copy is taken then.
+     */
+    private suspend fun fromModules(song: Song, onProgress: (done: Long, total: Long) -> Unit): Pair<ResolvedStream, File>? {
+        if (!ModuleStreams.active) return null
+        val stream = ModuleStreams.saved(song) ?: ModuleStreams.resolve(song, AppSettings.value.audioQuality) ?: return null
+        return try {
+            stream to AudioCache.fetchComplete(stream, onProgress)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            Log.w(Tag, "${song.id}: ${stream.module}'s copy wouldn't download; taking YouTube's", e)
+            ModuleStreams.markFailed(song.id)
+            null
+        }
     }
+
+    /** A FLAC file joined from a module's pieces gets its length written in, for other players. */
+    private fun finish(file: File) {
+        if (file.extension.equals("flac", ignoreCase = true)) {
+            runCatching { TagWriter.fillFlacLength(file) }.onFailure { Log.w(Tag, "Couldn't write the length of ${file.name}", it) }
+        }
+    }
+
+    /** Notes a file in [dir] as [song]'s download. A FLAC file's own header gives its rate and depth. */
+    internal fun record(song: Song, file: File, stream: ResolvedStream, at: Long = System.currentTimeMillis()) {
+        val flac = if (file.extension.equals("flac", ignoreCase = true)) HlsAudio.flacInfo(file) else null
+        val entry = DownloadedSong(
+            song = song,
+            file = file.name,
+            mimeType = stream.mimeType,
+            bitrate = stream.bitrate,
+            sampleRate = flac?.sampleRate?.takeIf { it > 0 } ?: stream.sampleRate,
+            loudnessDb = stream.loudnessDb,
+            durationMs = stream.durationMs,
+            bytes = file.length(),
+            at = at,
+            bitDepth = flac?.bitDepth?.takeIf { it > 0 } ?: stream.bitDepth,
+            module = stream.module,
+        )
+        store.update { it + (song.id to entry) }
+    }
+
+    /** Where swapping YouTube downloads for the modules' copies is: how many are checked, of how many. */
+    data class Lossless(val done: Int, val total: Int, val swapped: Int = 0, val finished: Boolean = false)
+
+    private val _lossless = MutableStateFlow<Lossless?>(null)
+    val lossless: StateFlow<Lossless?> = _lossless.asStateFlow()
+
+    /** YouTube's files are always .webm or .m4a; a module's never are (see [ResolvedStream.container]). */
+    private val YouTubeContainers = setOf("webm", "m4a")
+
+    /** Downloads that came from YouTube, which a module may have in lossless. */
+    fun fromYouTube(entries: Collection<DownloadedSong> = store.value.values): List<DownloadedSong> =
+        entries.filter { it.module == null && File(it.file).extension.lowercase() in YouTubeContainers }
+
+    /**
+     * Downloads every song saved from YouTube again through the modules that are on, and keeps the
+     * module's copy (usually FLAC) in its place, in the same spot in the list. Songs no module has
+     * keep YouTube's copy. One song at a time, so the module's server isn't asked for a whole
+     * library at once.
+     */
+    fun downloadAgainFromModules() {
+        if (_lossless.value?.finished == false || !ModuleStreams.active) return
+        val entries = fromYouTube().filter { File(dir, it.file).isFile }
+        _lossless.value = Lossless(0, entries.size)
+        AppScope.launch(Dispatchers.IO) {
+            var swapped = 0
+            entries.forEachIndexed { i, entry ->
+                try {
+                    if (swapForModuleCopy(entry)) swapped++
+                } catch (e: CancellationException) {
+                    throw e
+                } catch (e: Exception) {
+                    Log.w(Tag, "Couldn't get ${entry.song.title} from the modules", e)
+                }
+                _lossless.value = Lossless(i + 1, entries.size, swapped)
+            }
+            _lossless.value = Lossless(entries.size, entries.size, swapped, finished = true)
+            Log.i(Tag, "Swapped $swapped of ${entries.size} YouTube downloads for the modules' copies")
+        }
+    }
+
+    /** Puts a module's copy of [entry]'s song in place of YouTube's; false when no module has it. */
+    private suspend fun swapForModuleCopy(entry: DownloadedSong): Boolean {
+        val song = entry.song
+        if (song.id in _active.value) return false
+        val (stream, source) = fromModules(song) { _, _ -> } ?: return false
+        val old = File(dir, entry.file)
+        val target = File(dir, "${song.id}.${stream.container}")
+        if (target == old) return false
+        val part = File(dir, target.name + ".part")
+        try {
+            source.copyTo(part, overwrite = true)
+            // Removed while the module's copy came: it stays removed.
+            if (store.value[song.id]?.file != entry.file) return false
+            Files.move(part.toPath(), target.toPath(), StandardCopyOption.REPLACE_EXISTING)
+        } finally {
+            part.delete()
+        }
+        finish(target)
+        record(song, target, stream, at = entry.at)
+        // A file that's playing can't go on Windows; the next start clears what no download uses.
+        old.delete()
+        Log.i(Tag, "Swapped ${song.title} for ${stream.badge} from ${stream.module}")
+        if (AppSettings.value.saveDownloadsToMusic) {
+            runCatching { exportToMusic(song, target, replaces = YouTubeCopies) }
+                .onFailure { Log.w(Tag, "Couldn't copy ${song.title} to the Music folder", it) }
+        }
+        return true
+    }
+
+    /** What a download from YouTube was saved as in Music\Convx: Ogg Opus or Vorbis, MP4 audio, or WebM before tags. */
+    private val YouTubeCopies = setOf("opus", "ogg", "m4a", "webm")
 
     /**
      * The phone's DownloadExporter: the audio as Artist - Title, its lyrics as .lrc and its cover in
      * a hidden folder. The copy also carries the title, artist, album, lyrics and cover inside it,
-     * so File Explorer, Windows Media Player and phones show who it is. Gives back the copy.
+     * so File Explorer, Windows Media Player and phones show who it is. Copies of the song under
+     * the extensions in [replaces] go, so a song saved again in another format is there once.
+     * Gives back the copy.
      */
-    private suspend fun exportToMusic(song: Song, file: File): File {
+    private suspend fun exportToMusic(song: Song, file: File, replaces: Set<String> = emptySet()): File {
         val folder = exportDir.apply { mkdirs() }
         val base = exportBaseName(song.artistText, song.title)
         val lyrics = lyricsText(song)
@@ -281,7 +405,8 @@ object Downloads {
             null
         } ?: File(folder, "$base.${file.extension}").also { file.copyTo(it, overwrite = true) }
         // A copy from before tags were written, under the stream's own extension, goes: the song is there once.
-        if (copy.extension != file.extension) File(folder, "$base.${file.extension}").takeIf { it.isFile }?.delete()
+        (replaces + file.extension).filter { !it.equals(copy.extension, ignoreCase = true) }
+            .forEach { ext -> File(folder, "$base.$ext").takeIf { it.isFile }?.delete() }
         lyrics?.let { File(folder, "$base.lrc").writeText(it) }
         cover?.let { bytes ->
             runCatching {

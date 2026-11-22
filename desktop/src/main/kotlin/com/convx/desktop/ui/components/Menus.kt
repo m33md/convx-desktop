@@ -376,6 +376,8 @@ fun MenuDivider() = HorizontalDivider(color = ConvxColors.Separator, thickness =
 fun SongMenuContent(
     song: Song,
     dismiss: () -> Unit,
+    /** The player's own rows, first, so they show without scrolling however long the menu is. */
+    lead: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
     extra: (@Composable (dismiss: () -> Unit) -> Unit)? = null,
 ) {
     val navigator = LocalNavigator.current
@@ -411,6 +413,10 @@ fun SongMenuContent(
     // In a party where the host holds the controls these say why instead, not "Playing next".
     // With the bar showing, the cover hops into its queue button rather than a notice saying so.
     val origin = LocalMenuOrigin.current
+    if (lead != null) {
+        lead(dismiss)
+        MenuDivider()
+    }
     MenuItem("Play next", "playlist_play") {
         if (PlayerController.playNext(listOf(song)) != null && !QueueFlight.launch(song.thumbnail, origin(), 1)) Overlays.toast("Playing next")
         dismiss()

@@ -18,6 +18,7 @@ import org.jetbrains.skia.Image
 import java.io.ByteArrayOutputStream
 import java.io.DataOutputStream
 import java.io.File
+import java.io.RandomAccessFile
 import java.nio.file.Files
 import java.nio.file.StandardCopyOption
 import java.util.Base64
@@ -25,7 +26,8 @@ import java.util.Base64
 /**
  * Writes a song's tags and cover into a copy of its audio file, the way music players read them,
  * without decoding the sound again: FFmpeg copies the audio as it is into a container that holds
- * tags. YouTube's WebM becomes Ogg Opus (WebM can't carry a cover), its MP4 audio an .m4a.
+ * tags. YouTube's WebM becomes Ogg Opus (WebM can't carry a cover), its MP4 audio an .m4a, and a
+ * module's FLAC stays FLAC.
  */
 object TagWriter {
     class Tags(
@@ -39,10 +41,10 @@ object TagWriter {
         val cover: ByteArray? = null,
     )
 
-    /** The extension the tagged copy of [input] gets. */
+    /** The extension the tagged copy of [input] gets. FLAC sent in MP4 by a module becomes a plain .flac. */
     fun extensionFor(input: File): String = when (val ext = input.extension.lowercase()) {
         "webm" -> if (audioCodec(input) == "vorbis") "ogg" else "opus"
-        "mp4" -> "m4a"
+        "mp4" -> if (audioCodec(input) == "flac") "flac" else "m4a"
         else -> ext
     }
 
@@ -60,6 +62,7 @@ object TagWriter {
         val temp = File(output.parentFile, ".convx-tagging-${System.nanoTime()}.$ext")
         try {
             remux(input, temp, tags, ext)
+            if (ext == "flac") fillFlacLength(temp)
             Files.move(temp.toPath(), output.toPath(), StandardCopyOption.REPLACE_EXISTING)
         } finally {
             temp.delete()
@@ -171,6 +174,47 @@ object TagWriter {
                 avformat.avformat_free_context(ctx)
             }
             avformat.avformat_close_input(inCtx)
+        }
+    }
+
+    /**
+     * Writes the song's length into a .flac file's header when it's missing, as it is in a file
+     * joined from a module's pieces; without it File Explorer and other players show no length
+     * and seek poorly. The length is counted from the frames, which aren't decoded for it.
+     */
+    fun fillFlacLength(file: File) {
+        val info = HlsAudio.flacInfo(file) ?: return
+        if (info.totalSamples > 0) return
+        val ctx = AVFormatContext(null)
+        if (avformat.avformat_open_input(ctx, utf8(file.absolutePath), null, null) < 0) return
+        var total = 0L
+        try {
+            if (avformat.avformat_find_stream_info(ctx, null as PointerPointer<*>?) < 0) return
+            val index = (0 until ctx.nb_streams()).firstOrNull { ctx.streams(it).codecpar().codec_type() == avutil.AVMEDIA_TYPE_AUDIO } ?: return
+            val timeBase = ctx.streams(index).time_base()
+            val samples = avutil.av_make_q(1, info.sampleRate)
+            val packet = avcodec.av_packet_alloc()
+            try {
+                while (avformat.av_read_frame(ctx, packet) >= 0) {
+                    if (packet.stream_index() == index && packet.pts() != avutil.AV_NOPTS_VALUE) {
+                        total = maxOf(total, avutil.av_rescale_q(packet.pts() + packet.duration(), timeBase, samples))
+                    }
+                    avcodec.av_packet_unref(packet)
+                }
+            } finally {
+                avcodec.av_packet_free(packet)
+            }
+        } finally {
+            avformat.avformat_close_input(ctx)
+        }
+        if (total <= 0 || total >= 1L shl 36) return
+        // STREAMINFO's sample count: the low 4 bits of byte 21 of the file and the 4 bytes after.
+        RandomAccessFile(file, "rw").use { raf ->
+            raf.seek(21)
+            val high = raf.read() and 0xF0
+            raf.seek(21)
+            raf.write(high or (total shr 32).toInt())
+            raf.writeInt(total.toInt())
         }
     }
 

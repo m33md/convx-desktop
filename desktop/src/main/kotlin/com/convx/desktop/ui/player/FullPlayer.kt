@@ -374,16 +374,12 @@ fun PlayerStage(
                                         Box {
                                             IconButton(moreSlot.fallback, { menu.expanded = true }, size = actionSize, iconSize = actionIcon, filled = !v2, slot = moreSlot)
                                             AppMenu(menu) {
-                                                SongMenuContent(song, { menu.expanded = false }) { dismiss ->
+                                                SongMenuContent(song, { menu.expanded = false }, lead = { dismiss -> TempoPitchMenuItem(dismiss) }) { dismiss ->
                                                     // The phone's player menu opens the party from here.
                                                     MenuItem("Listen together", "group") {
                                                         dismiss()
                                                         UiState.fullPlayer = false
                                                         navigator.navigate(Screen.Party)
-                                                    }
-                                                    MenuItem("Tempo and pitch", "speed") {
-                                                        dismiss()
-                                                        tempoAndPitch()
                                                     }
                                                     MenuItem("Ambient mode", "fullscreen") {
                                                         dismiss()

@@ -26,6 +26,7 @@ import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.DialogCard
 import com.convx.desktop.ui.components.IconButton
+import com.convx.desktop.ui.components.MenuItem
 import com.convx.desktop.ui.components.Overlays
 import com.convx.desktop.ui.components.PillButton
 import com.convx.desktop.ui.theme.ConvxType
@@ -34,6 +35,20 @@ import kotlin.math.abs
 /** The phone's Tempo and Pitch, from the player's menu. */
 fun tempoAndPitch() {
     Overlays.showDialog { TempoPitchDialog() }
+}
+
+/** The player menu's row for [tempoAndPitch], naming the speed and pitch while they're changed. */
+@Composable
+fun TempoPitchMenuItem(dismiss: () -> Unit) {
+    val state by PlayerController.state.collectAsState()
+    val changed = buildList {
+        if (abs(state.tempo - 1f) > 0.001f) add("x${Tempos[Tempos.indices.minBy { abs(Tempos[it] - state.tempo) }]}")
+        if (state.transpose != 0) add(if (state.transpose > 0) "+${state.transpose}" else "${state.transpose}")
+    }
+    MenuItem(if (changed.isEmpty()) "Tempo and pitch" else "Tempo and pitch · ${changed.joinToString(" ")}", "speed") {
+        dismiss()
+        tempoAndPitch()
+    }
 }
 
 /** The phone's steps: 0.25x to 2x by 0.05, and a semitone at a time an octave either way. */

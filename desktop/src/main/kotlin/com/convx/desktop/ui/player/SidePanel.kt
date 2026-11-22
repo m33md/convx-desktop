@@ -212,7 +212,7 @@ private fun NowPlayingPanel(state: PlayerState) {
             )
             Box {
                 IconButton("more_horiz", { menu.expanded = true })
-                AppMenu(menu) { SongMenuContent(song, { menu.expanded = false }) }
+                AppMenu(menu) { SongMenuContent(song, { menu.expanded = false }, lead = { dismiss -> TempoPitchMenuItem(dismiss) }) }
             }
         }
         // YouTube's own count for the video this plays: Convx has no Spotify numbers to show.
