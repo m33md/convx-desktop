@@ -20,10 +20,8 @@ import com.convx.desktop.player.LocalMusic
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Overlays
 import com.convx.desktop.ui.components.PillButton
+import com.convx.desktop.ui.components.chooseFolder
 import java.io.File
-import javax.swing.JFileChooser
-import javax.swing.SwingUtilities
-import javax.swing.UIManager
 
 /**
  * The phone's Music folders, Scan local files and Network storage, together: the folders Convx
@@ -148,23 +146,6 @@ fun LocalFoldersSettings() {
         "Network storage: Windows opens SMB shares (\\\\server\\share) and WebDAV folders mapped with \"Map network drive\" " +
             "as ordinary folders, so add them here like any other. The phone needs its own SMB and WebDAV clients for that.",
     )
-}
-
-/** Windows' folder picker, through Swing's, which can choose folders where AWT's can't. */
-private fun chooseFolder(title: String, onChosen: (String) -> Unit) {
-    SwingUtilities.invokeLater {
-        // Windows' own look, so the picker isn't Swing's grey Metal.
-        runCatching { UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName()) }
-        val chooser = JFileChooser(System.getProperty("user.home")).apply {
-            dialogTitle = title
-            fileSelectionMode = JFileChooser.DIRECTORIES_ONLY
-            isAcceptAllFileFilterUsed = false
-        }
-        if (chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-            val dir = chooser.selectedFile?.absolutePath ?: return@invokeLater
-            onChosen(dir)
-        }
-    }
 }
 
 /** A share by its UNC path; Windows signs in to it with your account or saved credentials. */

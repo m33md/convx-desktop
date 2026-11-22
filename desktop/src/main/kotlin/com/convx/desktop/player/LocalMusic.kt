@@ -143,6 +143,7 @@ object LocalMusic {
             val excluded = settings.excludedFolders.map { File(it).absolutePath.lowercase().trimEnd('\\', '/') }
             val before = store.value.tracks
             val found = HashMap<String, Track>()
+            val downloadCopy = Downloads.exportCopies()
             var read = 0
             try {
                 for (folder in folders) {
@@ -151,7 +152,7 @@ object LocalMusic {
                             !dir.isHidden && !Downloads.isExportFolder(dir) &&
                                 excluded.none { dir.absolutePath.lowercase().trimEnd('\\', '/') == it }
                         }
-                        .filter { it.isFile && it.extension.lowercase() in Extensions }
+                        .filter { it.isFile && it.extension.lowercase() in Extensions && !downloadCopy(it) }
                         .forEach { file ->
                             ensureActive()
                             val id = idOf(file)

@@ -204,6 +204,22 @@ enum class RepeatMode { OFF, ALL, ONE }
 
 enum class AudioQuality { AUTO, HIGH, LOW }
 
+/**
+ * What the copies in the download folder are saved as. Automatic keeps what the source gives: a
+ * module's FLAC when it has the song in lossless, otherwise YouTube's own sound. The lossless ones
+ * only take a lossless source; a song only YouTube has stays in its own format, since turning it
+ * into FLAC wouldn't make it sound any better.
+ */
+enum class DownloadFormat(val label: String, val ext: String?, val lossless: Boolean, val short: String, val about: String) {
+    AUTO("Automatic", null, false, "best the source has", "The best the source gives: FLAC when a module has the song in lossless, otherwise YouTube's own sound. Nothing is converted"),
+    FLAC("FLAC", "flac", true, "lossless", "Lossless. Songs only YouTube has stay in YouTube's format, since FLAC wouldn't make them sound better"),
+    ALAC("Apple Lossless", "m4a", true, "lossless .m4a", "Lossless .m4a for the Mac's Music app and iPhones. Songs only YouTube has stay in YouTube's format"),
+    WAV("WAV", "wav", true, "lossless, no tags", "Lossless and opens anywhere, but large, and WAV can't hold tags or a cover. Songs only YouTube has stay in YouTube's format"),
+    MP3("MP3", "mp3", false, "320 kbps", "320 kbps. Plays on everything"),
+    AAC("AAC", "m4a", false, "256 kbps .m4a", "256 kbps .m4a. Smaller than MP3 for the same sound"),
+    OPUS("Opus", "opus", false, "192 kbps", "192 kbps. The smallest for its sound, though not every player opens it"),
+}
+
 /** The phone's five player designs, in its order. */
 enum class PlayerDesign(val label: String) {
     Card("Card"),
@@ -515,9 +531,15 @@ data class Settings(
     val persistentQueue: Boolean = true,
     val rememberShuffleRepeat: Boolean = true,
     val skipOnError: Boolean = true,
-    /** The phone's Downloads group: download a song when you like it, and copy downloads to Music\Convx. */
+    /** The phone's Downloads group: download a song when you like it, and copy downloads to a folder. */
     val autoDownloadOnLike: Boolean = false,
     val saveDownloadsToMusic: Boolean = true,
+    /** The folder downloads are copied to as Artist - Title; null for Music\Convx. */
+    val downloadFolder: String? = null,
+    /** What those copies are saved as. */
+    val downloadFormat: DownloadFormat = DownloadFormat.AUTO,
+    /** Ask for a folder each time a song, album or playlist is downloaded from a menu. */
+    val askWhereToSave: Boolean = false,
     /** The phone's Privacy page: stop recording plays or searches, and keep the window out of screenshots. */
     val pauseListenHistory: Boolean = false,
     /** Seconds a song plays before it counts as a listen; the phone's History duration. */

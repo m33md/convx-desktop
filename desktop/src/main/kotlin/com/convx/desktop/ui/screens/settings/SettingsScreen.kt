@@ -95,6 +95,7 @@ enum class SettingsPage(val title: String, val hub: String) {
     QualitySound("Quality & sound", "playback"),
     Transitions("Song transitions", "playback"),
     Queue("Queue & autoplay", "playback"),
+    Downloads("Downloads", "playback"),
     Output("Sound output", "playback"),
     YouTubeMusic("YouTube Music", "accounts"),
     LastFm("Last.fm", "accounts"),
@@ -399,8 +400,12 @@ private val searchEntries: List<SearchEntry> by lazy {
         SearchEntry("Ask before replacing the queue", "Keep or clear the queue", h.playback, SettingsPage.Queue, "queue replace keep clear undo"),
         SearchEntry("Enable similar content", "Keep going when the queue ends", h.playback, SettingsPage.Queue, "radio autoplay queue"),
         SearchEntry("Remember shuffle and repeat", null, h.playback, SettingsPage.Queue, "shuffle repeat"),
-        SearchEntry("Auto download on like", "Download songs when you like them", h.playback, SettingsPage.Queue, "download offline like heart"),
-        SearchEntry("Save downloads to Music folder", "Copies in Music\\Convx", h.playback, SettingsPage.Queue, "download offline music folder export m4a lrc"),
+        SearchEntry("Auto download on like", "Download songs when you like them", h.playback, SettingsPage.Downloads, "download offline like heart"),
+        SearchEntry("Save downloads to a folder", "Copies as Artist - Title", h.playback, SettingsPage.Downloads, "download offline music folder export m4a lrc"),
+        SearchEntry("Download folder", "Where downloads are saved", h.playback, SettingsPage.Downloads, "download folder location path directory nas"),
+        SearchEntry("Download format", "FLAC, Apple Lossless, WAV, MP3, AAC or Opus", h.playback, SettingsPage.Downloads, "download format flac mp3 wav alac aac opus m4a lossless convert"),
+        SearchEntry("Ask where to save", "Pick a folder for each download", h.playback, SettingsPage.Downloads, "download ask folder location"),
+        SearchEntry("Download again from your modules", "Lossless copies of YouTube downloads", h.playback, SettingsPage.Downloads, "download module lossless flac tidal"),
         SearchEntry("YouTube Music", "Log in, channels and sync", h.accounts, SettingsPage.YouTubeMusic, "youtube google login sign in account channel sync token"),
         SearchEntry("Login with token", null, h.accounts, SettingsPage.YouTubeMusic, "token cookie"),
         SearchEntry("More content", "Recommendations from your account", h.accounts, SettingsPage.YouTubeMusic, "login browse personalized"),
@@ -584,6 +589,7 @@ private fun PageContent(page: SettingsPage) {
         SettingsPage.QualitySound -> QualitySoundSettings()
         SettingsPage.Transitions -> SongTransitionsSettings()
         SettingsPage.Queue -> QueueSettings()
+        SettingsPage.Downloads -> DownloadSettings()
         SettingsPage.Output -> OutputSettings()
         SettingsPage.YouTubeMusic -> YouTubeAccountSettings()
         SettingsPage.LastFm -> LastFmSettings()

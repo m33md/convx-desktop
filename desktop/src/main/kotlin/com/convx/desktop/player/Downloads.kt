@@ -10,6 +10,7 @@ import com.convx.desktop.core.AppScope
 import com.convx.desktop.core.Http
 import com.convx.desktop.core.Log
 import com.convx.desktop.data.AppSettings
+import com.convx.desktop.data.DownloadFormat
 import com.convx.desktop.data.JsonFile
 import com.convx.desktop.data.Library
 import com.convx.desktop.data.Song
@@ -63,7 +64,7 @@ data class DownloadedSong(
  * download takes the song from the same sources as playback, the modules that are on first (FLAC
  * when they have it) and YouTube otherwise, through the same fetch, so a song that's playing isn't
  * fetched twice. With "Save downloads to Music folder" on, as on the phone, each download is also
- * copied to Music\Convx as Artist - Title, with its lyrics beside it.
+ * copied to Music\Convx, or a folder you pick, as Artist - Title, with its lyrics beside it.
  */
 object Downloads {
     private const val Tag = "Downloads"
@@ -89,8 +90,14 @@ object Downloads {
 
     val dir: File by lazy { File(AppDirs.data, "downloads").apply { mkdirs() } }
 
-    /** Where the phone's "Save downloads to Music folder" puts its copies on a PC. */
-    val exportDir: File get() = File(System.getProperty("user.home"), "Music${File.separator}Convx")
+    /** Where the phone's "Save downloads to Music folder" puts its copies on a PC, unless you pick a folder. */
+    val defaultExportDir: File get() = File(System.getProperty("user.home"), "Music${File.separator}Convx")
+
+    /** The folder you picked for the copies, if any. */
+    private val pickedExportDir: File? get() = AppSettings.value.downloadFolder?.takeIf { it.isNotBlank() }?.let(::File)
+
+    /** Where downloads are copied as Artist - Title. */
+    val exportDir: File get() = pickedExportDir ?: defaultExportDir
 
     private val store = JsonFile(
         File(AppDirs.data, "downloads.json"),
@@ -106,6 +113,11 @@ object Downloads {
 
     private val queue = Channel<Song>(Channel.UNLIMITED)
     private val jobs = ConcurrentHashMap<String, Job>()
+
+    /** A song asked for from a menu in a format or folder of its own, whatever the settings say. */
+    private class Asked(val format: DownloadFormat, val folder: File?)
+
+    private val requests = ConcurrentHashMap<String, Asked>()
 
     fun flush() = store.flush()
 
@@ -153,10 +165,33 @@ object Downloads {
         return fresh.size
     }
 
+    /**
+     * Saves [songs] as [format] in [folder] (the download folder when null), whatever the settings
+     * say: songs on this PC already are saved from their download, the rest are downloaded first.
+     * Gives back how many.
+     */
+    fun saveAs(songs: List<Song>, format: DownloadFormat, folder: File? = null): Int {
+        val wanted = songs.filter(::canDownload).distinctBy { it.id }
+        val ready = wanted.filter { isDownloaded(it.id) }
+        wanted.filterNot { it in ready }.forEach { requests[it.id] = Asked(format, folder) }
+        download(wanted)
+        if (ready.isNotEmpty()) {
+            AppScope.launch(Dispatchers.IO) {
+                for (song in ready) {
+                    val entry = done.value[song.id] ?: continue
+                    runCatching { exportToMusic(song, File(dir, entry.file), format, folder ?: exportDir) }
+                        .onFailure { Log.w(Tag, "Couldn't save ${song.title} as ${format.label}", it) }
+                }
+            }
+        }
+        return wanted.size
+    }
+
     /** Stops downloads that haven't finished; a song that's playing keeps streaming. */
     fun cancel(ids: Collection<String>) {
         _active.update { it - ids.toSet() }
         ids.forEach { id ->
+            requests.remove(id)
             jobs.remove(id)?.cancel()
             if (PlayerController.state.value.current?.id != id) AudioCache.cancel(id)
         }
@@ -208,19 +243,52 @@ object Downloads {
     private fun setStatus(id: String, status: Status) =
         _active.update { current -> current[id]?.let { current + (id to it.copy(status = status)) } ?: current }
 
-    /** For the local file scan: the Music folder copies are downloads, not separate songs. */
+    /** For the local file scan: Music\Convx holds only Convx's copies, which are downloads, not separate songs. */
     fun isExportFolder(folder: File): Boolean =
-        folder.absolutePath.trimEnd('\\', '/').equals(exportDir.absolutePath, ignoreCase = true)
+        pickedExportDir == null && samePath(folder, defaultExportDir)
+
+    /**
+     * For the local file scan: whether a file is Convx's copy of one of its downloads in a folder you
+     * picked, so it isn't listed again as a separate song. Your own files there are listed as usual.
+     */
+    fun exportCopies(): (File) -> Boolean {
+        val folder = pickedExportDir ?: return { false }
+        val names = store.value.values.mapTo(HashSet()) { exportBaseName(it.song.artistText, it.song.title).lowercase() }
+        return { file -> file.parentFile?.let { samePath(it, folder) } == true && file.nameWithoutExtension.lowercase() in names }
+    }
+
+    private fun samePath(a: File, b: File) =
+        a.absolutePath.trimEnd('\\', '/').equals(b.absolutePath.trimEnd('\\', '/'), ignoreCase = true)
+
+    /**
+     * Copies downloads to [folder] from now on, or to Music\Convx again when null. Gives back why it
+     * can't when Convx can't write there.
+     */
+    fun chooseExportFolder(folder: File?): String? {
+        if (folder != null) {
+            val writable = runCatching {
+                folder.mkdirs()
+                File.createTempFile(".convx-", ".tmp", folder).delete()
+            }.isSuccess
+            if (!writable) return "Convx can't save files in ${folder.name.ifBlank { folder.path }}"
+        }
+        AppSettings.update { it.copy(downloadFolder = folder?.absolutePath?.takeIf { folder != defaultExportDir }) }
+        return null
+    }
 
     private suspend fun fetch(song: Song) {
         val id = song.id
         var part: File? = null
         try {
             setStatus(id, Status.Running(0, 0))
-            val export = AppSettings.value.saveDownloadsToMusic
+            val request = requests[id]
+            val export = AppSettings.value.saveDownloadsToMusic || request != null
+            val format = request?.format ?: AppSettings.value.downloadFormat
+            // YouTube's AAC opens in every Windows player; for MP3 or Opus its Opus is the better start.
+            val preferAac = export && format != DownloadFormat.MP3 && format != DownloadFormat.OPUS
             val progress = { got: Long, total: Long -> setStatus(id, Status.Running(got, total)) }
             val (stream, source) = fromModules(song, progress)
-                ?: StreamResolver.resolve(id, AppSettings.value.audioQuality, preferAac = export).getOrThrow()
+                ?: StreamResolver.resolve(id, AppSettings.value.audioQuality, preferAac = preferAac).getOrThrow()
                     .let { it to AudioCache.fetchComplete(it, progress) }
             val target = File(dir, "$id.${stream.container}")
             part = File(dir, target.name + ".part").also { source.copyTo(it, overwrite = true) }
@@ -232,8 +300,9 @@ object Downloads {
             Log.i(Tag, "Downloaded ${song.title} (${stream.badge}${stream.module?.let { " from $it" } ?: ""})")
             if (export) {
                 // A module's copy takes the place of one saved from YouTube before.
-                runCatching { exportToMusic(song, target, replaces = if (stream.module != null) YouTubeCopies else emptySet()) }
-                    .onFailure { Log.w(Tag, "Couldn't copy ${song.title} to the Music folder", it) }
+                requests.remove(id)
+                runCatching { exportToMusic(song, target, format, request?.folder ?: exportDir, if (stream.module != null) YouTubeCopies else emptySet()) }
+                    .onFailure { Log.w(Tag, "Couldn't copy ${song.title} to the download folder", it) }
             }
         } catch (error: Throwable) {
             part?.delete()
@@ -355,12 +424,12 @@ object Downloads {
         Log.i(Tag, "Swapped ${song.title} for ${stream.badge} from ${stream.module}")
         if (AppSettings.value.saveDownloadsToMusic) {
             runCatching { exportToMusic(song, target, replaces = YouTubeCopies) }
-                .onFailure { Log.w(Tag, "Couldn't copy ${song.title} to the Music folder", it) }
+                .onFailure { Log.w(Tag, "Couldn't copy ${song.title} to the download folder", it) }
         }
         return true
     }
 
-    /** What a download from YouTube was saved as in Music\Convx: Ogg Opus or Vorbis, MP4 audio, or WebM before tags. */
+    /** What a download from YouTube was saved as in the download folder: Ogg Opus or Vorbis, MP4 audio, or WebM before tags. */
     private val YouTubeCopies = setOf("opus", "ogg", "m4a", "webm")
 
     /**
@@ -370,8 +439,14 @@ object Downloads {
      * the extensions in [replaces] go, so a song saved again in another format is there once.
      * Gives back the copy.
      */
-    private suspend fun exportToMusic(song: Song, file: File, replaces: Set<String> = emptySet()): File {
-        val folder = exportDir.apply { mkdirs() }
+    private suspend fun exportToMusic(
+        song: Song,
+        file: File,
+        format: DownloadFormat = AppSettings.value.downloadFormat,
+        into: File = exportDir,
+        replaces: Set<String> = emptySet(),
+    ): File {
+        val folder = into.apply { mkdirs() }
         val base = exportBaseName(song.artistText, song.title)
         val lyrics = lyricsText(song)
         val cover = song.thumbnail?.let { url ->
@@ -383,29 +458,22 @@ object Downloads {
                 }
             }.onFailure { Log.w(Tag, "Couldn't get the cover of ${song.title}", it) }.getOrNull()
         }
-        val ext = TagWriter.extensionFor(file)
-        val tagged = File(folder, "$base.$ext")
-        val copy = if (TagWriter.canTag(ext)) {
-            runCatching {
-                TagWriter.write(
-                    file,
-                    tagged,
-                    TagWriter.Tags(
-                        title = song.title,
-                        artist = song.artistText,
-                        album = song.album?.name,
-                        albumArtist = song.artists.firstOrNull()?.name,
-                        lyrics = lyrics,
-                        cover = cover,
-                    ),
-                )
-                tagged
-            }.onFailure { Log.w(Tag, "Couldn't write the tags of ${song.title}; copying it as it is", it) }.getOrNull()
-        } else {
-            null
-        } ?: File(folder, "$base.${file.extension}").also { file.copyTo(it, overwrite = true) }
-        // A copy from before tags were written, under the stream's own extension, goes: the song is there once.
-        (replaces + file.extension).filter { !it.equals(copy.extension, ignoreCase = true) }
+        val tags = TagWriter.Tags(
+            title = song.title,
+            artist = song.artistText,
+            album = song.album?.name,
+            albumArtist = song.artists.firstOrNull()?.name,
+            lyrics = lyrics,
+            cover = cover,
+        )
+        val copy = runCatching {
+            val plan = FormatConverter.plan(file, format)
+            File(folder, "$base.${plan.ext}").also { FormatConverter.write(file, it, plan, format, tags) }
+        }.onFailure { Log.w(Tag, "Couldn't save ${song.title} as ${format.label}; copying it as it is", it) }.getOrNull()
+            ?: File(folder, "$base.${file.extension}").also { file.copyTo(it, overwrite = true) }
+        // A copy from before tags were written was WebM under the stream's own name: the song is there once.
+        val stale = replaces + if (file.extension.equals("webm", ignoreCase = true)) setOf("webm") else emptySet()
+        stale.filter { !it.equals(copy.extension, ignoreCase = true) }
             .forEach { ext -> File(folder, "$base.$ext").takeIf { it.isFile }?.delete() }
         lyrics?.let { File(folder, "$base.lrc").writeText(it) }
         cover?.let { bytes ->
@@ -418,14 +486,14 @@ object Downloads {
         return copy
     }
 
-    /** Where adding tags to the songs already in Music\Convx is: how many are done, of how many. */
+    /** Where adding tags to the songs already in the download folder is: how many are done, of how many. */
     data class Retag(val done: Int, val total: Int, val failed: Int = 0, val finished: Boolean = false)
 
     private val _retag = MutableStateFlow<Retag?>(null)
     val retag: StateFlow<Retag?> = _retag.asStateFlow()
 
     /**
-     * Copies every download to Music\Convx again, this time with its tags and cover, for songs
+     * Copies every download to the download folder again, this time with its tags and cover, for songs
      * saved there before Convx wrote them. The untagged copies are replaced.
      */
     fun retagMusicFolder() {
@@ -436,7 +504,7 @@ object Downloads {
             var failed = 0
             songs.forEachIndexed { i, entry ->
                 runCatching { exportToMusic(entry.song, File(dir, entry.file)) }
-                    .onFailure { failed++; Log.w(Tag, "Couldn't tag ${entry.song.title} in the Music folder", it) }
+                    .onFailure { failed++; Log.w(Tag, "Couldn't tag ${entry.song.title} in the download folder", it) }
                 _retag.value = Retag(i + 1, songs.size, failed)
             }
             _retag.value = Retag(songs.size, songs.size, failed, finished = true)

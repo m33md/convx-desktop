@@ -5,7 +5,10 @@
 param(
     [Parameter(Mandatory)] [string] $Setup,
     [Parameter(Mandatory)] [string] $Msi,
-    [Parameter(Mandatory)] [string] $OutDir
+    [Parameter(Mandatory)] [string] $OutDir,
+    # The setup on the download page now, if there is one from another commit: this one has to update
+    # a Convx it installed.
+    [string] $Previous = ''
 )
 $ErrorActionPreference = 'Stop'
 New-Item -ItemType Directory -Force $OutDir | Out-Null
@@ -241,6 +244,31 @@ Step 'The updater way: /passive with the install folder' {
     Shot $s '10-passive'
     if (-not $s.Process.WaitForExit(300000)) { throw 'The passive install never finished' }
     Write-Host "Passive setup exited with $($s.Process.ExitCode); Convx.exe there: $(Test-Path $exe)"
+}
+
+if ($Previous) {
+    # Someone with the setup from the download page runs this one: it updates Convx in place rather
+    # than opening on the Uninstall page, and Installed apps lists one Convx afterwards.
+    Step 'The setup on the download page, then this one updates it' {
+        $p = Start-Process -FilePath $Setup -ArgumentList @('/uninstall', '/quiet', '-log', "`"$(Join-Path $OutDir 'clean.log')`"") -PassThru -Wait
+        Write-Host "Uninstall before it exited with $($p.ExitCode); Convx.exe there: $(Test-Path $exe)"
+        $p = Start-Process -FilePath $Previous -ArgumentList @('/quiet', '/norestart', '-log', "`"$(Join-Path $OutDir 'download-page.log')`"") -PassThru -Wait
+        Write-Host "The download page's setup exited with $($p.ExitCode); Installed apps: $((Entries) -join '; ')"
+        if (-not (Test-Path $exe)) { throw "The download page's setup didn't install Convx" }
+        $s = Start-Setup 'update-download-page.log'
+        Wait-For $s 'Update Convx'
+        Shot $s '12-update-download-page'
+        Click $s 'Update'
+        Wait-For $s 'Convx is ready' 300
+        Shot $s '13-updated-download-page'
+        Click $s 'Close'
+        $s.Process.WaitForExit(30000) | Out-Null
+        Finish $s
+        $listed = @(Entries | Where-Object { $_ -like '*(hidden: False)' })
+        Write-Host "Installed apps: $((Entries) -join '; ')"
+        if ($listed.Count -ne 1) { throw "Installed apps lists $($listed.Count) Convx" }
+        if (-not (Test-Path $exe)) { throw 'Convx.exe is gone after the update' }
+    }
 }
 
 Get-ChildItem $env:TEMP -Filter '*.log' -ErrorAction SilentlyContinue |

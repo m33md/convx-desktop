@@ -258,7 +258,7 @@ object TagWriter {
     }
 
     /** The first audio stream's codec, e.g. "opus" or "vorbis". */
-    private fun audioCodec(file: File): String? {
+    fun audioCodec(file: File): String? {
         val ctx = AVFormatContext(null)
         if (avformat.avformat_open_input(ctx, utf8(file.absolutePath), null, null) < 0) return null
         return try {

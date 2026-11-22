@@ -46,6 +46,10 @@ fun PlaybackHub() {
             SettingsNav.push(SettingsPage.Queue)
         }
         RowDivider()
+        LinkRow("Downloads", "Format, folder and where songs come from", icon = "download", tint = SystemColors.Teal, value = settings.downloadFormat.label) {
+            SettingsNav.push(SettingsPage.Downloads)
+        }
+        RowDivider()
         LinkRow("Sound output", "Which speakers or headphones Convx plays on", icon = "speaker_apple", tint = SystemColors.Indigo, value = settings.outputDevice ?: "Default") {
             SettingsNav.push(SettingsPage.Output)
         }
@@ -215,65 +219,7 @@ fun QueueSettings() {
             AppSettings.update { it.copy(skipOnError = v) }
         }
     }
-    SectionGap()
-    val modulesOn = settings.enabledModules.isNotEmpty() && settings.moduleSources.isNotEmpty()
-    SettingsSection(
-        "Downloads",
-        footer = "Downloads play with no connection. They're in Library under Downloaded, and Privacy & Storage shows how much room they take." +
-            if (modulesOn) " Songs come from your modules first, as they do when they play, so a module that has a song in lossless gives a FLAC file." else "",
-    ) {
-        SwitchRow("Auto download on like", "Automatically download songs when you like them", settings.autoDownloadOnLike) { v ->
-            AppSettings.update { it.copy(autoDownloadOnLike = v) }
-        }
-        RowDivider(PlainInset)
-        SwitchRow(
-            "Save downloads to Music folder",
-            "Also keep each download in Music\\Convx as Artist - Title, tagged with its title, artist, album, lyrics and cover, playable in any app",
-            settings.saveDownloadsToMusic,
-        ) { v ->
-            AppSettings.update { it.copy(saveDownloadsToMusic = v) }
-        }
-        if (settings.saveDownloadsToMusic) {
-            val retag by com.convx.desktop.player.Downloads.retag.collectAsState()
-            val downloaded by com.convx.desktop.player.Downloads.done.collectAsState()
-            RowDivider(PlainInset)
-            SettingsRow(
-                "Tag the songs already there",
-                when (val r = retag) {
-                    null -> "Write the tags and cover into songs saved before Convx did"
-                    else -> if (!r.finished) {
-                        "Tagging ${r.done} of ${r.total}…"
-                    } else {
-                        "Tagged ${r.total - r.failed} songs" + if (r.failed > 0) ", ${r.failed} couldn't be" else ""
-                    }
-                },
-                enabled = downloaded.isNotEmpty() && retag?.finished != false,
-                onClick = { com.convx.desktop.player.Downloads.retagMusicFolder() },
-            ) { com.convx.desktop.ui.components.ConvxIcon("edit", tint = SystemColors.Blue, size = 18.dp) }
-        }
-        val lossless by com.convx.desktop.player.Downloads.lossless.collectAsState()
-        val downloaded by com.convx.desktop.player.Downloads.done.collectAsState()
-        val fromYouTube = remember(downloaded) { com.convx.desktop.player.Downloads.fromYouTube(downloaded.values).size }
-        if (modulesOn && (fromYouTube > 0 || lossless != null)) {
-            RowDivider(PlainInset)
-            SettingsRow(
-                "Download again from your modules",
-                when (val l = lossless) {
-                    null -> "Swap the ${songCount(fromYouTube)} downloaded from YouTube for your modules' copies, in lossless when they have it. Songs no module has stay as they are"
-                    else -> if (!l.finished) {
-                        "Checking ${l.done} of ${l.total}… ${l.swapped} swapped so far"
-                    } else {
-                        "Swapped ${songCount(l.swapped)}" + if (l.total > l.swapped) ", ${l.total - l.swapped} aren't on your modules" else ""
-                    }
-                },
-                enabled = fromYouTube > 0 && lossless?.finished != false,
-                onClick = { com.convx.desktop.player.Downloads.downloadAgainFromModules() },
-            ) { com.convx.desktop.ui.components.ConvxIcon("download", tint = SystemColors.Blue, size = 18.dp) }
-        }
-    }
 }
-
-private fun songCount(n: Int) = if (n == 1) "1 song" else "$n songs"
 
 /** The PC's answer to the phone's Bluetooth & output: pick the speakers or headphones. */
 @Composable

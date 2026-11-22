@@ -187,11 +187,26 @@ jobs:
         id: trysetup
         if: steps.setup.outcome == 'success'
         continue-on-error: true
-        timeout-minutes: 15
+        timeout-minutes: 20
         shell: powershell
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           $msi = Get-ChildItem build/compose/binaries/main/msi/*.msi | Select-Object -First 1
-          ../installer/windows/preview.ps1 -Setup build/setup/Convx-Setup.exe -Msi $msi.FullName -OutDir build/snapshots/setup
+          # The setup on the download page, unless it came from this same commit: this one has to
+          # update a Convx it installed, so people who run it over the last version see Update.
+          # gh's messages on stderr would stop Windows PowerShell here, and a missing setup only skips that try.
+          $ErrorActionPreference = 'Continue'
+          $previous = ''
+          $notes = gh api "repos/$env:GITHUB_REPOSITORY/releases/tags/desktop-latest" --jq .body 2>&1 | Out-String
+          if ($LASTEXITCODE -eq 0 -and -not ($notes -match $env:GITHUB_SHA)) {
+            gh release download desktop-latest -R $env:GITHUB_REPOSITORY -p 'Convx-Setup-*.exe' -D build/download-page --clobber 2>&1 | Write-Host
+            $found = Get-ChildItem build/download-page/*.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($found) { $previous = $found.FullName; Write-Host "Updating over $($found.Name) from the download page" }
+          }
+          if (-not $previous) { Write-Host '::warning::No setup from another commit on the download page to update over' }
+          $ErrorActionPreference = 'Stop'
+          ../installer/windows/preview.ps1 -Setup build/setup/Convx-Setup.exe -Msi $msi.FullName -OutDir build/snapshots/setup -Previous $previous
 
       - name: Publish screenshots
         if: github.event_name == 'push' && hashFiles('desktop/build/snapshots/**') != ''

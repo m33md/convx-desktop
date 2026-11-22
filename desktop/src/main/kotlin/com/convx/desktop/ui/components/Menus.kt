@@ -32,6 +32,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.data.AppSettings
+import com.convx.desktop.data.DownloadFormat
 import com.convx.desktop.data.Library
 import com.convx.desktop.data.Song
 import com.convx.desktop.data.toItem
@@ -385,7 +386,12 @@ fun SongMenuContent(
     val library by Library.state.collectAsState()
     val liked = library.liked.any { it.song.id == song.id }
     var choosingPlaylist by remember { mutableStateOf(false) }
+    var choosingFormat by remember { mutableStateOf(false) }
 
+    if (choosingFormat) {
+        DownloadFormatItems({ listOf(song) }, dismiss)
+        return
+    }
     if (choosingPlaylist) {
         MenuItem("New playlist", "add") {
             dismiss()
@@ -449,7 +455,7 @@ fun SongMenuContent(
     }
     MenuItem("Add to playlist", "playlist_add") { choosingPlaylist = true }
     if (!local) SpeedDialMenuItem(song.toItem(), library.speedDial.any { it.id == song.id }, dismiss)
-    DownloadMenuItems(listOf(song), dismiss)
+    DownloadMenuItems(listOf(song), dismiss, onDownloadAs = { choosingFormat = true })
     MenuDivider()
     song.artists.firstOrNull { it.id != null }?.let { artist ->
         MenuItem("Go to artist", "artist") {
@@ -510,6 +516,11 @@ fun CollectionMenuContent(
     val clipboard = LocalClipboardManager.current
     val library by Library.state.collectAsState()
     var choosingPlaylist by remember { mutableStateOf(false) }
+    var choosingFormat by remember { mutableStateOf(false) }
+    if (choosingFormat) {
+        DownloadFormatItems(loadAll ?: { songs() }, dismiss)
+        return
+    }
     if (choosingPlaylist) {
         MenuItem("New playlist", "add") {
             dismiss()
@@ -549,7 +560,7 @@ fun CollectionMenuContent(
         dismiss()
     }
     MenuItem("Add to playlist", "playlist_add") { choosingPlaylist = true }
-    DownloadMenuItems(songs(), dismiss, loadAll)
+    DownloadMenuItems(songs(), dismiss, loadAll, onDownloadAs = { choosingFormat = true })
     if (saved != null && onToggleSaved != null) {
         MenuItem(if (saved) "Remove from Library" else "Save to Library", if (saved) "library_add_check" else "library_add") {
             onToggleSaved()
@@ -574,52 +585,46 @@ fun CollectionMenuContent(
  * A list that's partly downloaded offers both: the rest, and removing what's there.
  */
 @Composable
-fun DownloadMenuItems(songs: List<Song>, dismiss: () -> Unit, loadAll: (suspend () -> List<Song>)? = null) {
+fun DownloadMenuItems(
+    songs: List<Song>,
+    dismiss: () -> Unit,
+    loadAll: (suspend () -> List<Song>)? = null,
+    /** Opens the formats, for "Download as…". */
+    onDownloadAs: (() -> Unit)? = null,
+) {
     val done by Downloads.done.collectAsState()
     val active by Downloads.active.collectAsState()
     val wanted = remember(songs) { songs.filter(Downloads::canDownload) }
     if (wanted.isEmpty() && loadAll == null) return
     val single = songs.singleOrNull()
     val kept = wanted.filter { it.id in done }
+    val state = Downloads.collective(wanted, done, active)
     // The rest of a long playlist is fetched first, then every song not on this PC yet is downloaded.
     if (loadAll != null) {
-        val running = Downloads.collective(wanted, done, active) as? Downloads.Collective.Running
-        if (running == null) {
+        if (state !is Downloads.Collective.Running) {
             MenuItem("Download", "download") {
                 dismiss()
                 Overlays.toast("Getting the whole playlist…", "download")
-                com.convx.desktop.core.AppScope.launch {
-                    val all = loadAll().filter(Downloads::canDownload)
-                    val queued = Downloads.download(all)
-                    Overlays.toast(
-                        if (queued > 0) "Downloading $queued ${if (queued == 1) "song" else "songs"}" else "All ${all.size} songs are already downloaded",
-                        "download",
-                    )
-                }
-            }
-        } else {
-            MenuItem("Downloading ${running.done} of ${running.total}… Stop", "download") {
-                Downloads.cancel(wanted.map { it.id })
-                dismiss()
+                startDownload(loadAll, null, announce = true)
             }
         }
-    } else when (val state = Downloads.collective(wanted, done, active)) {
-        is Downloads.Collective.Running -> MenuItem(
+    } else if (state == Downloads.Collective.None) {
+        val failed = single != null && active[single.id]?.status is Downloads.Status.Failed
+        MenuItem(if (failed) "Download failed. Try again" else "Download", "download") {
+            dismiss()
+            startDownload({ wanted }, null, announce = single == null || AppSettings.value.askWhereToSave)
+        }
+    }
+    if (state is Downloads.Collective.Running) {
+        MenuItem(
             if (single != null) "Downloading… Stop" else "Downloading ${state.done} of ${state.total}… Stop",
             "download",
         ) {
             Downloads.cancel(wanted.map { it.id })
             dismiss()
         }
-        Downloads.Collective.Done -> Unit
-        Downloads.Collective.None -> {
-            val failed = single != null && active[single.id]?.status is Downloads.Status.Failed
-            MenuItem(if (failed) "Download failed. Try again" else "Download", "download") {
-                val queued = Downloads.download(wanted)
-                if (single == null && queued > 0) Overlays.toast("Downloading $queued ${if (queued == 1) "song" else "songs"}", "download")
-                dismiss()
-            }
-        }
+    } else if (onDownloadAs != null) {
+        MenuItem("Download as…", "music_note") { onDownloadAs() }
     }
     if (kept.isNotEmpty()) {
         MenuItem("Remove download", "delete") {
@@ -637,3 +642,47 @@ fun DownloadMenuItems(songs: List<Song>, dismiss: () -> Unit, loadAll: (suspend 
         }
     }
 }
+
+/** "Download as…": each format, with what it is in a few words. */
+@Composable
+private fun DownloadFormatItems(songs: suspend () -> List<Song>, dismiss: () -> Unit) {
+    for (format in DownloadFormat.entries) {
+        MenuItem("${format.label} · ${format.short}", "download") {
+            dismiss()
+            startDownload(songs, format, announce = true)
+        }
+    }
+}
+
+/**
+ * Downloads [songs], first asking for a folder when Settings > Downloads says to. A [format] or a
+ * folder picked here is for this download only, and its copy is saved even with the download
+ * folder turned off.
+ */
+private fun startDownload(songs: suspend () -> List<Song>, format: DownloadFormat?, announce: Boolean) {
+    fun go(folder: java.io.File?) = com.convx.desktop.core.AppScope.launch {
+        val all = songs().filter(Downloads::canDownload)
+        if (format == null && folder == null) {
+            val queued = Downloads.download(all)
+            if (announce) {
+                Overlays.toast(
+                    if (queued > 0) "Downloading ${songCount(queued)}" else "All ${all.size} songs are already downloaded",
+                    "download",
+                )
+            }
+            return@launch
+        }
+        val chosen = format ?: AppSettings.value.downloadFormat
+        val count = Downloads.saveAs(all, chosen, folder)
+        val where = (folder ?: Downloads.exportDir).let { it.name.ifBlank { it.path } }
+        val what = if (chosen == DownloadFormat.AUTO) "" else " as ${chosen.label}"
+        if (announce && count > 0) Overlays.toast("Saving ${if (count == 1) "it" else songCount(count)}$what in $where", "download")
+    }
+    if (AppSettings.value.askWhereToSave) {
+        chooseFolder("Save in", Downloads.exportDir.takeIf { it.isDirectory }?.path ?: System.getProperty("user.home")) { go(java.io.File(it)) }
+    } else {
+        go(null)
+    }
+}
+
+private fun songCount(n: Int) = if (n == 1) "1 song" else "$n songs"
