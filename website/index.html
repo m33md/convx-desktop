@@ -3,16 +3,21 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Convx</title>
-<meta name="claude:viewport-fit-sides" content="cover">
+<title>Convx: a free music app for Android, Windows and Mac</title>
 <meta name="description" content="Convx is a free, open-source music app with liquid glass, word-synced lyrics and AutoMix, for Android, Windows and Mac.">
 <meta name="theme-color" content="#000000">
+<link rel="canonical" href="https://m33md.github.io/convx-desktop/">
 <meta property="og:type" content="website">
+<meta property="og:site_name" content="Convx">
+<meta property="og:url" content="https://m33md.github.io/convx-desktop/">
 <meta property="og:title" content="Convx. Just listen.">
 <meta property="og:description" content="A free, open-source music app with liquid glass, word-synced lyrics and AutoMix. For Android, Windows and Mac.">
 <meta property="og:image" content="https://m33md.github.io/convx-desktop/assets/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Convx on a MacBook and a phone, with the words Just listen.">
 <meta name="twitter:card" content="summary_large_image">
-<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Convx","applicationCategory":"MultimediaApplication","operatingSystem":"Android 8.0+, Windows 10+, macOS","description":"A free, open-source music app with liquid glass, word-synced lyrics and AutoMix.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://www.gnu.org/licenses/gpl-3.0.html","author":{"@type":"Person","name":"Aryan (Cosmic Taser)"},"downloadUrl":"https://github.com/m33md/convx-desktop/releases/latest"}</script>
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Convx","applicationCategory":"MultimediaApplication","operatingSystem":"Android 8.0+, Windows 10+, macOS 12+","description":"A free, open-source music app with liquid glass, word-synced lyrics and AutoMix.","offers":{"@type":"Offer","price":"0","priceCurrency":"USD"},"license":"https://www.gnu.org/licenses/gpl-3.0.html","author":{"@type":"Person","name":"Aryan (Cosmic Taser)"},"downloadUrl":"https://github.com/m33md/convx-desktop/releases/latest"}</script>
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
 <link rel="apple-touch-icon" href="assets/icon-180.png">
@@ -68,6 +73,9 @@ body::before {
 img { max-width: 100%; height: auto; display: block; }
 a { color: inherit; }
 :focus-visible { outline: 2px solid var(--red); outline-offset: 3px; border-radius: 8px; }
+.skip { position: fixed; left: 12px; top: 12px; z-index: 60; padding: 10px 16px; border-radius: 999px; background: var(--label); color: var(--black);
+  font-weight: 600; text-decoration: none; transform: translateY(-160%); transition: transform 0.2s var(--ease-out); }
+.skip:focus-visible { transform: none; outline-offset: 2px; }
 .mono { font-family: var(--mono); font-feature-settings: "zero" 0; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
@@ -145,7 +153,7 @@ p { margin: 0; }
   padding: 7px 7px 7px 14px; border-radius: 999px;
   background: rgba(20, 20, 22, 0.58);
 }
-.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; margin-right: auto; min-height: 44px; padding-inline: 4px; }
 .brand-word { height: 19px; width: auto; color: var(--label); }
 .nav-links { position: relative; display: none; gap: 2px; }
 .nav-links a {
@@ -270,15 +278,17 @@ p { margin: 0; }
 .tour-meter { display: flex; align-items: center; gap: 10px; margin: 20px 10% 12px; font-size: 12px; color: var(--label-3); }
 .tour-meter b { color: var(--label); font-weight: 500; }
 .tour-meter i { width: 30px; height: 1px; background: currentColor; }
-.tour-meter em { margin-left: auto; font-style: normal; color: var(--label-2); }
+.tour-meter em { margin-left: auto; font-style: normal; color: var(--label-2); min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .tour-zoom {
   display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; padding: 6px 12px; border-radius: 999px; cursor: zoom-in;
+  position: relative; flex-shrink: 0; white-space: nowrap;
   font: 600 12.5px/1 var(--font); color: var(--label); background: rgba(255,255,255,0.08); border: 1px solid var(--line);
   transition: background-color 0.2s ease, transform 0.16s var(--ease-out);
 }
 .tour-zoom:active { transform: scale(0.96); }
 @media (hover: hover) and (pointer: fine) { .tour-zoom:hover { background: rgba(255,255,255,0.14); } }
 .tour-zoom svg { width: 13px; height: 13px; }
+.tour-zoom::after { content: ""; position: absolute; inset: -9px -4px; }
 .tour-view { cursor: zoom-in; }
 /* Full size: any tour screen opens at its real size, scrollable on a phone. */
 .shot-box {
@@ -544,7 +554,7 @@ p { margin: 0; }
 .dl-also a { color: var(--label-2); }
 .setup-shot { border-radius: 14px; width: min(100%, 400px); border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5); }
 .oss { margin-top: 28px; display: flex; flex-wrap: wrap; gap: 10px 24px; align-items: center; color: var(--label-2); font-size: 15px; }
-.oss a { color: var(--label); }
+.oss a { color: var(--label); padding-block: 10px; }
 
 /* Community + footer */
 .community { display: grid; gap: 24px; align-items: center; padding: clamp(28px, 4vw, 48px); border-radius: 32px; }
@@ -564,6 +574,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
 
 @media (max-width: 520px) {
   .cta-row .btn, .dl .btn { width: 100%; }
+  .tour-meter { margin-inline: 2%; }
   .zone span { display: none; }
   .deck-b .deck-label { margin-left: 0; justify-content: flex-end; }
   .stage .hero-phone { width: 27%; left: 10%; }
@@ -643,7 +654,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <symbol id="i-laptop" viewBox="0 0 24 24"><rect x="4.5" y="5" width="15" height="10.5" rx="2" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M2.5 19h19" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-chat" viewBox="0 0 24 24"><path d="M4 6.5A2.5 2.5 0 0 1 6.5 4h11A2.5 2.5 0 0 1 20 6.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 3.5V17h0A2.5 2.5 0 0 1 4 14.5z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></symbol>
-  <symbol id="i-send" viewBox="0 0 24 24"><path d="M20.5 3.5 3.5 10.5l6.5 2.5 2.5 6.5z M10 13l4-4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></symbol>
   <symbol id="i-cup" viewBox="0 0 24 24"><path d="M4 8h12v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5zM16 9.5h1.5a2.5 2.5 0 0 1 0 5H16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M8 3.5v2M12 3.5v2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
   <symbol id="i-code" viewBox="0 0 24 24"><path d="m8.5 7-5 5 5 5M15.5 7l5 5-5 5" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
   <symbol id="i-scrobble" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="2.2" fill="currentColor"/></symbol>
@@ -652,6 +662,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   <symbol id="i-play" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></symbol>
 </svg>
 
+<a class="skip" href="#main">Skip to content</a>
 <nav class="nav" aria-label="Main">
   <div class="nav-bar glass">
     <a class="brand" href="#top" aria-label="Convx home">
@@ -719,7 +730,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
   </div>
 </header>
 
-<main>
+<main id="main">
   <section class="band" id="lyrics">
     <div class="wrap split">
       <div>
@@ -776,10 +787,10 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
             <p>The phone's layout, sized for a big screen: a glass top bar, a simple side bar and a now playing bar that follows you everywhere.</p>
           </div>
           <ul>
-            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Media keys and play controls on the taskbar</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>Media keys, plus taskbar controls on Windows and Now Playing on a Mac</li>
             <li><svg aria-hidden="true"><use href="#i-check"/></svg>Several player designs, including a vinyl record</li>
             <li><svg aria-hidden="true"><use href="#i-check"/></svg>Disc Studio, made for a mouse and a big screen</li>
-            <li><svg aria-hidden="true"><use href="#i-check"/></svg>For Windows 10 and later, and for Macs with Apple silicon or Intel</li>
+            <li><svg aria-hidden="true"><use href="#i-check"/></svg>For Windows 10 and later, and macOS 12 and later on Apple silicon or Intel</li>
           </ul>
           <div class="plat-foot">
             <a class="btn btn-glass glass" data-dl="desktop" href="#download"><svg aria-hidden="true"><use href="#i-down"/></svg><span data-desk-name>Download for Windows</span></a>
@@ -795,7 +806,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
     <div class="wrap">
       <div class="section-head">
         <h2>Fourteen things to try first.</h2>
-        <p class="lede">Scroll, and the screen follows along. Everything here is Convx for Windows, running for real.</p>
+        <p class="lede">Scroll, and the screen follows along. Every screen here is the desktop app, running for real.</p>
       </div>
       <div class="tour" data-tour>
         <div class="tour-stage">
@@ -1003,7 +1014,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         <article class="dl" data-os="mac">
           <div class="dl-id">
             <span class="dl-icon"><svg aria-hidden="true"><use href="#i-laptop"/></svg></span>
-            <div><h3>Mac</h3><span class="dl-ver" data-ver="mac">Apple silicon or Intel</span></div>
+            <div><h3>Mac</h3><span class="dl-ver" data-ver="mac">macOS 12 or later</span></div>
           </div>
           <ol class="dl-steps">
             <li>Download the <span class="file">.dmg</span> for your Mac, open it and drag Convx into Applications.</li>
@@ -1033,7 +1044,6 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
         </div>
         <div class="community-links">
           <a class="btn btn-red" href="https://discord.gg/Ejeb4cmzfd"><svg aria-hidden="true"><use href="#i-chat"/></svg><span>Join the Discord</span></a>
-          <a class="btn btn-glass glass" href="https://t.me/+Nen-QpiY0tk1OTE9"><svg aria-hidden="true"><use href="#i-send"/></svg><span>Telegram</span></a>
           <a class="btn btn-glass glass" href="https://ko-fi.com/cosmictaser"><svg aria-hidden="true"><use href="#i-cup"/></svg><span>Support Aryan</span></a>
         </div>
       </div>
@@ -1121,8 +1131,21 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
 
   /* Latest versions and file sizes from GitHub, when the page can reach it. */
   const mb = n => Math.round(n / 1048576) + ' MB';
-  fetch('https://api.github.com/repos/m33md/convx-desktop/releases/latest')
-    .then(r => r.ok ? r.json() : null).then(j => {
+  const gh = (url, key) => {
+    try {
+      const c = JSON.parse(localStorage.getItem(key) || 'null');
+      if (c && Date.now() - c.t < 600000) return Promise.resolve(c.j);
+    } catch (e) {}
+    const ac = 'AbortController' in window ? new AbortController() : null;
+    const stop = ac && setTimeout(() => ac.abort(), 8000);
+    return fetch(url, ac ? { signal: ac.signal } : {}).then(r => r.ok ? r.json() : null).then(j => {
+      clearTimeout(stop);
+      if (j) try { localStorage.setItem(key, JSON.stringify({ t: Date.now(), j })); } catch (e) {}
+      return j;
+    });
+  };
+  gh('https://api.github.com/repos/m33md/convx-desktop/releases/latest', 'convx-desktop-release')
+    .then(j => {
       if (!j) return;
       const v = ((j.name || '') + ' ' + (j.body || '')).match(/\b\d+\.\d+(?:\.\d+)?\b/);
       const find = re => (j.assets || []).find(x => re.test(x.name));
@@ -1132,14 +1155,14 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       if (exe) {
         setAll('[data-dl="windows"][data-file]', el => el.href = exe.browser_download_url);
         setAll('[data-label="windows"]', el => el.textContent = ver + mb(exe.size));
-        setAll('[data-ver="windows"]', el => el.textContent = ver + 'Windows 10 or later, 64-bit');
+        setAll('[data-ver="windows"]', el => el.textContent = ver + 'Windows 10 or later');
       }
       if (msi) setAll('[data-alt="msi"]', el => el.href = msi.browser_download_url);
       if (zip) setAll('[data-alt="zip"]', el => el.href = zip.browser_download_url);
       if (arm) {
         setAll('[data-dl="mac"][data-file]', el => el.href = arm.browser_download_url);
         setAll('[data-label="mac"]', el => el.textContent = 'Apple silicon · ' + mb(arm.size));
-        setAll('[data-ver="mac"]', el => el.textContent = ver + 'Apple silicon or Intel');
+        setAll('[data-ver="mac"]', el => el.textContent = ver + 'macOS 12 or later');
       }
       if (intel) setAll('[data-alt="intel"]', el => el.href = intel.browser_download_url);
       /* An Intel Mac that tells us so gets the Intel file straight away. */
@@ -1173,8 +1196,13 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       }
     });
   });
-  fetch('https://api.github.com/repos/cosmictaserdev-creator/Convx/releases?per_page=10')
-    .then(r => r.ok ? r.json() : null).then(list => {
+  /* Nothing to install on an iPhone or iPad yet, so say so instead of offering an APK it can't open. */
+  if (os === 'ios' && dlNext) {
+    dlNext.innerHTML = '<span>Convx isn’t on iPhone or iPad yet. It’s free on Android phones, and on Windows and Mac computers.</span>';
+    dlNext.classList.add('on');
+  }
+  gh('https://api.github.com/repos/cosmictaserdev-creator/Convx/releases?per_page=10', 'convx-android-releases')
+    .then(list => {
       if (!Array.isArray(list)) return;
       const rel = list.find(x => !x.draft && (x.assets || []).some(a => /\.apk$/i.test(a.name)));
       if (!rel) return;

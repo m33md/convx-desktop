@@ -4,7 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Q&amp;A · Convx</title>
-<meta name="description" content="Answers to common questions about Convx for Android and Windows.">
+<meta name="description" content="Answers to common questions about Convx for Android, Windows and Mac.">
+<link rel="canonical" href="https://m33md.github.io/convx-desktop/faq.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Convx">
+<meta property="og:title" content="Q&amp;A · Convx">
+<meta property="og:description" content="Answers to common questions about Convx for Android, Windows and Mac.">
+<meta property="og:image" content="https://m33md.github.io/convx-desktop/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#000000">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
@@ -16,6 +23,7 @@
 </head>
 <body>
 
+<a class="skip" href="#main">Skip to content</a>
 <nav class="nav" aria-label="Main">
   <div class="nav-bar glass">
     <a class="brand" href="index.html" aria-label="Convx home">
@@ -33,14 +41,13 @@
 </nav>
 
 <header class="wrap page-head">
-  <p class="eyebrow">Q&amp;A</p>
   <h1>Questions, answered.</h1>
   <p class="lede">The things people ask most about Convx, from installing it to bringing your playlists along.</p>
   
   <div class="tabs" role="navigation" aria-label="Help pages"><a href="docs.html">Docs</a><a href="faq.html" aria-current="page">Q&amp;A</a><a href="privacy.html">Privacy</a></div>
 </header>
 
-<main class="wrap page-body">
+<main class="wrap page-body" id="main">
     <nav class="toc" aria-label="On this page">
       <p>On this page</p>
       <ol>
@@ -56,22 +63,24 @@
     <div class="doc">
       <section class="qa-group" id="about-convx">
         <h2>About Convx</h2>
-        <details class="qa" id="what"><summary>What is Convx?<i aria-hidden="true"></i></summary><div class="a"><p>A free music app for Android and Windows. It plays from YouTube Music, shows word-synced lyrics, blends songs together with AutoMix, and wraps it all in liquid glass. Aryan (Cosmic Taser) makes it; the Windows version is maintained by m33md.</p></div></details>
+        <details class="qa" id="what"><summary>What is Convx?<i aria-hidden="true"></i></summary><div class="a"><p>A free music app for Android, Windows and Mac. It plays from YouTube Music, shows word-synced lyrics, blends songs together with AutoMix, and wraps it all in liquid glass. Aryan (Cosmic Taser) makes it; the Windows and Mac version is maintained by m33md.</p></div></details>
         <details class="qa" id="free"><summary>Is it really free?<i aria-hidden="true"></i></summary><div class="a"><p>Yes. Convx is free and open source under the GPL-3.0, for anyone to use, read and build on. If you’d like to support it, there’s <a href="https://ko-fi.com/cosmictaser">Aryan’s Ko-fi</a>.</p></div></details>
         <details class="qa" id="youtube"><summary>Is Convx made by YouTube or Google?<i aria-hidden="true"></i></summary><div class="a"><p>No. Convx is an independent project and isn’t affiliated with, endorsed by, or connected to YouTube or Google.</p></div></details>
-        <details class="qa" id="platforms"><summary>Is there a version for iPhone or Mac?<i aria-hidden="true"></i></summary><div class="a"><p>Not yet. Convx is on Android and Windows today. News about anything new lands first on the <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>.</p></div></details>
+        <details class="qa" id="platforms"><summary>Is there a version for iPhone?<i aria-hidden="true"></i></summary><div class="a"><p>Not yet. Convx is on Android, Windows and Mac. News about anything new lands first on the <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>.</p></div></details>
       </section>
       <section class="qa-group" id="getting-started">
         <h2>Getting started</h2>
         <details class="qa" id="account"><summary>Do I need an account?<i aria-hidden="true"></i></summary><div class="a"><p>No. Convx works without signing in to anything. Sign in to YouTube Music if you want your own library, playlists and recommendations.</p></div></details>
         <details class="qa" id="smartscreen"><summary>Windows says it protected my PC. Is Convx safe?<i aria-hidden="true"></i></summary><div class="a"><p>That message appears for apps that aren’t from a big publisher. Click <strong>More info</strong>, then <strong>Run anyway</strong>. Convx is built in the open on GitHub, so anyone can check the code and how each download is made.</p></div></details>
-        <details class="qa" id="requirements"><summary>What do I need to run it?<i aria-hidden="true"></i></summary><div class="a"><p>Windows 10 or newer for the PC app, and Android 8.0 or newer for the phone app.</p></div></details>
-        <details class="qa" id="updates"><summary>How do I update?<i aria-hidden="true"></i></summary><div class="a"><p>On Windows, Convx checks for a new version each time it opens and updates itself from inside the app. You can also do it in <span class="path">Settings › Help &amp; About › App updates</span>.</p></div></details>
+        <details class="qa" id="gatekeeper"><summary>My Mac says it can’t check Convx for malware. Is it safe?<i aria-hidden="true"></i></summary><div class="a"><p>macOS shows it for any app that hasn’t been through Apple’s paid notarization check. Click <strong>Done</strong>, then open <span class="path">System Settings › Privacy &amp; Security</span> and click <strong>Open Anyway</strong>. You only do this once. Like the Windows version, every Mac download is built on GitHub from the public code.</p></div></details>
+        <details class="qa" id="which-mac"><summary>Which Mac download do I need?<i aria-hidden="true"></i></summary><div class="a"><p>Open the Apple menu and choose <strong>About This Mac</strong>. If it lists a <strong>Chip</strong> such as Apple M1 or newer, get the Apple silicon download. If it lists an Intel <strong>Processor</strong>, get the Intel one. The download button picks for you when your browser tells it.</p></div></details>
+        <details class="qa" id="requirements"><summary>What do I need to run it?<i aria-hidden="true"></i></summary><div class="a"><p>Windows 10 or newer (64-bit) or macOS 12 or newer for the desktop app, on Apple silicon or Intel Macs, and Android 8.0 or newer for the phone app.</p></div></details>
+        <details class="qa" id="updates"><summary>How do I update?<i aria-hidden="true"></i></summary><div class="a"><p>Convx checks for a new version each time it opens. On Windows it updates itself from inside the app. On a Mac it tells you when a new version is out: click <strong>Download</strong>, open the disk image and drag Convx into Applications to replace the old one. Your library and settings stay. You can check any time in <span class="path">Settings › Help &amp; About › App updates</span>.</p></div></details>
       </section>
       <section class="qa-group" id="music">
         <h2>Music</h2>
         <details class="qa" id="source"><summary>Where does the music come from?<i aria-hidden="true"></i></summary><div class="a"><p>From YouTube Music. Modules can add other sources, often in lossless FLAC, and Convx asks them first, with YouTube Music as the fallback.</p></div></details>
-        <details class="qa" id="offline"><summary>Can I listen offline?<i aria-hidden="true"></i></summary><div class="a"><p>Yes. Download a song from its menu, or turn on <strong>Auto download on like</strong>. Downloads are in Library under Downloaded and play with no connection.</p></div></details>
+        <details class="qa" id="offline"><summary>Can I listen offline?<i aria-hidden="true"></i></summary><div class="a"><p>Yes. Download a song from its menu, or turn on <strong>Auto download on like</strong>. Downloads are in Library under Downloaded and play with no connection. On the desktop app, <span class="path">Settings › Playback &amp; Audio › Downloads</span> can also save copies to any folder as FLAC, MP3 and more, with their tags and cover inside.</p></div></details>
         <details class="qa" id="spotify"><summary>Can I bring my Spotify playlists?<i aria-hidden="true"></i></summary><div class="a"><p>Yes, two ways. Link Spotify in <span class="path">Settings › Accounts &amp; Services › Spotify</span>, or, without Premium, export your playlists as CSV files from exportify.net and import them in <span class="path">Settings › Privacy &amp; Storage › Backup &amp; restore</span>. Apple Music playlists can be imported from a link too.</p></div></details>
         <details class="qa" id="wont-play"><summary>A song won’t play. What can I do?<i aria-hidden="true"></i></summary><div class="a"><p>Convx asks YouTube for a fresh link and tries again on its own. If a song still won’t play, YouTube may be holding it back for a while, so try again later, or add a module that can play it from somewhere else.</p></div></details>
       </section>
@@ -82,19 +91,19 @@
       </section>
       <section class="qa-group" id="listening-together">
         <h2>Listening together</h2>
-        <details class="qa" id="party"><summary>Can my phone and my PC listen together?<i aria-hidden="true"></i></summary><div class="a"><p>Yes. Start a party on either one and share the code. Phones and PCs join with the same codes and hear the same song at the same moment.</p></div></details>
-        <details class="qa" id="discord"><summary>How do I show what I’m playing on Discord?<i aria-hidden="true"></i></summary><div class="a"><p>Keep the Discord app open on your PC and turn on Discord in <span class="path">Settings › Accounts &amp; Services › Discord</span>. Your status shows the song while it plays and goes away when you pause.</p></div></details>
+        <details class="qa" id="party"><summary>Can my phone and my computer listen together?<i aria-hidden="true"></i></summary><div class="a"><p>Yes. Start a party on either one and share the code. Phones and computers join with the same codes and hear the same song at the same moment.</p></div></details>
+        <details class="qa" id="discord"><summary>How do I show what I’m playing on Discord?<i aria-hidden="true"></i></summary><div class="a"><p>Keep the Discord app open on your computer and turn on Discord in <span class="path">Settings › Accounts &amp; Services › Discord</span>. Your status shows the song while it plays and goes away when you pause.</p></div></details>
       </section>
       <section class="qa-group" id="your-data">
         <h2>Your data</h2>
         <details class="qa" id="data"><summary>Does Convx collect my data?<i aria-hidden="true"></i></summary><div class="a"><p>No. There is no Convx account and no Convx server keeping your library. The <a href="privacy.html">Privacy page</a> lists every service Convx talks to and when.</p></div></details>
-        <details class="qa" id="backup"><summary>How do I move my library to a new PC?<i aria-hidden="true"></i></summary><div class="a"><p>Make a backup in <span class="path">Settings › Privacy &amp; Storage › Backup &amp; restore</span> and restore it on the new PC. It carries your library, playlists, history and settings. Sign in again on the new PC, since sign-ins never leave the old one.</p></div></details>
+        <details class="qa" id="backup"><summary>How do I move my library to a new computer?<i aria-hidden="true"></i></summary><div class="a"><p>Make a backup in <span class="path">Settings › Privacy &amp; Storage › Backup &amp; restore</span> and restore it on the new computer. It carries your library, playlists, history and settings. Sign in again there, since sign-ins never leave the computer they were made on.</p></div></details>
       </section>
       <section class="qa-group" id="help">
         <h2>Help</h2>
-        <details class="qa" id="bugs"><summary>Where do I report a bug or ask for a feature?<i aria-hidden="true"></i></summary><div class="a"><p>On the <a href="https://discord.gg/Ejeb4cmzfd">Convx Discord</a>, or as a GitHub issue: <a href="https://github.com/cosmictaserdev-creator/Convx/issues">Android</a> or <a href="https://github.com/m33md/convx-desktop/issues">Windows</a>. On Windows, <span class="path">Settings › Help &amp; About › Crash report</span> shows what went wrong the last time Convx closed unexpectedly, which helps a lot.</p></div></details>
+        <details class="qa" id="bugs"><summary>Where do I report a bug or ask for a feature?<i aria-hidden="true"></i></summary><div class="a"><p>On the <a href="https://discord.gg/Ejeb4cmzfd">Convx Discord</a>, or as a GitHub issue: <a href="https://github.com/cosmictaserdev-creator/Convx/issues">Android</a> or <a href="https://github.com/m33md/convx-desktop/issues">Windows and Mac</a>. In the desktop app, <span class="path">Settings › Help &amp; About › Crash report</span> shows what went wrong the last time Convx closed unexpectedly, which helps a lot.</p></div></details>
       </section>
-      <p class="note" style="margin-top:48px"><b>Still stuck?</b> The <a href="docs.html">Docs</a> walk through every part of Convx for Windows, and the <a href="https://discord.gg/Ejeb4cmzfd">Discord</a> is full of people happy to help.</p>
+      <p class="note" style="margin-top:48px"><b>Still stuck?</b> The <a href="docs.html">Docs</a> walk through every part of Convx for Windows and Mac, and the <a href="https://discord.gg/Ejeb4cmzfd">Discord</a> is full of people happy to help.</p>
     </div>
 </main>
 
@@ -102,7 +111,7 @@
   <div class="wrap foot">
     <div>
       <img src="assets/convx-word.svg" width="115" height="22" alt="Convx">
-      <p>Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
+      <p>Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows and Mac is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
       <p>Convx is an independent project and is not affiliated with, endorsed by, or connected to YouTube, Google, or their affiliates.</p>
     </div>
     <nav class="foot-links" aria-label="Footer">
@@ -111,7 +120,7 @@
       <a href="faq.html">Q&amp;A</a>
       <a href="privacy.html">Privacy</a>
       <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
-      <a href="https://github.com/m33md/convx-desktop">Windows source</a>
+      <a href="https://github.com/m33md/convx-desktop">Desktop source</a>
       <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
       <a href="https://ko-fi.com/cosmictaser">Ko-fi</a>
     </nav>
@@ -160,14 +169,10 @@
     secs.forEach((s, i) => { const r = s.getBoundingClientRect(); if (r.top < y && r.bottom > y) mark(i); });
   }, { passive: true });
 
-  /* GSAP: the heading settles in, and the page rises in as you read. */
+  /* The heading settles in once; the reading itself stays still. */
   if (gs && !reduce) {
-    gs.from('.page-head > *', { y: 34, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.07 });
-    gs.from('.toc', { x: -20, opacity: 0, duration: 1, ease: 'expo.out', delay: 0.3 });
-    const els = gs.utils.toArray('.doc section > *, .qa');
-    gs.set(els, { opacity: 0, y: 36 });
-    const show = b => gs.to(b, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.05, overwrite: true, clearProps: 'transform,opacity' });
-    ScrollTrigger.batch(els, { start: 'top 94%', once: true, onEnter: show, onEnterBack: show, onLeave: show });
+    gs.from('.page-head > *', { y: 10, opacity: 0, duration: 0.6, ease: 'power3.out', stagger: 0.05 });
+    gs.from('.toc', { opacity: 0, duration: 0.6, ease: 'power2.out', delay: 0.2 });
   }
 
   /* Q&A: answers open and close smoothly. */

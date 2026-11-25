@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://m33md.github.io/convx-desktop/sitemap.xml

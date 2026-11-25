@@ -4,7 +4,14 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Docs · Convx</title>
-<meta name="description" content="How to install and use Convx for Windows: sign-in, importing playlists, lyrics, AutoMix, modules, Disc Studio and more.">
+<meta name="description" content="How to install and use Convx for Windows and Mac: sign-in, importing playlists, lyrics, AutoMix, modules, Disc Studio and more.">
+<link rel="canonical" href="https://m33md.github.io/convx-desktop/docs.html">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Convx">
+<meta property="og:title" content="Docs · Convx">
+<meta property="og:description" content="How to install and use Convx for Windows and Mac: sign-in, importing playlists, lyrics, AutoMix, modules, Disc Studio and more.">
+<meta property="og:image" content="https://m33md.github.io/convx-desktop/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="theme-color" content="#000000">
 <link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
 <link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
@@ -16,6 +23,7 @@
 </head>
 <body>
 
+<a class="skip" href="#main">Skip to content</a>
 <nav class="nav" aria-label="Main">
   <div class="nav-bar glass">
     <a class="brand" href="index.html" aria-label="Convx home">
@@ -33,14 +41,13 @@
 </nav>
 
 <header class="wrap page-head">
-  <p class="eyebrow">Docs</p>
   <h1>Getting the most out of Convx.</h1>
-  <p class="lede">Everything in Convx for Windows, from the first launch to building it yourself. Settings paths look like <span class="path">Settings › Playback &amp; Audio</span>.</p>
+  <p class="lede">Everything in Convx for Windows and Mac, from the first launch to building it yourself. Settings paths look like <span class="path">Settings › Playback &amp; Audio</span>.</p>
   
   <div class="tabs" role="navigation" aria-label="Help pages"><a href="docs.html" aria-current="page">Docs</a><a href="faq.html">Q&amp;A</a><a href="privacy.html">Privacy</a></div>
 </header>
 
-<main class="wrap page-body">
+<main class="wrap page-body" id="main">
     <nav class="toc" aria-label="On this page">
       <p>On this page</p>
       <ol>
@@ -69,13 +76,20 @@
           <li>Run it. If Windows says it protected your PC, click <strong>More info</strong>, then <strong>Run anyway</strong>.</li>
           <li>Open Convx from the Start menu.</li>
         </ol>
-        <p style="margin-top:16px">The same page has an <code>.msi</code> installer, and a portable <code>.zip</code> that runs without installing. Convx needs Windows 10 or newer.</p>
+        <p style="margin-top:16px">The same page has an <code>.msi</code> installer, and a portable <code>.zip</code> that runs without installing. Convx needs Windows 10 or newer, 64-bit.</p>
+        <h3>On a Mac</h3>
+        <ol class="steps">
+          <li>Download <code>Convx-&lt;version&gt;-mac-apple-silicon.dmg</code> for a Mac with an Apple M1 chip or newer, or <code>Convx-&lt;version&gt;-mac-intel.dmg</code> for an Intel Mac, from the <a href="https://github.com/m33md/convx-desktop/releases/latest">latest release</a>.</li>
+          <li>Open it and drag Convx into Applications.</li>
+          <li>Open Convx. The first time, macOS says it can’t check Convx for malware: click <strong>Done</strong>, then open <span class="path">System Settings › Privacy &amp; Security</span> and click <strong>Open Anyway</strong>.</li>
+        </ol>
+        <p style="margin-top:16px">Convx needs macOS 12 or newer.</p>
         <h3>On Android</h3>
         <ol class="steps">
           <li>Download the APK from <a href="https://github.com/cosmictaserdev-creator/Convx/releases">Convx’s releases</a>.</li>
           <li>Open it, and allow your browser or file manager to install apps if Android asks.</li>
         </ol>
-        <p style="margin-top:16px">The phone app needs Android 8.0 or newer. The rest of these docs follow Convx for Windows; the phone app has the same features, in the phone’s own menus.</p>
+        <p style="margin-top:16px">The phone app needs Android 8.0 or newer. The rest of these docs follow Convx for Windows and Mac, which look and work the same; the phone app has the same features, in the phone’s own menus.</p>
       </section>
 
       <section id="first-steps">
@@ -106,9 +120,9 @@
         <h2>Playing</h2>
         <ul>
           <li><strong>Right-click any song</strong> to play it next, add it to the queue, start a radio, make an AI DJ Mix from it, see track insights, pin it to Speed dial, download it, or go to its artist or album.</li>
-          <li><strong>Downloads</strong> play with no connection and live in Library under Downloaded. Turn on <strong>Auto download on like</strong> to keep every liked song, and <strong>Save downloads to Music folder</strong> for copies in <code>Music\Convx</code>.</li>
+          <li><strong>Downloads</strong> play with no connection and live in Library under Downloaded. In <span class="path">Settings › Playback &amp; Audio › Downloads</span>, turn on <strong>Auto download on like</strong> to keep every liked song, and <strong>Save downloads to a folder</strong> for copies with their title, artist, lyrics and cover inside, in <code>Music/Convx</code> or any folder you pick, as FLAC, Apple Lossless, MP3 and more. <strong>Download as…</strong> in a song’s or playlist’s menu saves it in another format just once.</li>
           <li><strong>The queue</strong> can carry on with similar songs when it ends, come back after a restart, and remember shuffle and repeat. Find these in <span class="path">Settings › Playback &amp; Audio</span>.</li>
-          <li><strong>Media keys</strong> and the play buttons on Convx’s taskbar thumbnail work while Convx is in the background.</li>
+          <li><strong>Media keys</strong> work while Convx is in the background, and so do the play buttons on its taskbar thumbnail on Windows, and Now Playing in Control Center, the lock screen and AirPods on a Mac.</li>
           <li><strong>Recognize</strong> listens through your microphone and names the song playing around you, with a history of what it found.</li>
         </ul>
       </section>
@@ -192,11 +206,11 @@
       <section id="data">
         <h2>Backup and storage</h2>
         <ul>
-          <li><strong>Backup &amp; restore</strong> saves your library, playlists, history and settings to one file, and brings them back. Sign-ins stay on the PC they were made on.</li>
+          <li><strong>Backup &amp; restore</strong> saves your library, playlists, history and settings to one file, and brings them back. Sign-ins stay on the computer they were made on.</li>
           <li><strong>Storage</strong> shows the room downloads and caches take, sets the largest song and image caches, and clears them. Clearing a cache never touches downloads.</li>
           <li><strong>Privacy</strong> pauses or clears listen and search history, sets when a song counts as a listen, and can keep Convx out of screenshots and screen sharing.</li>
         </ul>
-        <p style="margin-top:16px">All three are in <span class="path">Settings › Privacy &amp; Storage</span>. Convx keeps its data in <code>%APPDATA%\Convx</code> (library, settings and downloads) and <code>%LOCALAPPDATA%\Convx</code> (caches and logs). More in the <a href="privacy.html">Privacy</a> page.</p>
+        <p style="margin-top:16px">All three are in <span class="path">Settings › Privacy &amp; Storage</span>. On Windows, Convx keeps its data in <code>%APPDATA%\Convx</code> (library, settings and downloads) and <code>%LOCALAPPDATA%\Convx</code> (caches and logs). On a Mac, they’re <code>~/Library/Application Support/Convx</code> and <code>~/Library/Caches/Convx</code>. More in the <a href="privacy.html">Privacy</a> page.</p>
       </section>
 
       <section id="troubleshooting">
@@ -206,17 +220,18 @@
           <li><strong>Convx closed unexpectedly:</strong> <span class="path">Settings › Help &amp; About › Crash report</span> shows what happened. Share it on the Discord or in a GitHub issue.</li>
           <li><strong>Behind a proxy, or having IPv6 trouble:</strong> <span class="path">Settings › Accounts &amp; Services › Network &amp; proxy</span>.</li>
           <li><strong>Convx feels slow:</strong> turn on <strong>Reduce live blur</strong>, or make everything smaller with <strong>Display density</strong>, in <span class="path">Settings › Player &amp; Lyrics › Controls &amp; layout</span>.</li>
-          <li><strong>Updates:</strong> <span class="path">Settings › Help &amp; About › App updates</span> checks for and installs a newer version.</li>
+          <li><strong>Updates:</strong> <span class="path">Settings › Help &amp; About › App updates</span> checks for a newer version. Windows installs it for you; on a Mac, open the downloaded disk image and drag Convx into Applications.</li>
         </ul>
       </section>
 
       <section id="build">
         <h2>Build it yourself</h2>
-        <p>Convx for Windows is written in Kotlin with Compose Multiplatform. It compiles the phone app’s own YouTube Music, lyrics, artwork, song recognition and module code, decodes audio with FFmpeg, and runs modules in QuickJS. You need JDK 21.</p>
+        <p>Convx for Windows and Mac is written in Kotlin with Compose Multiplatform. It compiles the phone app’s own YouTube Music, lyrics, artwork, song recognition and module code, decodes audio with FFmpeg, and runs modules in QuickJS. You need JDK 21.</p>
         <pre><code>git clone https://github.com/m33md/convx-desktop
 cd convx-desktop/desktop
 ./gradlew run          # start the app
-./gradlew packageMsi   # build the installer</code></pre>
+./gradlew packageMsi   # build the Windows installer
+./gradlew packageDmg   # build the Mac disk image (on a Mac)</code></pre>
         <p style="margin-top:16px">The phone app’s code is at <a href="https://github.com/cosmictaserdev-creator/Convx">cosmictaserdev-creator/Convx</a>. Both are GPL-3.0.</p>
       </section>
     </div>
@@ -226,7 +241,7 @@ cd convx-desktop/desktop
   <div class="wrap foot">
     <div>
       <img src="assets/convx-word.svg" width="115" height="22" alt="Convx">
-      <p>Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
+      <p>Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows and Mac is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
       <p>Convx is an independent project and is not affiliated with, endorsed by, or connected to YouTube, Google, or their affiliates.</p>
     </div>
     <nav class="foot-links" aria-label="Footer">
@@ -235,7 +250,7 @@ cd convx-desktop/desktop
       <a href="faq.html">Q&amp;A</a>
       <a href="privacy.html">Privacy</a>
       <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
-      <a href="https://github.com/m33md/convx-desktop">Windows source</a>
+      <a href="https://github.com/m33md/convx-desktop">Desktop source</a>
       <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
       <a href="https://ko-fi.com/cosmictaser">Ko-fi</a>
     </nav>
@@ -284,14 +299,10 @@ cd convx-desktop/desktop
     secs.forEach((s, i) => { const r = s.getBoundingClientRect(); if (r.top < y && r.bottom > y) mark(i); });
   }, { passive: true });
 
-  /* GSAP: the heading settles in, and the page rises in as you read. */
+  /* The heading settles in once; the reading itself stays still. */
   if (gs && !reduce) {
-    gs.from('.page-head > *', { y: 34, opacity: 0, duration: 1.1, ease: 'expo.out', stagger: 0.07 });
-    gs.from('.toc', { x: -20, opacity: 0, duration: 1, ease: 'expo.out', delay: 0.3 });
-    const els = gs.utils.toArray('.doc section > *, .qa');
-    gs.set(els, { opacity: 0, y: 36 });
-    const show = b => gs.to(b, { opacity: 1, y: 0, duration: 0.9, ease: 'expo.out', stagger: 0.05, overwrite: true, clearProps: 'transform,opacity' });
-    ScrollTrigger.batch(els, { start: 'top 94%', once: true, onEnter: show, onEnterBack: show, onLeave: show });
+    gs.from('.page-head > *', { y: 10, opacity: 0, duration: 0.6, ease: 'power3.out', stagger: 0.05 });
+    gs.from('.toc', { opacity: 0, duration: 0.6, ease: 'power2.out', delay: 0.2 });
   }
 
   /* Q&A: answers open and close smoothly. */
