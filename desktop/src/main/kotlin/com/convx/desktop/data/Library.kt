@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import java.io.File
 import java.util.UUID
+import kotlin.math.abs
 
 /** The user's own music: likes, saved albums/playlists/artists, local playlists, history. */
 object Library {
@@ -130,6 +131,55 @@ object Library {
         } else {
             data.copy(localPlaylists = data.localPlaylists + LocalPlaylist(id, name, songs, cover = cover))
         }
+    }
+
+    /**
+     * Puts an imported playlist's [songs] into the playlist [id], creating it if needed. One that's
+     * already there keeps your order and every song it has; only the songs it doesn't have go at the
+     * end. A song counts as had by its id, or by [key] (its title and artist), so one matched to
+     * another YouTube upload isn't added twice. Its name becomes [name] only when [rename]; your own
+     * picture stays. Returns how many songs were added.
+     */
+    fun mergeImported(
+        id: String,
+        name: String,
+        songs: List<Song>,
+        cover: String? = null,
+        spotifyId: String? = null,
+        rename: Boolean = false,
+        key: (Song) -> String? = { null },
+    ): Int {
+        var added = 0
+        store.update { data ->
+            val old = data.localPlaylists.firstOrNull { it.id == id }
+            if (old == null) {
+                val fresh = songs.distinctBy { it.id }
+                added = fresh.size
+                return@update data.copy(localPlaylists = data.localPlaylists + LocalPlaylist(id, name, fresh, cover = cover, spotifyId = spotifyId))
+            }
+            val ids = old.songs.mapTo(HashSet()) { it.id }
+            // Lengths by title and artist: the same words a few seconds apart are the same song.
+            val lengths = HashMap<String, MutableList<Int?>>()
+            old.songs.forEach { song -> key(song)?.let { lengths.getOrPut(it) { mutableListOf() } += song.duration } }
+            fun had(song: Song): Boolean {
+                val k = key(song) ?: return false
+                val known = lengths.getOrPut(k) { mutableListOf() }
+                val had = known.any { it == null || song.duration == null || abs(it - song.duration) <= 3 }
+                if (!had) known += song.duration
+                return had
+            }
+            val fresh = songs.filter { song -> ids.add(song.id) && !had(song) }
+            added = fresh.size
+            val next = old.copy(
+                name = if (rename) name else old.name,
+                songs = old.songs + fresh,
+                cover = old.cover?.takeIf(PlaylistCovers::isOwn) ?: cover ?: old.cover,
+                spotifyId = old.spotifyId ?: spotifyId,
+            )
+            if (next == old) data
+            else data.copy(localPlaylists = data.localPlaylists.map { if (it.id == id) next.copy(updatedAt = System.currentTimeMillis()) else it })
+        }
+        return added
     }
 
     /**

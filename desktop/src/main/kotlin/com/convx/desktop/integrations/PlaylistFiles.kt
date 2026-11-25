@@ -5,6 +5,7 @@
 
 package com.convx.desktop.integrations
 
+import com.convx.desktop.data.Song
 import java.io.File
 import java.net.URLDecoder
 import java.nio.ByteBuffer
@@ -27,7 +28,8 @@ object PlaylistFiles {
         val spotifyId: String? = null,
     )
 
-    data class Parsed(val title: String, val tracks: List<FileTrack>)
+    /** A playlist file's name and songs; [id] and [cover] are the Convx playlist a Convx export came from. */
+    data class Parsed(val title: String, val tracks: List<FileTrack>, val id: String? = null, val cover: String? = null)
 
     /** The first rows of a CSV and a first guess at which column is which, for the mapping dialog. */
     data class CsvPreview(
@@ -87,6 +89,8 @@ object PlaylistFiles {
      */
     fun parseM3u(text: String, fallbackTitle: String): Parsed {
         var title = fallbackTitle
+        var id: String? = null
+        var cover: String? = null
         val tracks = mutableListOf<FileTrack>()
         var pending: FileTrack? = null
         for (raw in text.lineSequence()) {
@@ -94,6 +98,8 @@ object PlaylistFiles {
             when {
                 line.isEmpty() -> Unit
                 line.startsWith("#PLAYLIST:", ignoreCase = true) -> line.substringAfter(':').trim().takeIf { it.isNotEmpty() }?.let { title = it }
+                line.startsWith(IdTag) -> id = line.removePrefix(IdTag).trim().takeIf { it.startsWith("local-") }
+                line.startsWith(CoverTag) -> cover = line.removePrefix(CoverTag).trim().takeIf { it.startsWith("https://") }
                 line.startsWith("#EXTINF:", ignoreCase = true) -> {
                     pending?.let { tracks += it }
                     pending = parseExtInf(line)
@@ -112,8 +118,39 @@ object PlaylistFiles {
             }
         }
         pending?.let { tracks += it }
-        return Parsed(title, tracks.filter { it.videoId != null || it.title.isNotBlank() })
+        return Parsed(title, tracks.filter { it.videoId != null || it.title.isNotBlank() }, id, cover)
     }
+
+    private const val IdTag = "#CONVX-ID:"
+    private const val CoverTag = "#CONVX-COVER:"
+
+    /**
+     * A Convx playlist as an M3U file (UTF-8). The phone's "Import a m3u playlist" reads its
+     * `#EXTINF:<seconds>,<artist1;artist2> - <title>` lines; Convx on a PC also reads the YouTube
+     * Music link under each, so it gets the very songs back without searching, and the playlist's
+     * Convx id and picture, so importing it again adds to the same playlist. Music players read it too.
+     * [location] is the line under a song: its link, or the file of a song that is a file.
+     */
+    fun writeM3u(name: String, id: String?, cover: String?, songs: List<Song>, location: (Song) -> String): String =
+        buildString {
+            fun line(text: String) = text.replace(LineBreaks, " ").trim()
+            append("#EXTM3U\n")
+            append("#PLAYLIST:").append(line(name)).append('\n')
+            id?.let { append(IdTag).append(line(it)).append('\n') }
+            cover?.takeIf { it.startsWith("https://") }?.let { append(CoverTag).append(line(it)).append('\n') }
+            songs.forEach { song ->
+                // The phone splits artists on ";" and the title off at the first " - ".
+                val artists = song.artists.map { line(it.name).replace(';', ',') }.filter { it.isNotEmpty() }.joinToString(";")
+                append("#EXTINF:").append(song.duration?.takeIf { it > 0 } ?: -1).append(',')
+                if (artists.isNotEmpty()) append(artists).append(" - ")
+                append(line(song.title)).append('\n')
+                append(line(location(song))).append('\n')
+            }
+        }
+
+    private val LineBreaks = Regex("[\\r\\n]+")
+
+    private fun isM3u(name: String) = name.endsWith(".m3u", ignoreCase = true) || name.endsWith(".m3u8", ignoreCase = true)
 
     private fun parseExtInf(line: String): FileTrack? {
         val body = line.substringAfter(':')
@@ -227,15 +264,20 @@ object PlaylistFiles {
         if (file.extension.equals("zip", ignoreCase = true)) {
             java.util.zip.ZipFile(file).use { zip ->
                 zip.entries().asSequence()
-                    .filter { !it.isDirectory && it.name.endsWith(".csv", ignoreCase = true) && it.size in 0..MaxBytes }
+                    .filter { !it.isDirectory && (it.name.endsWith(".csv", ignoreCase = true) || isM3u(it.name)) && it.size in 0..MaxBytes }
                     .take(500)
-                    .map { entry -> parseCsvPlaylist(entry.name, decode(zip.getInputStream(entry).use { it.readBytes() })) }
+                    .map { entry -> playlistOf(entry.name, decode(zip.getInputStream(entry).use { it.readBytes() })) }
                     .toList()
             }
         } else {
-            listOf(parseCsvPlaylist(file.name, read(file)))
+            listOf(playlistOf(file.name, read(file)))
         }
     }
+
+    /** A CSV, or an M3U such as Convx's own export. */
+    private fun playlistOf(fileName: String, text: String): Parsed =
+        if (isM3u(fileName)) parseM3u(text, fileName.substringAfterLast('/').substringAfterLast('\\').substringBeforeLast('.').ifBlank { "Imported playlist" })
+        else parseCsvPlaylist(fileName, text)
 
     private fun parseCsvPlaylist(fileName: String, text: String): Parsed {
         val preview = previewCsv(text)

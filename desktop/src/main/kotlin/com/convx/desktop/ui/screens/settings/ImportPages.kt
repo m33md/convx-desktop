@@ -35,7 +35,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.convx.desktop.core.Log
 import com.convx.desktop.data.Library
+import com.convx.desktop.data.LocalPlaylist
+import com.convx.desktop.integrations.PlaylistExport
 import com.convx.desktop.integrations.PlaylistFiles
 import com.convx.desktop.integrations.PlaylistImport
 import com.convx.desktop.integrations.spotify.SpotifyApi
@@ -44,6 +47,7 @@ import com.convx.desktop.ui.components.Chip
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.DialogCard
 import com.convx.desktop.ui.components.Overlays
+import com.convx.desktop.ui.components.chooseFolder
 import com.convx.desktop.ui.components.PillButton
 import com.convx.desktop.ui.shapes.ContinuousRoundedRectangle
 import com.convx.desktop.ui.shell.LocalNavigator
@@ -62,7 +66,8 @@ internal fun SpotifyImportSection() {
     SettingsSection(
         "Import",
         footer = "Import your Spotify playlists and Liked Songs into your library. Convx searches YouTube Music for the best " +
-            "match of each song and mirrors them to Convx playlists. Importing a playlist again updates it.",
+            "match of each song and puts them in Convx playlists. A playlist you already have, from Spotify or Exportify, " +
+            "only gets the songs it's missing, so nothing is imported twice.",
     ) {
         SettingsRow(
             "Import playlists",
@@ -101,28 +106,51 @@ private fun spotifyImportDialog() {
         var liked by remember { mutableStateOf<Int?>(null) }
         var failed by remember { mutableStateOf<String?>(null) }
         var selected by remember { mutableStateOf(setOf<String>()) }
+        val library by Library.state.collectAsState()
+        val ids = listOf(LikedKey) + playlists.orEmpty().map { it.id }
+        // What Convx has already, from an earlier import or Exportify, so only what's missing need come.
+        val there = remember(playlists, library) {
+            val flags = PlaylistImport.alreadyThere(listOf<SpotifyPlaylist?>(null) + playlists.orEmpty())
+            ids.filterIndexed { i, _ -> flags[i] }.toSet()
+        }
+        val missing = ids.filterNot { it in there }.toSet()
         LaunchedEffect(Unit) {
             val result = SpotifyApi.playlists()
             playlists = result.getOrNull()
             failed = result.exceptionOrNull()?.let { it.message ?: "Spotify didn't answer" }
             liked = SpotifyApi.likedCount().getOrNull()
         }
-        val ids = listOf(LikedKey) + playlists.orEmpty().map { it.id }
+        // Once you've imported before, what's missing is picked for you.
+        LaunchedEffect(playlists) {
+            if (playlists != null && there.isNotEmpty()) selected = missing
+        }
+        fun note(id: String) = if (id in there) "In Convx" else null
         DialogCard("Select playlists to import") {
             when {
                 failed != null -> Text("Couldn't load your Spotify playlists ($failed). Check your connection and try again.", style = ConvxType.Body, color = SystemColors.Red)
                 playlists == null -> Text("Loading your playlists…", style = ConvxType.Body, color = ConvxColors.SecondaryLabel)
                 else -> {
-                    Text("${playlists!!.size} playlists available", style = ConvxType.Subhead, color = ConvxColors.SecondaryLabel)
+                    Text(
+                        "${playlists!!.size} playlists available" +
+                            if (there.isEmpty()) "" else if (missing.isEmpty()) " · all in Convx already" else " · ${missing.size} not in Convx yet",
+                        style = ConvxType.Subhead,
+                        color = ConvxColors.SecondaryLabel,
+                    )
                     Spacer(Modifier.height(8.dp))
                     ScrollbarColumn(Modifier.heightIn(max = 380.dp)) {
                         CheckRow("Select All", checked = selected.size == ids.size) {
                             selected = if (selected.size == ids.size) emptySet() else ids.toSet()
                         }
+                        if (there.isNotEmpty() && missing.isNotEmpty()) {
+                            RowDivider(PlainInset)
+                            CheckRow("Only what's missing", "Playlists that aren't in Convx", checked = selected == missing) {
+                                selected = if (selected == missing) emptySet() else missing
+                            }
+                        }
                         RowDivider(PlainInset)
                         CheckRow(
                             "Liked Songs",
-                            "Your Spotify Liked Songs" + (liked?.let { " · $it songs" } ?: ""),
+                            listOfNotNull("Your Spotify Liked Songs" + (liked?.let { " · $it songs" } ?: ""), note(LikedKey)).joinToString(" · "),
                             checked = LikedKey in selected,
                             icon = "favorite",
                             tint = SystemColors.Indigo,
@@ -131,7 +159,7 @@ private fun spotifyImportDialog() {
                             RowDivider()
                             CheckRow(
                                 playlist.name,
-                                "${playlist.trackCount} songs · ${playlist.owner}",
+                                listOfNotNull(playlist.trackCount.takeIf { it >= 0 }?.let { "$it songs" }, playlist.owner.ifBlank { null }, note(playlist.id)).joinToString(" · "),
                                 checked = playlist.id in selected,
                                 icon = "queue_music",
                                 tint = SystemColors.Green,
@@ -310,6 +338,8 @@ internal fun importM3uFile() {
         Overlays.toast("Couldn't read ${file.name}", "error")
         return
     }
+    // A playlist exported from Convx goes back into its playlist, like Import playlists from Convx does.
+    if (parsed.id != null) return importConvxLists(listOf(parsed))
     if (!PlaylistImport.busy) PlaylistImport.dismiss()
     PlaylistImport.loadFile(parsed)
     Overlays.showDialog {
@@ -347,6 +377,118 @@ internal fun importExportifyFiles() {
             ImportStages(state, PlaylistImport.ExportifySource) { FileImportIdle(state) }
         }
     }
+}
+
+/**
+ * Playlists exported from Convx, here or on another device: each file goes into the playlist it
+ * came from or one of yours with its name, adding only the songs that one is missing; the rest
+ * become new playlists.
+ */
+internal fun importConvxFiles() {
+    val files = pickFiles("Choose playlists exported from Convx", listOf(PlaylistExport.Extension, "m3u8", "zip"))
+    if (files.isEmpty()) return
+    val lists = runCatching { PlaylistFiles.readPlaylistFiles(files) }.getOrElse {
+        Overlays.toast("Couldn't read those files: ${it.message ?: "unknown error"}", "error")
+        return
+    }
+    importConvxLists(lists)
+}
+
+private fun importConvxLists(read: List<PlaylistFiles.Parsed>) {
+    val lists = read.filter { it.tracks.isNotEmpty() }
+    if (lists.isEmpty()) {
+        Overlays.toast("No songs found in those files", "error")
+        return
+    }
+    if (PlaylistImport.busy) {
+        Overlays.toast("Another import is running; wait for it to finish.", "error")
+        return
+    }
+    PlaylistImport.dismiss()
+    PlaylistImport.importFiles(lists, PlaylistImport.ConvxSource)
+    Overlays.showDialog {
+        val state by PlaylistImport.state.collectAsState()
+        DialogCard("Import playlists") {
+            ImportStages(state, PlaylistImport.ConvxSource) { FileImportIdle(state) }
+        }
+    }
+}
+
+/** Your playlists, all or the ones you pick, each saved as a file in a folder you choose. */
+internal fun exportPlaylistsDialog() {
+    val playlists = Library.value.localPlaylists.filter { it.songs.isNotEmpty() }
+    if (playlists.isEmpty()) {
+        Overlays.toast("You have no playlists with songs to export", "error")
+        return
+    }
+    Overlays.showDialog {
+        var selected by remember { mutableStateOf(playlists.map { it.id }.toSet()) }
+        DialogCard("Export playlists") {
+            Text(
+                "Each playlist is saved as its own .m3u file. On another PC, open Settings > Backup & restore > Import playlists " +
+                    "from Convx and choose them all. On the phone, use Backup & restore > Import a m3u playlist, one file at a time.",
+                style = ConvxType.Subhead,
+                color = ConvxColors.SecondaryLabel,
+            )
+            Spacer(Modifier.height(8.dp))
+            ScrollbarColumn(Modifier.heightIn(max = 340.dp)) {
+                CheckRow("Select All", checked = selected.size == playlists.size) {
+                    selected = if (selected.size == playlists.size) emptySet() else playlists.map { it.id }.toSet()
+                }
+                playlists.forEach { playlist ->
+                    RowDivider()
+                    CheckRow(
+                        playlist.name,
+                        "${playlist.songs.size} ${if (playlist.songs.size == 1) "song" else "songs"}",
+                        checked = playlist.id in selected,
+                        icon = "queue_music",
+                        tint = SystemColors.Red,
+                    ) { selected = selected.toggle(playlist.id) }
+                }
+            }
+            Spacer(Modifier.height(20.dp))
+            DialogButtons {
+                PillButton("Cancel", { Overlays.dismissDialog() })
+                PillButton(if (selected.isEmpty()) "Export" else "Export ${selected.size}", {
+                    if (selected.isNotEmpty()) {
+                        val chosen = playlists.filter { it.id in selected }
+                        Overlays.dismissDialog()
+                        chooseFolder("Choose where to save your playlists") { dir -> exportTo(chosen, File(dir)) }
+                    }
+                }, filled = selected.isNotEmpty())
+            }
+        }
+    }
+}
+
+private fun exportTo(playlists: List<LocalPlaylist>, folder: File) {
+    runCatching { PlaylistExport.writeAll(playlists, folder) }
+        .onSuccess { files ->
+            Overlays.toast(
+                "Exported ${files.size} ${if (files.size == 1) "playlist" else "playlists"} to ${folder.name.ifBlank { folder.path }}",
+                action = "Open folder",
+            ) { openFolder(folder) }
+        }
+        .onFailure {
+            Log.w("PlaylistExport", "Couldn't export to $folder", it)
+            Overlays.toast("Couldn't save the playlists there: ${it.message ?: "unknown error"}", "error")
+        }
+}
+
+/** One playlist saved as a file, from its own menu. */
+internal fun exportPlaylist(playlist: LocalPlaylist) {
+    val picker = FileDialog(null as Frame?, "Export playlist", FileDialog.SAVE).apply {
+        file = PlaylistExport.fileName(playlist.name) + "." + PlaylistExport.Extension
+        isVisible = true
+    }
+    val name = picker.file ?: return
+    val file = File(picker.directory, if (name.endsWith(".m3u8", true) || name.endsWith(".m3u", true)) name else "$name.${PlaylistExport.Extension}")
+    runCatching { PlaylistExport.write(playlist, file) }
+        .onSuccess { Overlays.toast("Exported ${playlist.name}", action = "Open folder") { openFolder(file.parentFile) } }
+        .onFailure {
+            Log.w("PlaylistExport", "Couldn't export to $file", it)
+            Overlays.toast("Couldn't save ${file.name}: ${it.message ?: "unknown error"}", "error")
+        }
 }
 
 /** Exportify on the Spotify page: the way in without Premium or the shared connection. */

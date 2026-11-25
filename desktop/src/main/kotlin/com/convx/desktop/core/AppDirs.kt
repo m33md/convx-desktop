@@ -23,15 +23,38 @@ object AppDirs {
         File(base, "Convx").apply { mkdirs() }
     }
 
+    /**
+     * Covers, the song cache, logs and the like. On Windows the installer puts Convx itself in
+     * %LOCALAPPDATA%\Convx and empties that folder on every update, so the cache sits beside it,
+     * in %LOCALAPPDATA%\Convx Cache, where an update leaves it alone.
+     */
     val cache: File by lazy {
-        val base = if (isWindows) {
-            System.getenv("LOCALAPPDATA")?.let(::File) ?: File(System.getProperty("user.home"), "AppData/Local")
-        } else if (isMac) {
-            File(System.getProperty("user.home"), "Library/Caches")
+        if (isWindows) {
+            val local = System.getenv("LOCALAPPDATA")?.let(::File) ?: File(System.getProperty("user.home"), "AppData/Local")
+            File(local, "Convx Cache").apply {
+                mkdirs()
+                moveOldCache(File(local, "Convx"), this)
+            }
         } else {
-            System.getenv("XDG_CACHE_HOME")?.let(::File) ?: File(System.getProperty("user.home"), ".cache")
+            val base = if (isMac) {
+                File(System.getProperty("user.home"), "Library/Caches")
+            } else {
+                System.getenv("XDG_CACHE_HOME")?.let(::File) ?: File(System.getProperty("user.home"), ".cache")
+            }
+            File(base, "Convx").apply { mkdirs() }
         }
-        File(base, "Convx").apply { mkdirs() }
+    }
+
+    /** What Convx kept in its install folder, which a copy of Convx that wasn't updated by the installer may still have. */
+    private val CacheParts = listOf("images", "lyrics", "logs", "audio", "local-covers", "module-scripts", "apple_catalog")
+
+    private fun moveOldCache(old: File, into: File) {
+        for (name in CacheParts) {
+            val from = File(old, name)
+            val to = File(into, name)
+            if (!from.isDirectory || to.exists()) continue
+            runCatching { java.nio.file.Files.move(from.toPath(), to.toPath()) }
+        }
     }
 
     val images: File by lazy { File(cache, "images").apply { mkdirs() } }

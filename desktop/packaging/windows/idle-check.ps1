@@ -178,7 +178,7 @@ if ($process.HasExited) {
 }
 
 # Convx's own log: its Perf lines say how many frames it drew while idle.
-Get-ChildItem (Join-Path $local 'Convx\logs') -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object {
+Get-ChildItem (Join-Path $local 'Convx Cache\logs') -Filter *.log -ErrorAction SilentlyContinue | ForEach-Object {
     Copy-Item $_.FullName (Join-Path $OutDir "$Name-$($_.Name)")
     Select-String -Path $_.FullName -Pattern 'Perf|I/Memory' | ForEach-Object { Say $_.Line }
 }

@@ -77,7 +77,67 @@ object LocalMusic {
     private val _status = MutableStateFlow<Status>(Status.Idle)
     val status: StateFlow<Status> = _status.asStateFlow()
     private var job: Job? = null
+    private var repairJob: Job? = null
     private val covers by lazy { File(AppDirs.cache, "local-covers").apply { mkdirs() } }
+
+    private val _coversChanged = MutableStateFlow(0)
+
+    /** Goes up whenever covers of local files were saved again, so pictures that were missing are looked for again. */
+    val coversChanged: StateFlow<Int> = _coversChanged.asStateFlow()
+
+    /**
+     * The file behind a cover link: the file itself, or for a cover Convx saved out of a music file,
+     * the same picture where Convx keeps them now (an older link may name a folder that's gone).
+     */
+    fun coverFile(url: String): File? {
+        val file = runCatching { File(java.net.URI(url)) }.getOrNull() ?: return null
+        if (file.isFile) return file
+        if (file.parentFile?.name != "local-covers") return null
+        return File(covers, file.name).takeIf { it.isFile }
+    }
+
+    /** Whether a track's cover was saved out of its file and that copy is gone, so it must be read again. */
+    private fun lostCover(track: Track): Boolean {
+        val cover = track.cover ?: return false
+        if (!cover.startsWith("file:")) return false
+        return coverFile(cover) == null
+    }
+
+    /** A track whose cover moved with the cache, pointed at where it is now. */
+    private fun relinked(track: Track): Track {
+        val cover = track.cover?.takeIf { it.startsWith("file:") } ?: return track
+        val file = coverFile(cover) ?: return track
+        val now = file.toURI().toString()
+        return if (now == cover) track else track.copy(cover = now)
+    }
+
+    /**
+     * Saves again the covers that went missing (a cleared cache, or one an older Convx kept where its
+     * updates deleted it), without a full scan. Runs when Convx starts.
+     */
+    fun repairCovers() {
+        if (job?.isActive == true || repairJob?.isActive == true) return
+        repairJob = AppScope.launch(Dispatchers.IO) {
+            val tracks = store.value.tracks
+            val fixed = HashMap<String, Track>()
+            for ((id, track) in tracks) {
+                ensureActive()
+                val linked = relinked(track)
+                if (!lostCover(linked)) {
+                    if (linked !== track) fixed[id] = linked
+                    continue
+                }
+                val file = File(track.path)
+                if (!file.isFile) continue
+                readTrack(id, file)?.let { fixed[id] = it }
+            }
+            if (fixed.isEmpty()) return@launch
+            store.update { index -> Index(index.tracks + fixed.filterKeys { it in index.tracks }) }
+            runCatching { FolderPlaylists.sync(store.value) }
+            _coversChanged.value++
+            Log.i(Tag, "Saved ${fixed.size} covers of local files again")
+        }
+    }
 
     fun isLocal(id: String) = id.startsWith(Prefix)
 
@@ -131,6 +191,8 @@ object LocalMusic {
      * reads every file again ("Read tags again"). Folder playlists follow what was found.
      */
     fun scan(untagged: Boolean = false, everything: Boolean = false) {
+        // A scan saves missing covers again too.
+        repairJob?.cancel()
         val running = job
         if (running?.isActive == true) {
             if (!untagged && !everything) return
@@ -157,9 +219,10 @@ object LocalMusic {
                             ensureActive()
                             val id = idOf(file)
                             if (id in found) return@forEach
-                            val old = before[id]
+                            val old = before[id]?.let(::relinked)
                             val same = old != null && old.modified == file.lastModified() && old.size == file.length()
-                            found[id] = if (same && !everything && !(untagged && old!!.untagged)) {
+                            // A file whose saved cover is gone is read again, which saves its cover again.
+                            found[id] = if (same && !everything && !(untagged && old!!.untagged) && !lostCover(old!!)) {
                                 old!!
                             } else {
                                 read++
@@ -170,6 +233,7 @@ object LocalMusic {
                 }
                 store.update { Index(found) }
                 runCatching { FolderPlaylists.sync(store.value) }.onFailure { Log.w(Tag, "Couldn't update the folder playlists", it) }
+                if (read > 0) _coversChanged.value++
                 val added = found.keys.count { it !in before }
                 val removed = before.keys.count { it !in found }
                 _status.value = Status.Done(System.currentTimeMillis(), found.size, added, removed)
@@ -183,7 +247,7 @@ object LocalMusic {
     }
 
     /** One id per file, stable across scans; the path itself never goes into file names or links. */
-    private fun idOf(file: File): String {
+    internal fun idOf(file: File): String {
         val digest = MessageDigest.getInstance("SHA-1").digest(file.absolutePath.lowercase().toByteArray(Charsets.UTF_8))
         return Prefix + digest.take(10).joinToString("") { "%02x".format(it) }
     }
@@ -191,7 +255,10 @@ object LocalMusic {
     /** Reads one file's tags the way a scan does; for the playback check. */
     internal fun read(file: File): Track? = readTrack(idOf(file), file)
 
-    private fun readTrack(id: String, file: File): Track? {
+    /** A file's tags without saving its cover, for songs that are only matched, never listed (LocalCopies). */
+    internal fun readTags(id: String, file: File): Track? = readTrack(id, file, withCover = false)
+
+    private fun readTrack(id: String, file: File, withCover: Boolean = true): Track? {
         val grabber = FFmpegFrameGrabber(file.absolutePath)
         return try {
             grabber.start()
@@ -216,7 +283,7 @@ object LocalMusic {
                 named = tagged.isEmpty() && named != null,
                 album = tags["album"],
                 durationMs = grabber.lengthInTime / 1000,
-                cover = embeddedCover(id, grabber) ?: folderCover(file.parentFile),
+                cover = if (withCover) embeddedCover(id, grabber) ?: folderCover(file.parentFile) else null,
                 codec = audioCodec(grabber),
                 bitrate = grabber.audioBitrate.takeIf { it > 0 },
                 sampleRate = grabber.sampleRate.takeIf { it > 0 },

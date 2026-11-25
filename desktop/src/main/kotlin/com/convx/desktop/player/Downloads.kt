@@ -257,6 +257,13 @@ object Downloads {
         return { file -> file.parentFile?.let { samePath(it, folder) } == true && file.nameWithoutExtension.lowercase() in names }
     }
 
+    /** A music file of yours in a download folder you picked, where Convx's copy of [song] would go. */
+    private fun ownFileIn(song: Song): File? {
+        val folder = pickedExportDir ?: return null
+        val base = exportBaseName(song.artistText, song.title)
+        return LocalMusic.Extensions.firstNotNullOfOrNull { ext -> File(folder, "$base.$ext").takeIf { it.isFile } }
+    }
+
     private fun samePath(a: File, b: File) =
         a.absolutePath.trimEnd('\\', '/').equals(b.absolutePath.trimEnd('\\', '/'), ignoreCase = true)
 
@@ -273,12 +280,15 @@ object Downloads {
             if (!writable) return "Convx can't save files in ${folder.name.ifBlank { folder.path }}"
         }
         AppSettings.update { it.copy(downloadFolder = folder?.absolutePath?.takeIf { folder != defaultExportDir }) }
+        LocalCopies.refresh()
         return null
     }
 
     private suspend fun fetch(song: Song) {
         val id = song.id
         var part: File? = null
+        // A song saved before has its copy in the folder already; any other file of that name is yours.
+        val savedBefore = done.value.containsKey(id)
         try {
             setStatus(id, Status.Running(0, 0))
             val request = requests[id]
@@ -298,7 +308,11 @@ object Downloads {
             record(song, target, stream)
             _active.update { it - id }
             Log.i(Tag, "Downloaded ${song.title} (${stream.badge}${stream.module?.let { " from $it" } ?: ""})")
-            if (export) {
+            val yours = if (export && request == null && !savedBefore) ownFileIn(song) else null
+            if (yours != null) {
+                // The download folder is your own music: your file of this song stays as it is.
+                Log.i(Tag, "${song.title} is in the download folder already (${yours.extension}); not copied over it")
+            } else if (export) {
                 // A module's copy takes the place of one saved from YouTube before.
                 requests.remove(id)
                 runCatching { exportToMusic(song, target, format, request?.folder ?: exportDir, if (stream.module != null) YouTubeCopies else emptySet()) }

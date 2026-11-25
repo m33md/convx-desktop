@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -168,8 +169,9 @@ object ImageCache {
             try {
                 val outcome = runCatching { fetch(url, maxSide) }
                 val result = outcome.getOrNull()
-                // Only a definite "not there" is remembered; network blips retry on the next ask.
-                if (result == null && outcome.isSuccess) failed += url
+                // Only a definite "not there" is remembered; network blips retry on the next ask. A missing
+                // cover of a file on this PC isn't: Convx saves it again (LocalMusic.repairCovers).
+                if (result == null && outcome.isSuccess && !url.startsWith("file:")) failed += url
                 // A bigger copy made meanwhile stays.
                 result?.let { (image, side) -> kept(url, side) ?: image.also { keep(url, it, side) } }
             } finally {
@@ -206,7 +208,7 @@ object ImageCache {
     private suspend fun fetch(url: String, maxSide: Int): Pair<ImageBitmap, Int>? {
         // Covers of music files on this PC are read where they are.
         if (url.startsWith("file:")) {
-            val bytes = File(java.net.URI(url)).takeIf { it.isFile }?.readBytes() ?: return null
+            val bytes = com.convx.desktop.player.LocalMusic.coverFile(url)?.readBytes() ?: return null
             return decode(bytes, maxSide)
         }
         val file = File(AppDirs.images, sha1(url))
@@ -286,10 +288,17 @@ object ImageCache {
 
 /** The picture at [url] as it came; lists of covers use [Artwork], which makes it the size it's drawn at. */
 @Composable
-fun rememberImage(url: String?): State<ImageBitmap?> =
-    produceState(initialValue = url?.let(ImageCache::peek), url) {
+fun rememberImage(url: String?): State<ImageBitmap?> {
+    val again = localCoversAgain(url)
+    return produceState(initialValue = url?.let(ImageCache::peek), url, again) {
         value = url?.let { ImageCache.load(it) }
     }
+}
+
+/** For a cover of a file on this PC, a number that goes up when such covers are saved again, so a missing one is looked for again. */
+@Composable
+private fun localCoversAgain(url: String?): Int =
+    if (url?.startsWith("file:") == true) com.convx.desktop.player.LocalMusic.coversChanged.collectAsState().value else 0
 
 /** The pixel sizes covers are made at: the first one that covers the box they're drawn in. */
 private val CoverSides = intArrayOf(40, 56, 72, 96, 128, 160, 200, 256, 320, 400, 512, 640, 800, 1000, 1280, 1600)
@@ -325,7 +334,8 @@ fun Artwork(
     val resolved = remember(url, size) { artworkUrl(url, size) }
     // The box's longer side in pixels, known once it's laid out; the cover is then made for it.
     val side = remember { MutableStateFlow(-1) }
-    val image by produceState(initialValue = resolved?.let(ImageCache::peek), resolved) {
+    val again = localCoversAgain(resolved)
+    val image by produceState(initialValue = resolved?.let(ImageCache::peek), resolved, again) {
         if (resolved == null) {
             value = null
             return@produceState

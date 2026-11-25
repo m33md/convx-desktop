@@ -287,12 +287,13 @@ object PlayerController : AudioEngine.Listener {
     }
 
     private fun playEndpointNow(endpoint: WatchEndpoint, title: String?) = guarded {
-        val result = YouTube.next(endpoint).getOrNull() ?: run {
-            _state.update { it.copy(error = "Couldn't start this mix") }
+        val result = YouTube.next(endpoint).onFailure { Log.w(Tag, "Couldn't start ${endpoint.playlistId ?: endpoint.videoId}", it) }.getOrNull()
+        val songs = result?.items.orEmpty().map { it.toSong() }
+        if (result == null || songs.isEmpty()) {
+            if (result != null) Log.w(Tag, "YouTube Music sent no songs for ${endpoint.playlistId ?: endpoint.videoId}")
+            _state.update { it.copy(error = if (result == null) "Couldn't start this mix" else "YouTube Music didn't send any songs for this") }
             return@guarded
         }
-        val songs = result.items.map { it.toSong() }
-        if (songs.isEmpty()) return@guarded
         unshuffled = null
         radioEndpoint = result.endpoint
         radioContinuation = result.continuation
@@ -754,7 +755,14 @@ object PlayerController : AudioEngine.Listener {
     }
 
     private suspend fun extendRadio(endpoint: WatchEndpoint, replaceAfterCurrent: Boolean) {
-        val result = YouTube.next(endpoint, radioContinuation).getOrNull() ?: return
+        val result = YouTube.next(endpoint, radioContinuation)
+            .onFailure { Log.w(Tag, "Couldn't load the radio ${endpoint.playlistId ?: endpoint.videoId}", it) }
+            .getOrNull()
+        // A radio that just started and brought nothing says so; the song itself still plays.
+        if (replaceAfterCurrent && result?.items.isNullOrEmpty()) {
+            _state.update { it.copy(error = "YouTube Music didn't send a radio for this song") }
+        }
+        if (result == null) return
         radioContinuation = result.continuation
         radioEndpoint = result.endpoint
         val s = _state.value
@@ -819,8 +827,9 @@ object PlayerController : AudioEngine.Listener {
                 failCurrent("\"${song.title}\" isn't on this PC any more")
                 return@launch
             }
-            // A downloaded song plays from its file with no call to YouTube, so it works offline.
-            val offline = if (local == null) Downloads.offline(song.id) else null
+            // A downloaded song plays from its file with no call to YouTube, so it works offline;
+            // so does a song you have a file of yourself.
+            val offline = if (local == null) Downloads.offline(song.id) ?: LocalCopies.find(song) else null
             val stream = if (local != null) {
                 LocalMusic.stream(song.id, local)
             } else if (offline != null) {
@@ -870,7 +879,7 @@ object PlayerController : AudioEngine.Listener {
             delay(3_000)
             val song = SpotifyMatcher.resolve(next) ?: return@launch
             val id = song.id
-            if (LocalMusic.isLocal(id) || AudioCache.isCachedForPlayback(id) || Downloads.isDownloaded(id)) return@launch
+            if (LocalMusic.isLocal(id) || AudioCache.isCachedForPlayback(id) || Downloads.isDownloaded(id) || LocalCopies.find(song) != null) return@launch
             StreamResolver.resolveFor(song, AppSettings.value.audioQuality).onSuccess { AudioCache.prefetch(it) }
         }
     }
@@ -880,7 +889,7 @@ object PlayerController : AudioEngine.Listener {
         val song = if (SpotifyMatcher.isSpotify(queued)) SpotifyMatcher.resolve(queued) ?: return null else queued
         val local = LocalMusic.track(song.id).takeIf { LocalMusic.isLocal(song.id) }
         if (LocalMusic.isLocal(song.id) && (local == null || !java.io.File(local.path).isFile)) return null
-        val offline = if (local == null) Downloads.offline(song.id) else null
+        val offline = if (local == null) Downloads.offline(song.id) ?: LocalCopies.find(song) else null
         val stream = when {
             local != null -> LocalMusic.stream(song.id, local)
             offline != null -> offline.first

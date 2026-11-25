@@ -73,6 +73,9 @@ class InnerTube {
 
     var useLoginForBrowse: Boolean = false
 
+    /** Where notes about requests that needed a second try go (the app's log). */
+    var log: ((String) -> Unit)? = null
+
     @OptIn(ExperimentalSerializationApi::class)
     private fun createClient() = HttpClient(OkHttp) {
         expectSuccess = true
@@ -303,15 +306,18 @@ class InnerTube {
         params: String? = null,
         continuation: String? = null,
         setLogin: Boolean = false,
+        /** Asks as nobody in particular, without the account, whatever the other settings say. */
+        guest: Boolean = false,
     ) = withRetry {
+        val login = !guest && (setLogin || useLoginForBrowse)
         httpClient.post("browse") {
-            ytClient(client, setLogin = setLogin || useLoginForBrowse)
+            ytClient(client, setLogin = login)
             setBody(
                 BrowseBody(
                     context = client.toContext(
                         locale,
                         visitorData,
-                        if (setLogin || useLoginForBrowse) dataSyncId else null
+                        if (login) dataSyncId else null
                     ),
                     browseId = browseId,
                     params = params,
@@ -329,12 +335,13 @@ class InnerTube {
         index: Int?,
         params: String?,
         continuation: String? = null,
+        guest: Boolean = false,
     ) = withRetry {
         httpClient.post("next") {
-            ytClient(client, setLogin = true)
+            ytClient(client, setLogin = !guest)
             setBody(
                 NextBody(
-                    context = client.toContext(locale, visitorData, dataSyncId),
+                    context = client.toContext(locale, visitorData, if (guest) null else dataSyncId),
                     videoId = videoId,
                     playlistId = playlistId,
                     playlistSetVideoId = playlistSetVideoId,

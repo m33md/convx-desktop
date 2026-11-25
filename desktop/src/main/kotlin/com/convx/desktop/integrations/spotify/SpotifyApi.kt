@@ -40,6 +40,7 @@ data class SpotifyPlaylist(
     val name: String,
     val owner: String,
     val image: String?,
+    /** How many songs, or -1 when Spotify didn't say (its web player lists playlists without a count). */
     val trackCount: Int,
     val description: String = "",
 )
@@ -56,8 +57,10 @@ data class SpotifyTrack(
 )
 
 /**
- * Spotify's Web API, read-only: who you are, your playlists, what's in them, and your Liked
- * Songs. Pages are fetched whole and kept for the session; [clearCache] drops them.
+ * Your Spotify library, read-only: who you are, your playlists, what's in them, and your Liked
+ * Songs. Logged in as the phone is, it comes through the web player's API ([SpotifyPathfinder]);
+ * linked through a developer app, through Spotify's Web API. Pages are fetched whole and kept for
+ * the session; [clearCache] drops them.
  */
 object SpotifyApi {
     private const val Tag = "Spotify"
@@ -75,6 +78,13 @@ object SpotifyApi {
     private val trackLocks = ConcurrentHashMap<String, Mutex>()
 
     private val _waiting = MutableStateFlow<String?>(null)
+
+    init {
+        SpotifyPathfinder.onWaiting = { _waiting.value = it }
+    }
+
+    /** Logged in as the phone is: the web player's API rather than the Web API. */
+    private val web: Boolean get() = SpotifyAccount.usesWebPlayer
 
     /** While Spotify has asked Convx to slow down, what it said, so a page can show it instead of "…". */
     val waiting: StateFlow<String?> = _waiting.asStateFlow()
@@ -99,6 +109,7 @@ object SpotifyApi {
     }
 
     suspend fun me(): Result<SpotifyProfile> = attempt {
+        if (web) return@attempt SpotifyPathfinder.profile()
         val obj = get("$Base/me")
         SpotifyProfile(
             id = obj.str("id").orEmpty(),
@@ -116,6 +127,7 @@ object SpotifyApi {
     private suspend fun readPlaylists(refresh: Boolean): List<SpotifyPlaylist> {
         // Whoever waited for the lock may find the list already read.
         if (!refresh) playlists?.let { return it }
+        if (web) return SpotifyPathfinder.playlists().also { playlists = it }
         val items = pages("$Base/me/playlists?limit=50").mapNotNull { element ->
             val obj = element as? JsonObject ?: return@mapNotNull null
             val id = obj.str("id") ?: return@mapNotNull null
@@ -141,6 +153,7 @@ object SpotifyApi {
 
     private suspend fun readPlaylistTracks(id: String, refresh: Boolean): List<SpotifyTrack> {
         if (!refresh) playlistTracks[id]?.let { return it }
+        if (web) return SpotifyPathfinder.playlistTracks(id).also { playlistTracks[id] = it }
         val fields = "limit=100&additional_types=track&market=from_token"
         val rows = try {
             pages("$Base/playlists/$id/items?$fields")
@@ -155,6 +168,7 @@ object SpotifyApi {
 
     /** Spotify's tracks for a search, best first by Spotify's own ranking; a handful is plenty for one song. */
     suspend fun searchTracks(query: String, limit: Int = 5): Result<List<SpotifyTrack>> = attempt {
+        if (web) return@attempt SpotifyPathfinder.searchTracks(query, limit)
         val q = java.net.URLEncoder.encode(query, Charsets.UTF_8)
         get("$Base/search?type=track&limit=${limit.coerceIn(1, 10)}&q=$q").obj("tracks")?.arr("items").orEmpty()
             .mapNotNull { track(it as? JsonObject) }
@@ -163,6 +177,7 @@ object SpotifyApi {
     /** How many Liked Songs there are, in one request rather than reading them all. */
     suspend fun likedCount(): Result<Int> = attempt {
         liked?.let { return@attempt it.size }
+        if (web) return@attempt SpotifyPathfinder.likedCount()
         get("$Base/me/tracks?limit=1").int("total") ?: 0
     }
 
@@ -173,6 +188,7 @@ object SpotifyApi {
 
     private suspend fun readLiked(refresh: Boolean): List<SpotifyTrack> {
         if (!refresh) liked?.let { return it }
+        if (web) return SpotifyPathfinder.likedSongs().also { liked = it }
         val tracks = pages("$Base/me/tracks?limit=50&market=from_token").mapNotNull { row ->
             track((row as? JsonObject)?.let { it.obj("track") ?: it.obj("item") })
         }

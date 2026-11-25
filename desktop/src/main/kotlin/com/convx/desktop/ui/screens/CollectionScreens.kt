@@ -435,6 +435,7 @@ fun AlbumScreen(browseId: String) {
     val library by Library.state.collectAsState()
     val playback = com.convx.desktop.ui.components.LocalPlayback.current
     val page = rememberPage("album:$browseId") { YouTube.album(browseId).getOrThrow() }
+    val scope = rememberCoroutineScope()
     // Convx keeps its own black whatever the cover (the user's call); the art carries the colour.
     val pageColor = PageBlack
     val listState = rememberLazyListState()
@@ -445,15 +446,35 @@ fun AlbumScreen(browseId: String) {
             val saved = library.albums.any { it.browseId == browseId }
             val isThisPlaying = playback.isPlaying && songs.any { it.id == playback.currentId }
             val artists = album.album.artists.orEmpty()
+            // YouTube Music sometimes lists no track Convx can read; its own Play still queues the album.
+            val queueId = album.album.playlistId.removePrefix("VL").takeIf { songs.isEmpty() && it.isNotBlank() }
+            LaunchedEffect(album) {
+                if (songs.isEmpty()) {
+                    com.convx.desktop.core.Log.w(
+                        "Album",
+                        "No songs for $browseId (${album.unavailable} rows that can't play, playlist ${album.album.playlistId.ifBlank { "none" }}, " +
+                            "region ${YouTube.locale.gl}, ${if (com.convx.desktop.integrations.youtube.YouTubeAccount.signedIn) "logged in" else "guest"})",
+                    )
+                }
+            }
             PageList(state = listState, tint = pageColor, topPadding = 0.dp) {
                 collectionHeader(
                     title = album.album.title,
                     art = { size -> Artwork(album.album.thumbnail, Modifier.size(size), size = 600, shape = RoundedCornerShape(12.dp), iconSize = 64.dp) },
-                    metadata = (listOfNotNull(album.album.year?.toString()) + songs.totalLine()).joinToString(" · "),
+                    metadata = (listOfNotNull(album.album.year?.toString()) + if (songs.isEmpty()) emptyList() else songs.totalLine()).joinToString(" · "),
                     playing = isThisPlaying,
-                    enabled = songs.isNotEmpty(),
-                    onPlay = { if (isThisPlaying) PlayerController.pause() else PlayerController.playSongs(songs, 0, album.album.title, shuffle = false) },
-                    onShuffle = { PlayerController.playSongs(songs, 0, album.album.title, shuffle = true) },
+                    enabled = songs.isNotEmpty() || queueId != null,
+                    onPlay = {
+                        when {
+                            isThisPlaying -> PlayerController.pause()
+                            songs.isNotEmpty() -> PlayerController.playSongs(songs, 0, album.album.title, shuffle = false)
+                            queueId != null -> playAlbumQueue(scope, queueId, album.album.title, shuffle = false)
+                        }
+                    },
+                    onShuffle = {
+                        if (songs.isNotEmpty()) PlayerController.playSongs(songs, 0, album.album.title, shuffle = true)
+                        else if (queueId != null) playAlbumQueue(scope, queueId, album.album.title, shuffle = true)
+                    },
                     wordmark = artists.joinToString { it.name }.ifBlank { null },
                     onWordmarkClick = artists.firstOrNull { it.id != null }?.let { artist -> { navigator.navigate(Screen.Artist(artist.id!!)) } },
                     description = album.description,
@@ -472,6 +493,22 @@ fun AlbumScreen(browseId: String) {
                     },
                 )
                 songTable(songs, album.album.title, "album", showAlbum = false, showArtwork = false)
+                if (songs.isEmpty()) {
+                    item(key = "nosongs") {
+                        MessageState(
+                            title = if (album.unavailable > 0) "These songs can't play here" else "No songs listed",
+                            message = when {
+                                album.unavailable > 0 ->
+                                    "YouTube Music lists ${pluralize(album.unavailable, "song")} on this album but doesn't let them play in your country. Another version of the album may work."
+                                queueId != null -> "YouTube Music didn't list this album's songs. Press Play to play it the way YouTube Music does."
+                                else -> "YouTube Music didn't send this album's songs. Try again in a moment."
+                            },
+                            icon = "album",
+                            actionText = "Try again",
+                            onAction = { page.retry() },
+                        )
+                    }
+                }
                 if (album.otherVersions.isNotEmpty()) {
                     item(key = "versions") {
                         Spacer(Modifier.height(16.dp))
@@ -486,6 +523,17 @@ fun AlbumScreen(browseId: String) {
                 }
             }
         }
+    }
+}
+
+/** Plays an album from the queue YouTube Music builds for it, for albums whose track list came back empty. */
+private fun playAlbumQueue(scope: kotlinx.coroutines.CoroutineScope, playlistId: String, title: String, shuffle: Boolean) {
+    scope.launch {
+        val songs = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            YouTube.next(com.music.innertube.models.WatchEndpoint(playlistId = playlistId)).getOrNull()?.items.orEmpty().map { it.toSong() }
+        }
+        if (songs.isEmpty()) Overlays.toast("YouTube Music didn't send this album's songs", "error")
+        else PlayerController.playSongs(songs, 0, title, shuffle = shuffle)
     }
 }
 
@@ -682,6 +730,10 @@ fun LocalPlaylistScreen(id: String) {
                     }
                     // The whole playlist for listening offline; songs already on this PC are skipped.
                     DownloadMenuItems(songs, dismiss)
+                    MenuItem("Export playlist", "ios_share", enabled = songs.isNotEmpty()) {
+                        dismiss()
+                        com.convx.desktop.ui.screens.settings.exportPlaylist(playlist)
+                    }
                     if (folder == null) {
                         MenuItem("Modify with AI", "sparks") {
                             dismiss()
