@@ -546,7 +546,7 @@ p { margin: 0; }
 .dl-icon { width: 52px; height: 52px; border-radius: 16px; display: grid; place-items: center; background: rgba(255,255,255,0.08); box-shadow: inset 0 1px 0 rgba(255,255,255,0.14); }
 .dl-icon svg { width: 26px; height: 26px; }
 .dl h3 { font-size: 24px; }
-.dl-ver { display: block; margin-top: 2px; font-size: 13px; color: var(--label-3); font-variant-numeric: tabular-nums; }
+.dl-ver { display: block; margin-top: 2px; font-size: 13px; color: var(--label-3); font-variant-numeric: tabular-nums; white-space: pre-line; }
 .dl ol { margin: 0; padding-left: 20px; display: grid; gap: 6px; color: var(--label-2); font-size: 15px; }
 .dl ol li::marker { color: var(--label-3); font-size: 13px; font-variant-numeric: tabular-nums; }
 .dl .btn { min-width: 12.5rem; }
@@ -1155,14 +1155,14 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       if (exe) {
         setAll('[data-dl="windows"][data-file]', el => el.href = exe.browser_download_url);
         setAll('[data-label="windows"]', el => el.textContent = ver + mb(exe.size));
-        setAll('[data-ver="windows"]', el => el.textContent = ver + 'Windows 10 or later');
+        setAll('[data-ver="windows"]', el => el.textContent = (v ? 'Version ' + v[0] + '\n' : '') + 'Windows 10 or later, 64-bit');
       }
       if (msi) setAll('[data-alt="msi"]', el => el.href = msi.browser_download_url);
       if (zip) setAll('[data-alt="zip"]', el => el.href = zip.browser_download_url);
       if (arm) {
         setAll('[data-dl="mac"][data-file]', el => el.href = arm.browser_download_url);
         setAll('[data-label="mac"]', el => el.textContent = 'Apple silicon · ' + mb(arm.size));
-        setAll('[data-ver="mac"]', el => el.textContent = ver + 'macOS 12 or later');
+        setAll('[data-ver="mac"]', el => el.textContent = (v ? 'Version ' + v[0] + '\n' : '') + 'macOS 12 or later');
       }
       if (intel) setAll('[data-alt="intel"]', el => el.href = intel.browser_download_url);
       /* An Intel Mac that tells us so gets the Intel file straight away. */
@@ -1209,7 +1209,7 @@ footer { padding-block: 56px calc(48px + env(safe-area-inset-bottom, 0px)); colo
       const tag = String(rel.tag_name || '').replace(/^v/i, '');
       const name = rel.prerelease ? 'Nightly ' + tag.replace(/-?nightly/i, '') : 'Version ' + tag;
       setAll('[data-label="android"]', el => el.textContent = name + ' · Android 8.0+');
-      setAll('[data-ver="android"]', el => el.textContent = name + ' · Android 8.0 or later');
+      setAll('[data-ver="android"]', el => el.textContent = name + '\nAndroid 8.0 or later');
       setAll('[data-dl="android"]', el => el.href = rel.html_url);
     }).catch(() => {});
 
