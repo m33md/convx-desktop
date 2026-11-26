@@ -57,7 +57,25 @@ internal object PlayerMapper {
         )
     }
 
-    suspend fun next(innerTube: InnerTube, endpoint: WatchEndpoint, continuation: String?): Result<NextResult> = runCatching {
+    /**
+     * The queue for [endpoint] (a radio, an album, a playlist). With an account, a queue that fails
+     * or comes back empty is asked for again without it: some accounts get nothing back where a
+     * guest gets the whole queue.
+     */
+    suspend fun next(innerTube: InnerTube, endpoint: WatchEndpoint, continuation: String?): Result<NextResult> {
+        val first = next(innerTube, endpoint, continuation, guest = false)
+        if (first.getOrNull()?.items?.isNotEmpty() == true || innerTube.cookie == null) return first
+        first.exceptionOrNull()?.let { if (it is kotlinx.coroutines.CancellationException) throw it }
+        val guest = next(innerTube, endpoint, continuation, guest = true)
+        innerTube.log?.invoke(
+            "Queue ${endpoint.playlistId ?: endpoint.videoId}: " +
+                (first.exceptionOrNull()?.let { "failed with the account (${it.message?.take(160)})" } ?: "empty with the account") +
+                "; as a guest: " + (guest.exceptionOrNull()?.let { "failed (${it.message?.take(160)})" } ?: "${guest.getOrNull()?.items?.size} songs"),
+        )
+        return if (guest.getOrNull()?.items?.isNotEmpty() == true) guest else first
+    }
+
+    private suspend fun next(innerTube: InnerTube, endpoint: WatchEndpoint, continuation: String?, guest: Boolean): Result<NextResult> = runCatching {
         val response = innerTube.next(
             WEB_REMIX,
             endpoint.videoId,
@@ -65,7 +83,8 @@ internal object PlayerMapper {
             endpoint.playlistSetVideoId,
             endpoint.index,
             endpoint.params,
-            continuation).body<NextResponse>()
+            continuation,
+            guest = guest).body<NextResponse>()
         val tabs = response.contents.singleColumnMusicWatchNextResultsRenderer
             ?.tabbedRenderer?.watchNextTabbedResultsRenderer?.tabs
         val firstTab = tabs?.get(0)
@@ -76,16 +95,15 @@ internal object PlayerMapper {
         val lyricsEndpoint = tabs?.getOrNull(1)?.tabRenderer?.endpoint?.browseEndpoint
         val relatedEndpoint = tabs?.getOrNull(2)?.tabRenderer?.endpoint?.browseEndpoint
         val items = playlistPanelRenderer.contents.mapNotNull { content ->
-            content.playlistPanelVideoRenderer
-                ?.let(NextPage::fromPlaylistPanelVideoRenderer)
-                ?.let { it to content.playlistPanelVideoRenderer.selected }
+            val renderer = content.item ?: return@mapNotNull null
+            NextPage.fromPlaylistPanelVideoRenderer(renderer)?.let { it to renderer.selected }
         }
         val songs = items.map { it.first }
         val currentIndex = items.indexOfFirst { it.second }.takeIf { it != -1 }
 
         // load automix items
         playlistPanelRenderer.contents.lastOrNull()?.automixPreviewVideoRenderer?.content?.automixPlaylistVideoRenderer?.navigationEndpoint?.watchPlaylistEndpoint?.let { watchPlaylistEndpoint ->
-            return@runCatching next(innerTube, watchPlaylistEndpoint, null).getOrThrow().let { result ->
+            return@runCatching next(innerTube, watchPlaylistEndpoint, null, guest).getOrThrow().let { result ->
                 result.copy(
                     title = title,
                     items = songs + result.items,
@@ -172,7 +190,7 @@ internal object PlayerMapper {
         }
         innerTube.getQueue(WEB_REMIX, videoIds, playlistId).body<GetQueueResponse>().queueDatas
             .mapNotNull {
-                it.content.playlistPanelVideoRenderer?.let { renderer ->
+                it.content.item?.let { renderer ->
                     NextPage.fromPlaylistPanelVideoRenderer(renderer)
                 }
             }

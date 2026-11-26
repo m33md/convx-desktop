@@ -5,6 +5,7 @@
 
 package com.convx.desktop.lyrics
 
+import com.convx.desktop.core.AppInfo
 import com.convx.desktop.core.Http
 import com.convx.desktop.core.Log
 import com.convx.desktop.core.Secrets
@@ -18,6 +19,7 @@ import com.convx.music.lyrics.bitchord.TimedRun
 import com.convx.music.lyrics.bitchord.withInstrumentalGaps
 import com.convx.music.lyrics.bitchord.wordsFromRuns
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -31,98 +33,173 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.Request
 import java.net.URLEncoder
 import java.util.concurrent.ConcurrentHashMap
+import kotlin.math.abs
 
 /**
- * Spicy Lyrics' official API (developers.spicylyrics.org): community syllable syncs, then Apple
- * Music's, then Spotify's, for a Spotify track id, with a key the user makes there.
+ * Spicy Lyrics' official API (developers.spicylyrics.org): its community's syllable syncs, then
+ * Apple Music's, then Spotify's, for a Spotify track id.
+ *
+ * It works with no setup through Convx's own publishable key ([ConvxKey]); a key of your own,
+ * pasted in Settings, is used instead when there is one.
  *
  * Its terms shape this: the answer's source, and a community sync's uploader and maker, are shown
- * wherever the lyrics are ([LyricsCredit]); nothing it returns is written to an .lrc file; and a
- * kept copy is dropped after 30 days ([LyricsService]).
+ * wherever the lyrics are ([LyricsCredit]); nothing it returns is written to an .lrc file; a kept
+ * copy is dropped after 30 days ([LyricsService]); and when it asks Convx to wait, Convx waits.
  *
- * Songs are found by their Spotify id: the one an imported Spotify song came with, else a search
- * through the linked Spotify account, else song.link's lookup of the YouTube video.
+ * Songs are found by their Spotify id: the one an imported Spotify song came with, else Spicy
+ * Lyrics' own search, else a search through the linked Spotify account, else song.link's lookup of
+ * the YouTube video.
  */
 object SpicyLyrics {
     private const val Tag = "SpicyLyrics"
-    private const val Base = "https://api.spicylyrics.org/v1/lyrics/"
+    private const val Api = "https://api.spicylyrics.org/v1"
     private const val SongLink = "https://api.song.link/v1-alpha.1/links"
     const val KeyName = "spicylyrics.key"
 
+    /**
+     * Convx's own publishable key. Spicy Lyrics makes these to ship inside apps, where anyone can
+     * read them (developers.spicylyrics.org/docs/keys): every copy of Convx shares it, and Spicy
+     * Lyrics limits each listener on their own. Its application allows "No origin header", the
+     * setting Spicy Lyrics has for native clients.
+     */
+    const val ConvxKey = "sl_pk_3mv93SGbrLrW0W8c6UVNvJmfdQEakk-QKKHkRQ10sP4"
+
     /** A kept copy of its lyrics older than this is fetched again, as the terms ask. */
     const val KeepForMs = 30L * 24 * 60 * 60 * 1000
+
+    /** The longest Convx waits for a busy lookup before trying once more; longer waits give up. */
+    private const val LongestRetryWaitS = 4L
 
     private val json = Json { ignoreUnknownKeys = true }
     private val credits = ConcurrentHashMap<String, LyricsCredit>()
     private val spotifyIds = ConcurrentHashMap<String, String>()
     private val YouTubeId = Regex("^[A-Za-z0-9_-]{11}$")
 
+    /** Until when Spicy Lyrics asked Convx to stop asking (a rate limit), as a clock time. */
+    @Volatile private var quietUntil = 0L
+
     private val _problem = MutableStateFlow<String?>(null)
 
     /** What went wrong last, for Settings, or null while it answers. */
     val problem: StateFlow<String?> = _problem.asStateFlow()
 
-    val hasKey: Boolean get() = !Secrets[KeyName].isNullOrBlank()
+    /** Whether this copy of Convx comes with its own key, so the source works with no setup. */
+    val hasBuiltInKey: Boolean get() = ConvxKey.isNotBlank()
+
+    private fun key(): String? = Secrets[KeyName]?.trim()?.takeIf { it.isNotEmpty() } ?: ConvxKey.trim().takeIf { it.isNotEmpty() }
 
     fun setKey(key: String?) {
         Secrets[KeyName] = key?.trim()?.takeIf { it.isNotEmpty() }
         _problem.value = null
+        quietUntil = 0L
     }
 
-    /** Who to credit for the lyrics last found for [song]. */
-    fun credit(song: Song): LyricsCredit? = credits[song.id]
+    /** Who to credit for the lyrics last found for [song] asked as [title] by [artist], read from that answer. */
+    fun credit(song: Song, title: String, artist: String): LyricsCredit? = credits[asked(song, title, artist)]
+
+    /** A lookup's own key: a lyrics search with another title is another lookup of the same song. */
+    private fun asked(song: Song, title: String, artist: String) = "${song.id}|$title|$artist"
 
     suspend fun lyrics(song: Song, title: String, artist: String, durationMs: Long): List<LyricLine>? = withContext(Dispatchers.IO) {
-        val key = Secrets[KeyName]?.trim()?.takeIf { it.isNotEmpty() } ?: return@withContext null
-        val trackId = spotifyId(song, title, artist, durationMs) ?: run {
+        val key = key() ?: return@withContext null
+        if (System.currentTimeMillis() < quietUntil) return@withContext null
+        val trackId = spotifyId(song, title, artist, durationMs, key) ?: run {
             Log.i(Tag, "No Spotify id for \"$title\" by $artist")
             return@withContext null
         }
-        val request = Request.Builder()
-            .url(Base + trackId)
-            .header("Authorization", "Bearer $key")
-            .header("Accept", "application/json")
-            .header("User-Agent", Http.USER_AGENT)
-            .build()
-        val (code, body) = Http.client.newCall(request).execute().use { it.code to it.body?.string().orEmpty() }
-        when (code) {
-            200 -> Unit
-            404 -> return@withContext null
-            401, 403 -> {
-                _problem.value = "Spicy Lyrics refused the key ($code). Check that it's copied whole and that client access allows no origin header."
-                Log.w(Tag, "Key refused ($code): ${body.take(200)}")
-                return@withContext null
-            }
-            429 -> {
-                _problem.value = "Spicy Lyrics says this key has asked too often; it will answer again later."
-                Log.w(Tag, "Rate limited: ${body.take(200)}")
-                return@withContext null
-            }
-            else -> {
-                Log.w(Tag, "$trackId answered $code: ${body.take(200)}")
-                return@withContext null
-            }
-        }
-        _problem.value = null
-        val root = json.parseToJsonElement(body).jsonObject
-        val data = root.obj("Body") ?: root
-        val lines = parse(data, durationMs)
-        if (lines.isNullOrEmpty()) {
-            // The response's documented shape is the syllable one; say what else came, to fix it from a log.
-            Log.w(Tag, "Couldn't read a ${data.str("Type")} answer; it has ${data.keys} and items like ${(data["Content"] as? JsonArray)?.firstOrNull()?.let { (it as? JsonObject)?.keys }}")
-            return@withContext null
-        }
-        credits[song.id] = creditOf(data)
-        Log.i(Tag, "${data.str("Type")} lyrics from ${data.str("source")} for $trackId")
+        val body = ask("$Api/lyrics/$trackId", key) ?: return@withContext null
+        val (lines, credit) = read(body) ?: return@withContext null
+        credits[asked(song, title, artist)] = credit
         lines
     }
 
+    /** The lines in a lyrics answer and who to credit for them, or null when it can't be read. */
+    internal fun read(body: String): Pair<List<LyricLine>, LyricsCredit>? {
+        val root = runCatching { json.parseToJsonElement(body).jsonObject }.getOrNull() ?: return null
+        val data = root.obj("Body") ?: root
+        val lines = parse(data)
+        if (lines.isNullOrEmpty()) {
+            Log.w(Tag, "Couldn't read a ${data.str("Type")} answer; it has ${data.keys} and items like ${(data["Content"] as? JsonArray)?.firstOrNull()?.let { (it as? JsonObject)?.keys }}")
+            return null
+        }
+        Log.i(Tag, "${data.str("Type")} lyrics from ${data.str("source")} for ${data.str("id")}")
+        return lines to creditOf(data)
+    }
+
+    // ---- Asking ---------------------------------------------------------------------------
+
+    /**
+     * One GET to the API, the body when it answered 200. A lookup it couldn't do right now (503)
+     * is tried once more after the wait it asks for, when that's short; a rate limit (429) keeps
+     * every lookup quiet until the wait it gives is over.
+     */
+    private suspend fun ask(url: String, key: String): String? {
+        repeat(2) { attempt ->
+            val request = Request.Builder()
+                .url(url)
+                .header("Authorization", "Bearer $key")
+                .header("Accept", "application/json")
+                .header("User-Agent", "Convx/${AppInfo.VERSION} (desktop; ${AppInfo.PLATFORM})")
+                .build()
+            val (code, body, retryAfter) = Http.client.newCall(request).execute().use {
+                Triple(it.code, it.body?.string().orEmpty(), it.header("Retry-After")?.trim()?.toLongOrNull())
+            }
+            when (code) {
+                200 -> {
+                    _problem.value = null
+                    return body
+                }
+                400, 404 -> return null
+                503 -> {
+                    val wait = retryAfter ?: 2L
+                    if (attempt == 0 && wait <= LongestRetryWaitS) {
+                        delay(wait * 1000)
+                        return@repeat
+                    }
+                    Log.i(Tag, "Busy (${errorOf(body)}), wait ${retryAfter}s")
+                    return null
+                }
+                429 -> {
+                    val wait = (retryAfter ?: 60L).coerceIn(5L, 3_600L)
+                    quietUntil = System.currentTimeMillis() + wait * 1000
+                    _problem.value = "Spicy Lyrics asked Convx to wait ${wait}s before asking again (${errorOf(body)})."
+                    Log.w(Tag, "Rate limited for ${wait}s: ${errorOf(body)}")
+                    return null
+                }
+                401, 403 -> {
+                    _problem.value = if (Secrets[KeyName].isNullOrBlank()) {
+                        "Spicy Lyrics refused Convx's key (${errorOf(body)}). A key of your own works in its place."
+                    } else {
+                        "Spicy Lyrics refused your key (${errorOf(body)}). Check that it's copied whole and that client access allows no origin header."
+                    }
+                    Log.w(Tag, "Key refused ($code): ${errorOf(body)}")
+                    return null
+                }
+                else -> {
+                    Log.w(Tag, "${url.substringAfter(Api)} answered $code: ${errorOf(body)}")
+                    return null
+                }
+            }
+        }
+        return null
+    }
+
+    /** The error code and message of a refusal, as `{"Body": {"error", "message"}}` carries them. */
+    private fun errorOf(body: String): String = runCatching {
+        val error = json.parseToJsonElement(body).jsonObject.obj("Body")
+        listOfNotNull(error?.str("error"), error?.str("message")).joinToString(": ").ifEmpty { null }
+    }.getOrNull() ?: body.take(200)
+
     // ---- Reading the answer ----------------------------------------------------------------
 
-    private fun parse(data: JsonObject, durationMs: Long): List<LyricLine>? {
+    /** Times are seconds from the start of the track. */
+    private fun toMs(seconds: Double): Long = (seconds * 1000).toLong()
+
+    private fun parse(data: JsonObject): List<LyricLine>? {
         val content = data["Content"] as? JsonArray
         val static = data.str("Type").equals("Static", ignoreCase = true)
         if (content == null || static && content.none { (it as? JsonObject)?.obj("Lead") != null }) {
@@ -131,21 +208,20 @@ object SpicyLyrics {
                 .map { LyricLine(0L, it) }
                 .takeIf { it.any { line -> line.text.isNotBlank() } }
         }
-        val toMs = timeScale(content, durationMs)
         val lines = content.mapNotNull { element ->
             val item = element as? JsonObject ?: return@mapNotNull null
             val alignment = if (item.bool("OppositeAligned") == true) LyricAlignment.End else LyricAlignment.Start
             val lead = item.obj("Lead")
             when {
-                lead != null -> vocal(lead, toMs)?.let { main ->
-                    val backing = (item["Background"] as? JsonArray)?.mapNotNull { vocal(it as? JsonObject, toMs) }.orEmpty()
+                lead != null -> vocal(lead)?.let { main ->
+                    val backing = (item["Background"] as? JsonArray)?.mapNotNull { vocal(it as? JsonObject) }.orEmpty()
                     main.copy(alignment = alignment, background = merge(backing))
                 }
-                item["Syllables"] is JsonArray -> vocal(item, toMs)?.copy(alignment = alignment)
+                item["Syllables"] is JsonArray -> vocal(item)?.copy(alignment = alignment)
                 else -> {
                     val text = item.str("Text")?.trim() ?: return@mapNotNull null
                     val start = item.num("StartTime") ?: return@mapNotNull null
-                    LyricLine(toMs(start), text, sungUntilMs = item.num("EndTime")?.let(toMs), alignment = alignment)
+                    LyricLine(toMs(start), text, sungUntilMs = item.num("EndTime")?.let { toMs(it) }, alignment = alignment)
                 }
             }
         }
@@ -153,7 +229,7 @@ object SpicyLyrics {
     }
 
     /** One voice's line from its syllables; [TimedRun]s glue "e" and "nough" back into a word. */
-    private fun vocal(obj: JsonObject?, toMs: (Double) -> Long): LyricLine? {
+    private fun vocal(obj: JsonObject?): LyricLine? {
         obj ?: return null
         val syllables = obj["Syllables"] as? JsonArray ?: return null
         val runs = syllables.mapNotNull { element ->
@@ -167,10 +243,10 @@ object SpicyLyrics {
         val words = wordsFromRuns(runs, spacingIsExplicit = true)
         if (words.isEmpty()) return null
         return LyricLine(
-            timeMs = obj.num("StartTime")?.let(toMs)?.let { minOf(it, words.first().startMs) } ?: words.first().startMs,
+            timeMs = obj.num("StartTime")?.let { toMs(it) }?.let { minOf(it, words.first().startMs) } ?: words.first().startMs,
             text = words.joinToString(" ") { it.text },
             words = words,
-            sungUntilMs = obj.num("EndTime")?.let(toMs) ?: words.last().endMs,
+            sungUntilMs = obj.num("EndTime")?.let { toMs(it) } ?: words.last().endMs,
         )
     }
 
@@ -186,26 +262,12 @@ object SpicyLyrics {
         )
     }
 
-    /**
-     * Seconds or milliseconds: the documented example is in seconds (7.357), but nothing says so,
-     * so the song's length decides when there is one.
-     */
-    private fun timeScale(content: JsonArray, durationMs: Long): (Double) -> Long {
-        val latest = content.maxOfOrNull { element ->
-            val item = element as? JsonObject
-            maxOf(item?.num("EndTime") ?: 0.0, item?.obj("Lead")?.num("EndTime") ?: 0.0, item?.num("StartTime") ?: 0.0)
-        } ?: 0.0
-        val seconds = if (durationMs > 0) latest * 1000 <= durationMs + 120_000 else latest < 3_600
-        val scale = if (seconds) 1000.0 else 1.0
-        return { time -> (time * scale).toLong() }
-    }
-
     private fun creditOf(data: JsonObject): LyricsCredit {
         val provider = when (val source = data.str("source")) {
             "spicy_lyrics" -> "Spicy Lyrics"
             "apple_music" -> "Apple Music"
             "spotify" -> "Spotify"
-            null, "" -> "an unknown source"
+            null, "", "unknown" -> "an unknown source"
             else -> source.replace('_', ' ')
         }
         val upload = data.obj("UploadAttribution")
@@ -215,16 +277,42 @@ object SpicyLyrics {
 
     // ---- Finding the Spotify id ----------------------------------------------------------------
 
-    private suspend fun spotifyId(song: Song, title: String, artist: String, durationMs: Long): String? {
-        spotifyIds[song.id]?.let { return it }
+    private suspend fun spotifyId(song: Song, title: String, artist: String, durationMs: Long, key: String): String? {
+        val asked = asked(song, title, artist)
+        spotifyIds[asked]?.let { return it }
         val id = when {
             SpotifyMatcher.isSpotify(song) -> song.id.removePrefix(SpotifyMatcher.Prefix)
             else -> SpotifyMatcher.spotifyIdOf(song.id)
+                ?: fromSpicySearch(title, artist, durationMs, key)
                 ?: fromSpotifySearch(title, artist, durationMs)
                 ?: fromSongLink(song.id)
         }
-        if (id != null) spotifyIds[song.id] = id
+        if (id != null) spotifyIds[asked] = id
         return id
+    }
+
+    /**
+     * Spicy Lyrics' own search, by title, artist and length. Its first result is taken only when
+     * it is this song ("exact", or "likely" at the same length): another version of a song has
+     * other timings.
+     */
+    private suspend fun fromSpicySearch(title: String, artist: String, durationMs: Long, key: String): String? {
+        if (title.isBlank()) return null
+        val url = "$Api/tracks/search".toHttpUrl().newBuilder()
+            .addQueryParameter("title", title.take(200))
+            .apply { if (artist.isNotBlank()) addQueryParameter("artist", artist.take(200)) }
+            .apply { if (durationMs > 0) addQueryParameter("duration", (durationMs / 1000.0).toString()) }
+            .addQueryParameter("limit", "1")
+            .build()
+        val body = ask(url.toString(), key) ?: return null
+        val first = (json.parseToJsonElement(body).jsonObject.obj("Body")?.get("results") as? JsonArray)?.firstOrNull() as? JsonObject
+            ?: return null
+        val tier = first.str("tier")
+        val off = first.num("duration")?.takeIf { durationMs > 0 }?.let { abs(toMs(it) - durationMs) }
+        val sameLength = off == null || off <= 3_000
+        val trusted = sameLength && (tier == "exact" || tier == "likely" && off != null)
+        if (!trusted) Log.i(Tag, "Search for \"$title\" by $artist found ${first.str("title")} ($tier, ${off?.let { "${it / 1000}s off" } ?: "length unknown"}); not used")
+        return first.str("id")?.takeIf { trusted && it.isNotBlank() }
     }
 
     /** The linked Spotify account's own search, scored the way imports are matched. */

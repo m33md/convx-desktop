@@ -83,6 +83,8 @@ data class LocalPlaylist(
     val coverSeed: Int = 0,
     /** The Disc Studio design its [cover] was drawn from (DiscDesigns), so saving the design redraws it. */
     val design: String? = null,
+    /** The Spotify playlist it was imported from, when that isn't in its id (an Exportify list a Spotify import found by name). */
+    val spotifyId: String? = null,
 )
 
 /**
@@ -397,6 +399,8 @@ data class Settings(
     /** Music folders that are also playlists of their own, kept in step with the folder by each scan (FolderPlaylists). */
     val folderPlaylists: List<String> = emptyList(),
     val scanLocalOnStart: Boolean = true,
+    /** A streamed song plays from your own file of it when Local files or the download folder has one (LocalCopies). */
+    val playOwnCopies: Boolean = true,
     /** The phone's Network & proxy page; the proxy password lives in Secrets. */
     val ipVersion: String = "IPV4",
     val proxyEnabled: Boolean = false,

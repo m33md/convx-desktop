@@ -43,6 +43,7 @@ import com.convx.desktop.data.AppSettings
 import com.convx.desktop.integrations.DiscordPresence
 import com.convx.desktop.integrations.spotify.SpotifyAccount
 import com.convx.desktop.integrations.spotify.SpotifyApi
+import com.convx.desktop.integrations.spotify.SpotifyWebPlayer
 import com.convx.desktop.player.PlayerController
 import com.convx.desktop.ui.components.Artwork
 import com.convx.desktop.ui.components.ConvxIcon
@@ -89,38 +90,63 @@ internal fun AccountHeader(
 @Composable
 fun SpotifySettings() {
     val state by SpotifyAccount.state.collectAsState()
+    val settings by AppSettings.state.collectAsState()
     val navigator = LocalNavigator.current
     val profile = (state as? SpotifyAccount.State.SignedIn)?.profile
+    val ownApp = settings.spotifyClientId.trim().length == 32
+    val playerBrowser = remember { SpotifyWebPlayer.browser() }
+    val loginBrowser = remember { com.convx.desktop.integrations.youtube.BrowserSignIn.chosen() }
     AccountHeader(
         avatar = { AccountAvatar(profile?.image, "spotify", Color.Black, 64.dp) },
         title = profile?.name ?: "Spotify",
         status = when (val s = state) {
             is SpotifyAccount.State.SignedIn -> when {
-                s.profile == null && s.problem != null -> "Linked, but Spotify won't answer Convx: ${s.problem}"
+                s.profile == null && s.problem != null -> "Logged in, but Spotify won't answer Convx: ${s.problem}"
+                SpotifyAccount.usesWebPlayer -> "Logged in"
+                SpotifyAccount.usesOwnApp -> "Connected through your Spotify app"
                 s.profile?.premium == true -> "Connected · Premium"
                 else -> "Connected"
             }
-            SpotifyAccount.State.SigningIn -> "Finish signing in to Spotify in your browser, then come back here."
+            SpotifyAccount.State.SigningIn -> "Finish connecting your Spotify app in your browser, then come back here."
+            SpotifyAccount.State.WaitingForBrowser ->
+                if (loginBrowser?.engine == com.convx.desktop.integrations.youtube.BrowserSignIn.Engine.Safari) {
+                    "Log in to Spotify in the Safari window that opened. When Spotify's web player shows your library, come back here and press Done."
+                } else {
+                    "Log in to Spotify in the ${loginBrowser?.name ?: "browser"} window that opened. When Spotify's web player shows your library, close that window (or press Done)."
+                }
+            SpotifyAccount.State.Checking -> "Opening Spotify's web player out of sight to finish logging in…"
             is SpotifyAccount.State.Failed -> s.message
-            SpotifyAccount.State.SignedOut -> "Not connected. You sign in on Spotify's own page in your browser; Convx never sees your password."
+            SpotifyAccount.State.SignedOut -> when {
+                ownApp -> "Not connected. You connect on Spotify's own page in your browser, through your Spotify app."
+                playerBrowser == null -> SpotifyWebPlayer.NoBrowserException().message!!
+                else -> "Not logged in. You log in on Spotify's own page, as on the phone. Convx never sees your password; it keeps only the login, encrypted on this PC."
+            }
         },
         statusIsError = state is SpotifyAccount.State.Failed || (state as? SpotifyAccount.State.SignedIn)?.problem != null,
     ) {
         when (state) {
-            is SpotifyAccount.State.SignedIn -> PillButton("Disconnect", { SpotifyAccount.signOut() })
+            is SpotifyAccount.State.SignedIn -> PillButton("Log out", { SpotifyAccount.signOut() })
             SpotifyAccount.State.SigningIn -> PillButton("Cancel", { SpotifyAccount.cancelSignIn() })
-            else -> PillButton("Connect", {
-                SpotifyAccount.signIn { uri ->
-                    runCatching { java.awt.Desktop.getDesktop().browse(uri) }
-                        .onFailure { Overlays.toast("Couldn't open your browser", "error") }
+            SpotifyAccount.State.WaitingForBrowser -> Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) {
+                PillButton("Cancel", { SpotifyAccount.cancelLogIn() })
+                PillButton("Done", { SpotifyAccount.finishBrowser() }, filled = true, accent = SpotifyGreen)
+            }
+            SpotifyAccount.State.Checking -> Unit
+            else -> PillButton("Log in", {
+                if (ownApp) {
+                    SpotifyAccount.signIn { uri ->
+                        runCatching { java.awt.Desktop.getDesktop().browse(uri) }
+                            .onFailure { Overlays.toast("Couldn't open your browser", "error") }
+                    }
+                } else {
+                    SpotifyAccount.logIn()
                 }
             }, filled = true, accent = SpotifyGreen)
         }
     }
 
-    // Not with a Spotify app of your own, which has its own allowance.
-    val ownApp = AppSettings.state.collectAsState().value.spotifyClientId.trim().length == 32
-    if (!ownApp) {
+    // An older link through Spotify's shared developer client, which Spotify rations.
+    if (state is SpotifyAccount.State.SignedIn && !SpotifyAccount.usesWebPlayer && !ownApp) {
         SectionGap()
         SpotifyLimitNote()
     }
@@ -167,6 +193,10 @@ fun SpotifySettings() {
         SectionGap()
         SpotifyImportSection()
     }
+    if (state !is SpotifyAccount.State.SignedIn && !ownApp) {
+        SectionGap()
+        SpotifyCookieSection()
+    }
     SectionGap()
     ExportifyImportSection()
     SectionGap()
@@ -178,18 +208,39 @@ fun SpotifySettings() {
     )
 }
 
-/** Spotify is holding back the shared access Convx signs in with; until that's fixed, Exportify is the way in. */
+/** A link through Spotify's shared developer client, which Spotify rations: logging in the phone's way isn't. */
 @Composable
 private fun SpotifyLimitNote() {
     SettingsSection(
-        "Spotify is limiting Convx for now",
-        footer = "Spotify is limiting the shared access Convx uses to talk to it, so connecting, loading your library or " +
-            "importing from here may fail. We're working on a proper fix. Until then, import with Exportify: it needs neither " +
-            "this connection nor Premium, and brings every playlist and your Liked Songs.",
+        "Spotify limits this link",
+        footer = "This account is linked through the shared access Spotify gives developer tools, which Spotify is limiting, so loading " +
+            "your library or importing may fail. Log out and log in again: Convx then logs in the way the phone does, which isn't limited.",
     ) {
-        LinkRow("Import with Exportify", icon = "playlist_add", tint = SystemColors.Green) { importExportifyFiles() }
+        ButtonRow("Log out and log in again", color = SpotifyGreen) {
+            SpotifyAccount.signOut()
+            SpotifyAccount.logIn()
+        }
         RowDivider()
-        LinkRow("Open exportify.net", icon = "link", tint = SystemColors.Gray) { openUrl("https://exportify.net") }
+        LinkRow("Import with Exportify", icon = "playlist_add", tint = SystemColors.Green) { importExportifyFiles() }
+    }
+}
+
+/** Logging in with the web player's cookie, for when the login window can't be used. */
+@Composable
+private fun SpotifyCookieSection() {
+    SettingsSection(
+        "Other ways to log in",
+        footer = "If the login window doesn't work for you, log in to open.spotify.com in any browser, open its developer tools " +
+            "(F12), and under Application (Storage in Firefox), Cookies, https://open.spotify.com, copy the value of sp_dc. " +
+            "It is your Spotify login, so paste it only here. Convx keeps it encrypted on this PC.",
+    ) {
+        LinkRow("Log in with a cookie", icon = "key", tint = SystemColors.Gray) {
+            Overlays.prompt("Spotify's sp_dc cookie", "", confirm = "Log in") { text ->
+                if (!SpotifyAccount.logInWithCookie(text)) {
+                    Overlays.toast("That isn't Spotify's login cookie. Copy the value of sp_dc from open.spotify.com.", "error")
+                }
+            }
+        }
     }
 }
 
@@ -204,9 +255,9 @@ private fun SpotifyOwnAppSection() {
     val own = SpotifyAccount.usesOwnApp
     SettingsSection(
         "Your own Spotify app",
-        footer = "If Spotify won't answer Convx, link through an app of your own. Open developer.spotify.com/dashboard, sign in, " +
+        footer = "Instead of logging in, you can link through a Spotify developer app of your own. Open developer.spotify.com/dashboard, sign in, " +
             "click Create app, give it any name, and under Redirect URIs add ${SpotifyAccount.OwnAppRedirect} exactly. Tick Web API, " +
-            "save, then copy the Client ID from the app's Settings here and press Connect again. Spotify only lets an app's owner " +
+            "save, then copy the Client ID from the app's Settings here and press Log in again. Spotify only lets an app's owner " +
             "use it if they have Premium, and it reads the songs only of playlists you made or collaborate on.",
     ) {
         SettingsRow(
@@ -220,7 +271,7 @@ private fun SpotifyOwnAppSection() {
                     if (id.length == 32 && id.all { it in '0'..'9' || it in 'a'..'f' }) {
                         AppSettings.update { it.copy(spotifyClientId = id) }
                         SpotifyAccount.signOut()
-                        Overlays.toast("Saved. Press Connect to link through your app.", "spotify")
+                        Overlays.toast("Saved. Press Log in to link through your app.", "spotify")
                     } else {
                         Overlays.toast("That isn't a Client ID. It's 32 letters and numbers on your app's Settings page.", "error")
                     }

@@ -81,8 +81,9 @@ sealed interface LyricsState {
  * The phone's lyric sources in the phone's default order, word-timed sources first.
  *
  * Like the phone's LyricsHelper, the first usable answer shows at once and a better one
- * replaces it when it lands: word timing beats line timing beats plain text, and between
- * equals the higher-ranked source wins. Unlike the phone every source is asked at the same
+ * replaces it when it lands: Spicy Lyrics' lyrics beat every other source's whatever their
+ * timing, then word timing beats line timing beats plain text, and between equals the
+ * higher-ranked source wins. Unlike the phone every source is asked at the same
  * time, since a desktop isn't short of sockets, and the lookup starts as the song starts
  * (and for the song after it), so the lyrics are usually there before anyone opens them.
  */
@@ -101,7 +102,7 @@ object LyricsService {
     /** Every source the phone has, under the phone's ids, so its saved order means the same here. */
     private val all = listOf(
         // Desktop only: Spicy Lyrics' official API, with the user's own key.
-        Source("SpicyLyrics", "Spicy Lyrics", credit = { SpicyLyrics.credit(it.song) }) {
+        Source("SpicyLyrics", "Spicy Lyrics", credit = { SpicyLyrics.credit(it.song, it.title, it.artist) }) {
             SpicyLyrics.lyrics(it.song, it.title, it.artist, it.durationMs)
         },
         Source("LrcRed", "lrc.red") { LrcRed.lyrics(it.title, it.artist, it.durationMs) },
@@ -261,11 +262,13 @@ object LyricsService {
     /** Shows [lyrics] for [song] from now on, as the phone keeps an edit or a chosen result. */
     fun use(song: Song, lyrics: Lyrics) {
         LyricsTweaks.update(song.id) {
+            // Editing a credited copy keeps the time it was fetched, so it's still fetched again in time.
+            val keptAt = if (lyrics.credit != null && it.credit != null && it.keptAt > 0) it.keptAt else System.currentTimeMillis()
             it.copy(
                 lyrics = lyrics.lines.toLyricsText(),
                 source = lyrics.source,
                 credit = lyrics.credit,
-                keptAt = System.currentTimeMillis(),
+                keptAt = keptAt,
                 wrong = false,
             )
         }
@@ -343,6 +346,7 @@ object LyricsService {
 
         var best: Pair<Int, Lyrics>? = null
         val answered = BooleanArray(sources.size)
+        val first = sources.indices.filter { sources[it].id in AlwaysFirst }
         try {
             repeat(sources.size) {
                 val (index, result) = answers.receive()
@@ -352,15 +356,17 @@ object LyricsService {
                 val ms = (System.nanoTime() - started) / 1_000_000
                 Log.i(Tag, "${sources[index].name}: ${lyrics?.let { listOf("plain", "lines", "words")[it.syncLevel] } ?: "nothing"} after $ms ms")
                 val current = best
-                if (lyrics != null && (current == null || lyrics.syncLevel > current.second.syncLevel ||
-                        (lyrics.syncLevel == current.second.syncLevel && index < current.first))
-                ) {
+                if (lyrics != null && (current == null || beats(index to lyrics, current, sources))) {
                     best = index to lyrics
                     out.value = LyricsState.Ready(lyrics, final = false)
                 }
-                // Done once the best is word timed and nothing ranked above it is still out.
+                // Done once Spicy Lyrics has answered with lyrics, or once the best is word timed,
+                // nothing ranked above it is still out and Spicy Lyrics has had its say.
                 val b = best
-                if (b != null && b.second.wordSynced && (0 until b.first).all { i -> answered[i] }) return@coroutineScope b.second
+                if (b != null && sources[b.first].id in AlwaysFirst) return@coroutineScope b.second
+                if (b != null && b.second.wordSynced && (0 until b.first).all { i -> answered[i] } && first.all { i -> answered[i] }) {
+                    return@coroutineScope b.second
+                }
             }
             best?.second
         } finally {
@@ -369,6 +375,21 @@ object LyricsService {
             // Sources cut short never answered; the menu offers to ask them.
             entry.results.update { results -> results.filterValues { it != SourceResult.Asking } }
         }
+    }
+
+    /**
+     * Sources whose lyrics are used whenever they have any, even line timed or plain, over every
+     * other source's: Spicy Lyrics. The others are only used when it has nothing.
+     */
+    private val AlwaysFirst = setOf("SpicyLyrics")
+
+    /** Whether [a] should replace [b]: an always-first source wins, then word timing over line timing over plain text, then the higher rank. */
+    private fun beats(a: Pair<Int, Lyrics>, b: Pair<Int, Lyrics>, sources: List<Source>): Boolean {
+        val aFirst = sources[a.first].id in AlwaysFirst
+        val bFirst = sources[b.first].id in AlwaysFirst
+        if (aFirst != bFirst) return aFirst
+        if (a.second.syncLevel != b.second.syncLevel) return a.second.syncLevel > b.second.syncLevel
+        return a.first < b.first
     }
 
     private val PlaceholderMarks = listOf("纯音乐", "暂无歌词", "没有填词", "未找到歌词", "无歌词", "歌词加载失败", "此歌曲为没有填词")

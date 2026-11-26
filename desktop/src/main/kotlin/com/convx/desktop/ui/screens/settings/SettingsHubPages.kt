@@ -215,9 +215,9 @@ fun AccountsHub() {
             icon = "spotify",
             tint = SystemColors.Green,
             value = when (spotify) {
-                is SpotifyAccount.State.SignedIn -> "Connected"
-                SpotifyAccount.State.SigningIn -> "Signing in"
-                is SpotifyAccount.State.Failed -> "Not connected"
+                is SpotifyAccount.State.SignedIn -> "Logged in"
+                SpotifyAccount.State.SigningIn, SpotifyAccount.State.WaitingForBrowser, SpotifyAccount.State.Checking -> "Logging in"
+                is SpotifyAccount.State.Failed -> "Not logged in"
                 SpotifyAccount.State.SignedOut -> "Off"
             },
         ) { SettingsNav.push(SettingsPage.Spotify) }

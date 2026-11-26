@@ -104,6 +104,7 @@ import com.convx.desktop.data.Library
 import com.convx.desktop.data.LibraryData
 import com.convx.desktop.data.Song
 import com.convx.desktop.data.toSong
+import com.convx.desktop.integrations.PlaylistImport
 import com.convx.desktop.integrations.spotify.SpotifyAccount
 import com.convx.desktop.integrations.spotify.SpotifyApi
 import com.convx.desktop.integrations.spotify.SpotifyMatcher
@@ -179,9 +180,6 @@ private enum class Kind {
     Playlist,
     SpotifyLiked,
     SpotifyPlaylist,
-    ;
-
-    val spotify: Boolean get() = this == SpotifyLiked || this == SpotifyPlaylist
 }
 
 private enum class LibrarySort(val key: String) {
@@ -237,20 +235,32 @@ private fun inPlaces(whole: List<String>, part: List<String>): List<String> {
     return whole.map { if (it in set) next.next() else it } + part.filterNot { it in had }
 }
 
-/** Your Spotify Liked Songs and playlists, listed after the app's own, as Spotify lists them. */
-private fun spotifyEntries(playlists: List<SpotifyPlaylist>, likedCount: Int?): List<LibraryEntry> = buildList {
-    add(
-        LibraryEntry(
-            key = "spotify-liked", kind = Kind.SpotifyLiked, id = "spotify-liked", title = "Liked Songs",
-            owner = likedCount?.let { if (it == 1) "1 song" else "$it songs" }.orEmpty(),
-            thumbnail = null, mosaic = emptyList(), screen = Screen.SpotifyLiked, added = 0L, recent = 0L,
-        ),
-    )
+/**
+ * Your Spotify lists that aren't in Convx yet, listed after the app's own, as Spotify lists them:
+ * Liked Songs when [liked], then [playlists]. One you've brought in is listed once, as that copy.
+ */
+private fun spotifyEntries(
+    playlists: List<SpotifyPlaylist>,
+    liked: Boolean,
+    likedCount: Int?,
+    worn: Map<String, com.convx.desktop.data.WornCover>,
+): List<LibraryEntry> = buildList {
+    // A disc design put on one shows instead of Spotify's picture.
+    fun disc(id: String?) = worn[DiscTargets.spotify(id)]?.cover?.let(com.convx.desktop.data.PlaylistCovers::url)
+    if (liked) {
+        add(
+            LibraryEntry(
+                key = "spotify-liked", kind = Kind.SpotifyLiked, id = "spotify-liked", title = "Liked Songs",
+                owner = likedCount?.let { if (it == 1) "1 song" else "$it songs" }.orEmpty(),
+                thumbnail = disc(null), mosaic = emptyList(), screen = Screen.SpotifyLiked, added = 0L, recent = 0L,
+            ),
+        )
+    }
     playlists.forEachIndexed { index, p ->
         // Spotify's own order is most recently played first; keep it under "Recents".
         add(
             LibraryEntry(
-                "spotify:${p.id}", Kind.SpotifyPlaylist, p.id, p.name, p.owner, p.image, emptyList(),
+                "spotify:${p.id}", Kind.SpotifyPlaylist, p.id, p.name, p.owner, disc(p.id) ?: p.image, emptyList(),
                 Screen.SpotifyPlaylist(p.id), added = -index.toLong(), recent = -index.toLong(),
             ),
         )
@@ -351,11 +361,18 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
     val localIndex by com.convx.desktop.player.LocalMusic.index.collectAsState()
     val downloaded by com.convx.desktop.player.Downloads.done.collectAsState()
     val autoSettings = listOf(settings.showTopPlaylist, settings.showCachedPlaylist, settings.showUploadedPlaylist, settings.topSize)
-    val all = remember(library, spotifyLists, spotifyLiked, downloaded, autoSettings) {
+    // Spotify's lists with no Convx copy (Liked Songs first): a copy is the one you can change, so it stands for its list.
+    val spotifyOnly = remember(library, spotifyLists) {
+        spotifyLists?.let { lists ->
+            val copies = PlaylistImport.copies(listOf<SpotifyPlaylist?>(null) + lists, library.localPlaylists)
+            (copies[0] == null) to lists.filterIndexed { i, _ -> copies[i + 1] == null }
+        }
+    }
+    val all = remember(library, spotifyOnly, spotifyLiked, downloaded, autoSettings) {
         val cached = if (settings.showCachedPlaylist) com.convx.desktop.ui.screens.cachedSongs(library, downloaded.values) else emptyList()
         // Each row once: the list needs every row to be its own, and a playlist listed twice would stop it.
         (autoEntries(library, settings, cached) + library.playlistEntries() +
-            (spotifyLists?.let { spotifyEntries(it, spotifyLiked) } ?: emptyList())).distinctBy { it.key }
+            (spotifyOnly?.let { (liked, lists) -> spotifyEntries(lists, liked, spotifyLiked, library.worn) } ?: emptyList())).distinctBy { it.key }
     }
     val sort = LibrarySort.of(settings.librarySort)
     val pins = settings.pinnedLibrary
@@ -398,10 +415,10 @@ fun SideBar(collapsed: Boolean, modifier: Modifier = Modifier) {
         add(NavItem("stats", "Stats", "stats", screen == Screen.Stats) { navigator.navigate(Screen.Stats) })
     }
     // Under All Playlists, a group for each place your playlists come from that you have any of.
-    val groups = remember(library, spotifyLists) {
+    val groups = remember(library, spotifyOnly) {
         val spotifyMade = library.localPlaylists.count { PlaylistSource.ofLocal(it.id) == PlaylistSource.Spotify }
         listOf(
-            PlaylistSource.Spotify to spotifyMade + spotifyLists.orEmpty().size,
+            PlaylistSource.Spotify to spotifyMade + spotifyOnly?.second.orEmpty().size,
             PlaylistSource.YouTube to library.playlists.size,
             PlaylistSource.Convx to library.localPlaylists.size - spotifyMade,
         ).filter { it.second > 0 }
@@ -917,7 +934,6 @@ private fun PlaylistRow(
                 )
                 when {
                     playing -> ConvxIcon(if (isPlaying) "volume_up" else "volume_mute", tint = accent, size = 15.dp)
-                    entry.kind.spotify -> ConvxIcon("spotify", tint = SpotifyGreen, size = 12.dp)
                     pinned -> ConvxIcon("ic_push_pin", tint = Color.White.copy(alpha = 0.4f), size = 12.dp, modifier = Modifier.graphicsLayer { rotationZ = 45f })
                 }
             }
@@ -1045,8 +1061,12 @@ private fun EntryArt(entry: LibraryEntry, size: Dp) {
             val playlist = Library.playlist(entry.id)
             if (playlist != null) com.convx.desktop.ui.components.PlaylistCoverArt(playlist, size, shape) else MosaicArt(entry.mosaic, size, shape)
         }
-        // Spotify's own Liked Songs tile.
-        Kind.SpotifyLiked -> GradientTile("favorite", size, listOf(Color(0xFF450AF5), Color(0xFF8E8EE5)), shape)
+        // Spotify's own Liked Songs tile, or the disc design put on it.
+        Kind.SpotifyLiked -> if (entry.thumbnail != null) {
+            Artwork(entry.thumbnail, Modifier.size(size), size = 96, shape = shape, iconSize = size * 0.5f)
+        } else {
+            GradientTile("favorite", size, listOf(Color(0xFF450AF5), Color(0xFF8E8EE5)), shape)
+        }
         Kind.Playlist, Kind.SpotifyPlaylist -> Artwork(entry.thumbnail, Modifier.size(size), size = 96, shape = shape, iconSize = size * 0.5f)
     }
 }
@@ -1136,7 +1156,15 @@ private fun EntryMenu(entry: LibraryEntry, pinned: Boolean, dismiss: () -> Unit)
         Kind.Top -> DiscCoverMenuItems(DiscTargets.Top, dismiss = dismiss)
         Kind.Cached -> DiscCoverMenuItems(DiscTargets.Cached, dismiss = dismiss)
         Kind.Uploaded -> DiscCoverMenuItems(DiscTargets.Uploaded, dismiss = dismiss)
-        Kind.SpotifyLiked, Kind.SpotifyPlaylist -> Unit
+        Kind.SpotifyLiked, Kind.SpotifyPlaylist -> {
+            val spotifyId = entry.id.takeIf { entry.kind == Kind.SpotifyPlaylist }
+            MenuItem("Edit in Convx", "edit") {
+                dismiss()
+                navigator.navigate(entry.screen)
+                com.convx.desktop.ui.screens.editSpotifyPlaylistById(spotifyId)
+            }
+            DiscCoverMenuItems(DiscTargets.spotify(spotifyId), dismiss = dismiss)
+        }
     }
 }
 

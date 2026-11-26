@@ -438,6 +438,11 @@ private fun SearchResults(song: Song, title: String, artist: String) {
                                 ConvxIcon("sync", tint = Color.White, size = 12.dp)
                             }
                         }
+                        // A source that asks to be named with its lyrics is named here too.
+                        found.credit?.let {
+                            Spacer(Modifier.height(6.dp))
+                            LyricsCreditLine(it)
+                        }
                     }
                     IconButton(
                         if (index == expanded) "expand_less" else "expand_more",

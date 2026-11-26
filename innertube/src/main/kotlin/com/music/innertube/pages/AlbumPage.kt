@@ -19,6 +19,8 @@ data class AlbumPage(
     val releasesForYou: List<AlbumItem> = emptyList(),
     val description: String? = null,
     val descriptionRuns: List<com.music.innertube.models.Run>? = null,
+    /** Rows YouTube Music listed that can't be played here (greyed out, usually blocked in this country). */
+    val unavailable: Int = 0,
 ) {
     companion object {
         fun getTitle(response: BrowseResponse): String? {

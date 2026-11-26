@@ -7,6 +7,10 @@ package com.convx.desktop.ui.components
 
 import com.convx.desktop.ui.player.QueueFlight
 import com.convx.desktop.integrations.youtube.YouTubePlaylists
+import com.convx.desktop.integrations.PlaylistImport
+import com.convx.desktop.integrations.spotify.SpotifyAccount
+import com.convx.desktop.integrations.spotify.SpotifyApi
+import com.convx.desktop.integrations.spotify.SpotifyPlaylist
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.heightIn
@@ -413,6 +417,10 @@ fun SongMenuContent(
             YouTubePlaylists.add(playlist, listOf(song))
             dismiss()
         }
+        SpotifyPlaylistItems(library) { playlist ->
+            com.convx.desktop.ui.screens.addToSpotifyPlaylist(playlist, listOf(song))
+            dismiss()
+        }
         return
     }
 
@@ -501,6 +509,31 @@ private fun YouTubePlaylistItems(library: com.convx.desktop.data.LibraryData, on
     }
 }
 
+/**
+ * Your Spotify playlists, under the rest, while you're logged in to Spotify. One that's in Convx
+ * already is listed above as that playlist, so only the others are here; picking one brings it in
+ * (see addToSpotifyPlaylist).
+ */
+@Composable
+private fun SpotifyPlaylistItems(library: com.convx.desktop.data.LibraryData, onPick: (SpotifyPlaylist) -> Unit) {
+    val account by SpotifyAccount.state.collectAsState()
+    val signedIn = account is SpotifyAccount.State.SignedIn
+    // As last read (the side bar reads them at start), and read now if they haven't been yet.
+    var lists by remember { mutableStateOf(SpotifyApi.knownPlaylists) }
+    LaunchedEffect(signedIn) { if (signedIn) SpotifyApi.playlists().onSuccess { lists = it } }
+    val onlyOnSpotify = remember(lists, library.localPlaylists) {
+        val all = lists.orEmpty()
+        val copies = PlaylistImport.copies(all, library.localPlaylists)
+        all.filterIndexed { i, _ -> copies[i] == null }
+    }
+    if (!signedIn || onlyOnSpotify.isEmpty()) return
+    MenuDivider()
+    Text("Spotify", style = ConvxType.Caption, color = ConvxColors.SecondaryLabel, modifier = Modifier.padding(start = 14.dp, end = 14.dp, top = 8.dp, bottom = 2.dp))
+    for (playlist in onlyOnSpotify) {
+        MenuItem(playlist.name.ifBlank { "Untitled playlist" }, "queue_music") { onPick(playlist) }
+    }
+}
+
 /** Menu for a whole collection: album, playlist, mix. */
 @Composable
 fun CollectionMenuContent(
@@ -540,6 +573,10 @@ fun CollectionMenuContent(
         }
         YouTubePlaylistItems(library) { playlist ->
             YouTubePlaylists.add(playlist, songs())
+            dismiss()
+        }
+        SpotifyPlaylistItems(library) { playlist ->
+            com.convx.desktop.ui.screens.addToSpotifyPlaylist(playlist, songs())
             dismiss()
         }
         return
