@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Page not found · Convx</title>
+<meta name="description" content="This page isn’t here.">
+<meta name="robots" content="noindex">
+<script>(() => { if (location.protocol === 'file:') return; const m = location.hostname.endsWith('.github.io') && location.pathname.match(/^\/[^/]+\//); const b = document.createElement('base'); b.href = m ? m[0] : '/'; document.head.prepend(b); })();</script>
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Convx">
+<meta property="og:title" content="Page not found · Convx">
+<meta property="og:description" content="This page isn’t here.">
+<meta property="og:image" content="https://m33md.github.io/convx-desktop/assets/og.jpg">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#000000">
+<link rel="icon" type="image/png" sizes="32x32" href="assets/icon-32.png">
+<link rel="icon" type="image/png" sizes="64x64" href="assets/icon-64.png">
+<link rel="apple-touch-icon" href="assets/icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="assets/pages.css">
+</head>
+<body>
+
+<a class="skip" href="#main">Skip to content</a>
+<nav class="nav" aria-label="Main">
+  <div class="nav-bar glass">
+    <a class="brand" href="index.html" aria-label="Convx home">
+      <img src="assets/convx-word.svg" width="100" height="19" alt="">
+    </a>
+    <div class="nav-links">
+      <a href="index.html#tour">Tour</a>
+      <a href="index.html#features">Features</a>
+      <a href="docs.html">Docs</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+    <a class="btn btn-red" href="index.html#download">Download</a>
+  </div>
+</nav>
+
+<header class="wrap page-head">
+  <h1>This page isn’t here.</h1>
+  <p class="lede">Nothing plays at this address.</p>
+  
+  
+</header>
+
+<main class="wrap page-body no-toc" id="main">
+    <div class="doc">
+      <section>
+        <p>The link may be old, or the page may have moved. Everything about Convx is a click away:</p>
+        <ul>
+          <li><a href="index.html">The home page</a>, with the tour and every feature</li>
+          <li><a href="index.html#download">Download Convx</a> for Android, Windows or Mac</li>
+          <li><a href="docs.html">Docs</a>, <a href="faq.html">Q&amp;A</a> and <a href="privacy.html">Privacy</a></li>
+        </ul>
+      </section>
+    </div>
+</main>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <img src="assets/convx-word.svg" width="115" height="22" alt="Convx">
+      <p>Convx is made by <a href="https://github.com/cosmictaserdev-creator">Aryan (Cosmic Taser)</a>. Convx for Windows and Mac is maintained by <a href="https://github.com/m33md">m33md</a>. Both are free software under the <a href="https://www.gnu.org/licenses/gpl-3.0.html">GNU GPL v3.0</a>.</p>
+      <p>Convx is an independent project and is not affiliated with, endorsed by, or connected to YouTube, Google, or their affiliates.</p>
+    </div>
+    <nav class="foot-links" aria-label="Footer">
+      <a href="index.html#download">Download</a>
+      <a href="docs.html">Docs</a>
+      <a href="faq.html">Q&amp;A</a>
+      <a href="privacy.html">Privacy</a>
+      <a href="https://github.com/cosmictaserdev-creator/Convx">Android source</a>
+      <a href="https://github.com/m33md/convx-desktop">Desktop source</a>
+      <a href="https://discord.gg/Ejeb4cmzfd">Discord</a>
+      <a href="https://ko-fi.com/cosmictaser">Ko-fi</a>
+    </nav>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(() => {
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const gs = window.gsap && window.ScrollTrigger ? window.gsap : null;
+  if (gs) { gs.registerPlugin(ScrollTrigger); ScrollTrigger.clearScrollMemory('manual'); }
+
+  /* Always open at the top, unless the link points into the page; a reload otherwise lands part-way down. */
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  let touched = false;
+  ['wheel', 'touchstart', 'keydown', 'pointerdown'].forEach(t => addEventListener(t, () => { touched = true; }, { once: true, passive: true }));
+  const toTop = () => {
+    if (touched) return;
+    const target = location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+    if (target) target.scrollIntoView({ block: 'start', behavior: 'instant' });
+    else scrollTo({ top: 0, left: 0, behavior: 'instant' });
+  };
+  toTop();
+  addEventListener('load', toTop);
+
+  /* The bar tucks away while you read down the page and comes back when you scroll up. */
+  const nav = document.querySelector('.nav');
+  let lastY = scrollY;
+  addEventListener('scroll', () => {
+    const y = scrollY;
+    if (Math.abs(y - lastY) > 6) { nav.classList.toggle('tucked', y > lastY && y > 300); lastY = y; }
+  }, { passive: true });
+
+  /* Contents: the section you're reading is marked. */
+  const toc = [...document.querySelectorAll('.toc a')];
+  const secs = toc.map(a => document.querySelector(a.getAttribute('href')));
+  const mark = i => toc.forEach((a, k) => {
+    a.classList.toggle('on', k === i);
+    if (k === i) { const ol = a.closest('ol'); if (ol.scrollWidth > ol.clientWidth) ol.scrollTo({ left: a.parentElement.offsetLeft - 16, behavior: reduce ? 'auto' : 'smooth' }); }
+  });
+  if (gs) secs.forEach((s, i) => s && ScrollTrigger.create({ trigger: s, start: 'top 40%', end: 'bottom 40%', onToggle: self => { if (self.isActive) mark(i); } }));
+  else if (secs.length) addEventListener('scroll', () => {
+    const y = innerHeight * 0.4;
+    secs.forEach((s, i) => { const r = s.getBoundingClientRect(); if (r.top < y && r.bottom > y) mark(i); });
+  }, { passive: true });
+
+  /* The heading settles in once; the reading itself stays still. */
+  if (gs && !reduce) {
+    gs.from('.page-head > *', { y: 10, opacity: 0, duration: 0.6, ease: 'power3.out', stagger: 0.05 });
+    gs.from('.toc', { opacity: 0, duration: 0.6, ease: 'power2.out', delay: 0.2 });
+  }
+
+  /* Q&A: answers open and close smoothly. */
+  document.querySelectorAll('.qa').forEach(d => {
+    const s = d.querySelector('summary'), a = d.querySelector('.a');
+    s.addEventListener('click', e => {
+      if (!gs || reduce) return;
+      e.preventDefault();
+      gs.killTweensOf(a);
+      if (d.open) gs.to(a, { height: 0, paddingBottom: 0, opacity: 0, duration: 0.35, ease: 'power2.inOut', onComplete: () => { d.open = false; gs.set(a, { clearProps: 'height,paddingBottom,opacity' }); } });
+      else { d.open = true; gs.from(a, { height: 0, paddingBottom: 0, opacity: 0, duration: 0.55, ease: 'expo.out', clearProps: 'height,paddingBottom,opacity' }); }
+    });
+  });
+  const hashOpen = () => { const t = location.hash && document.getElementById(location.hash.slice(1)); if (t && t.tagName === 'DETAILS') t.open = true; };
+  hashOpen(); addEventListener('hashchange', hashOpen);
+  if (gs && document.fonts) document.fonts.ready.then(() => { ScrollTrigger.refresh(); toTop(); });
+})();
+</script>
+</body>
+</html>
