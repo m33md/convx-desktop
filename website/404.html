@@ -6,7 +6,7 @@
 <title>Page not found · Convx</title>
 <meta name="description" content="This page isn’t here.">
 <meta name="robots" content="noindex">
-<script>(() => { const m = location.hostname.endsWith('.github.io') && location.pathname.match(/^\/[^/]+\//); const b = document.createElement('base'); b.href = m ? m[0] : '/'; document.head.prepend(b); })();</script>
+<script>(() => { if (location.protocol === 'file:') return; const m = location.hostname.endsWith('.github.io') && location.pathname.match(/^\/[^/]+\//); const b = document.createElement('base'); b.href = m ? m[0] : '/'; document.head.prepend(b); })();</script>
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="Convx">
 <meta property="og:title" content="Page not found · Convx">

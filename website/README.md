@@ -2,7 +2,13 @@
 
 The Convx website: a home page (`index.html`), Docs, Q&A and Privacy (`docs.html`, `faq.html`,
 `privacy.html`), a not-found page (`404.html`) and their pictures in `assets/`. Plain HTML, CSS and
-JavaScript with no build step; open `index.html` in a browser to see it.
+JavaScript with no build step; open `index.html` in a browser to see it. The pages need an
+internet connection for their fonts, the animation library (GSAP, from cdnjs) and the download
+links.
+
+To put it online anywhere else, upload this folder's contents as they are to any static host,
+such as Netlify, Cloudflare Pages or a GitHub Pages repository. `index.html` is the home page and
+`404.html` the not-found page.
 
 Every push to `main` that changes this folder publishes it to
 https://m33md.github.io/convx-desktop/ (`.github/workflows/website.yml`). GitHub Pages has to be set
