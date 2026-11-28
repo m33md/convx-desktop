@@ -1,0 +1,35 @@
+﻿1 running samples, 1355 in native code
+
+Threads by CPU (share of the whole processor, average):
+    0.92%  C2 CompilerThread1
+    0.79%  AWT-EventQueue-0
+    0.60%  C1 CompilerThread0
+    0.56%  C2 CompilerThread0
+    0.36%  JFR Periodic Tasks
+    0.18%  main
+    0.05%  Attach Listener
+    0.05%  AWT-Windows
+    0.04%  DefaultDispatcher-worker-4
+    0.03%  DefaultDispatcher-worker-3
+    0.02%  convx-taskbar
+    0.02%  kotlinx.coroutines.DefaultExecutor
+    0.02%  OkHttp yt3.googleusercontent.com
+    0.02%  DefaultDispatcher-worker-2
+    0.01%  OkHttp music.apple.com
+
+Running samples by thread:
+      1  kotlinx.coroutines.DefaultExecutor
+
+Top frames:
+      1  kotlinx/coroutines/CancellableContinuationImpl.resumedState
+
+First Convx frame:
+
+First Compose/Skia frame:
+
+Native samples, top frame (threads waiting in native code show here too):
+   1016  sun/nio/ch/Net.poll
+    113  sun/nio/ch/Net.accept
+    113  sun/awt/windows/WToolkit.eventLoop
+    112  com/sun/jna/Native.invokeInt
+      1  jdk/jfr/internal/JVM.emitEvent

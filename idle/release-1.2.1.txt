@@ -1,0 +1,8 @@
+Idle check: release-1.2.1 (D:\a\_temp\release\Convx\Convx.exe)
+Measured process 6760 (Convx), started by 1164
+CPU while idle: 0.1% of all 4 threads (0.6% of one)
+Memory: working set 440 MB, private working set 360 MB (Task Manager's column), private bytes 460 MB; graphics memory dedicated 0 MB, shared 59 MB
+Threads: 62
+CPU while scrolling for 15 s: 32.3% of all 4 threads (129.3% of one)
+Memory right after scrolling: working set 527 MB, private working set 445 MB (Task Manager's column), private bytes 621 MB; graphics memory dedicated 0 MB, shared 126 MB
+Memory 75 s after scrolling: working set 439 MB, private working set 385 MB (Task Manager's column), private bytes 619 MB; graphics memory dedicated 0 MB, shared 126 MB

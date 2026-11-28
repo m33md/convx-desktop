@@ -1,0 +1,84 @@
+﻿40 running samples, 709 in native code
+
+Threads by CPU (share of the whole processor, average):
+    7.43%  C2 CompilerThread1
+    2.66%  pool-1-thread-2
+    1.71%  C2 CompilerThread0
+    1.07%  AWT-EventQueue-0
+    0.75%  C1 CompilerThread0
+    0.41%  DefaultDispatcher-worker-11
+    0.31%  DefaultDispatcher-worker-12
+    0.21%  DefaultDispatcher-worker-20
+    0.21%  DefaultDispatcher-worker-17
+    0.21%  DefaultDispatcher-worker-16
+    0.17%  DefaultDispatcher-worker-10
+    0.17%  DefaultDispatcher-worker-6
+    0.16%  AWT-Windows
+    0.10%  DefaultDispatcher-worker-15
+    0.10%  DefaultDispatcher-worker-14
+
+Running samples by thread:
+     30  AWT-EventQueue-0
+      3  DefaultDispatcher-worker-1
+      3  DefaultDispatcher-worker-10
+      2  DefaultDispatcher-worker-2
+      2  kotlinx.coroutines.DefaultExecutor
+
+Top frames:
+      2  kotlinx/serialization/encoding/AbstractDecoder.decodeSerializableValue
+      1  androidx/compose/animation/AnimatedVisibilityKt.AnimatedEnterExitImpl
+      1  androidx/compose/ui/spatial/RectManager.dispatchCallbacks
+      1  com/music/innertube/models/DefaultServiceEndpoint$$serializer.deserialize
+      1  io/ktor/client/plugins/contentnegotiation/ContentNegotiationKt.ContentNegotiation$lambda$0$convertResponse
+      1  java/lang/Character.isDigit
+      1  androidx/compose/ui/node/NodeCoordinatorKt.nextUntil-hw7D004
+      1  kotlinx/serialization/json/internal/StringJsonLexer.consumeKeyString
+      1  io/ktor/util/pipeline/DebugPipelineContext.proceedLoop
+      1  kotlinx/io/_UtilsJvmKt.reverseBytes
+      1  kotlin/jvm/internal/Intrinsics.sanitizeStackTrace
+      1  androidx/compose/runtime/Recomposer.composeInitial$runtime
+      1  com/convx/desktop/ui/components/VectorIconsKt.ConvxIcon-zTRkEkM
+      1  androidx/compose/runtime/snapshots/SnapshotStateObserver.clear
+      1  androidx/compose/foundation/text/BasicTextKt.BasicText-RWo7tUw
+      1  androidx/compose/runtime/ComposerKt.deactivateCurrentGroup$lambda$3
+      1  androidx/compose/animation/ExitTransition.plus
+      1  kotlinx/coroutines/BuildersKt__Builders_commonKt.withContext
+      1  androidx/compose/ui/layout/AlignmentLineKt.getLastBaseline
+      1  androidx/compose/ui/input/pointer/HitPathTracker.dispatchChanges
+      1  java/lang/StringBuilder.<init>
+      1  androidx/compose/ui/node/NodeCoordinator.fromParentPosition-8S9VItk
+      1  kotlinx/coroutines/internal/DispatchedContinuationKt.safeDispatch
+      1  com/convx/desktop/ui/screens/MoodTilesKt.MoodTile
+      1  androidx/compose/animation/core/SuspendAnimationKt.updateState
+
+First Convx frame:
+      2  com.convx.desktop.ui.components.PageInsetsKt$$Lambda/0x0000000100837478.invoke
+      2  com.convx.desktop.ui.screens.HomePartsKt$$Lambda/0x00000001008b3088.invoke
+      1  com.convx.desktop.ui.components.ItemsKt$$Lambda/0x000000010083d8a8.invoke
+      1  com.convx.desktop.ui.screens.HomeScreenKt$$Lambda/0x00000001008361b8.invoke
+
+First Compose/Skia frame:
+      3  androidx.compose.foundation.lazy.layout.LazyLayoutKt$LazyLayout$2$$Lambda/0x000000010063eb10.invoke
+      2  androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2$$Lambda/0x00000001007ae408.invoke
+      2  androidx.compose.ui.node.MeasurePassDelegate$$Lambda/0x00000001004a6330.invoke
+      2  androidx.compose.ui.platform.FlushCoroutineDispatcher$dispatch$2$$Lambda/0x000000010079f790.invoke
+      1  androidx.compose.animation.AnimatedVisibilityKt$$Lambda/0x000000010065d110.invoke
+      1  androidx.compose.foundation.lazy.LazyListState$$Lambda/0x00000001006254b8.invoke
+      1  androidx.compose.ui.node.MeasurePassDelegate$$Lambda/0x0000000100787d60.invoke
+      1  androidx.compose.runtime.ComposerKt$$Lambda/0x000000010080a948.invoke
+      1  androidx.compose.runtime.snapshots.SnapshotStateObserver$$Lambda/0x0000000100403be8.invoke
+      1  androidx.compose.ui.node.MeasurePassDelegate$$Lambda/0x00000001004a6588.invoke
+      1  org.jetbrains.skiko.SwingDispatcher$$Lambda/0x000000010079d488.actionPerformed
+      1  androidx.compose.foundation.gestures.MouseWheelScrollingLogic$$Lambda/0x000000010089e000.invoke
+      1  androidx.compose.runtime.Recomposer$$Lambda/0x0000000100324a48.invoke
+
+Native samples, top frame (threads waiting in native code show here too):
+    501  sun/nio/ch/Net.poll
+     63  com/sun/jna/Native.invokeInt
+     63  sun/nio/ch/Net.accept
+     60  sun/awt/windows/WToolkit.eventLoop
+     17  org/jetbrains/skiko/context/Direct3DContextHandler.flush
+      2  com/sun/jna/Native.invokeLong
+      1  org/jetbrains/skia/CanvasKt._nDrawPicture
+      1  org/jetbrains/skia/CanvasKt._nClear
+      1  sun/awt/windows/WComponentPeer.nativeHandleEvent

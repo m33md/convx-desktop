@@ -1,0 +1,77 @@
+﻿27 running samples, 713 in native code
+
+Threads by CPU (share of the whole processor, average):
+    6.89%  C2 CompilerThread1
+    2.60%  pool-1-thread-2
+    1.25%  C2 CompilerThread0
+    0.75%  AWT-EventQueue-0
+    0.62%  C1 CompilerThread0
+    0.47%  DefaultDispatcher-worker-10
+    0.34%  DefaultDispatcher-worker-6
+    0.23%  DefaultDispatcher-worker-17
+    0.20%  DefaultDispatcher-worker-7
+    0.16%  DefaultDispatcher-worker-19
+    0.10%  AWT-Windows
+    0.08%  StringDedupThread
+    0.08%  DefaultDispatcher-worker-20
+    0.08%  DefaultDispatcher-worker-16
+    0.08%  DefaultDispatcher-worker-15
+
+Running samples by thread:
+     23  AWT-EventQueue-0
+      2  DefaultDispatcher-worker-8
+      1  DefaultDispatcher-worker-2
+      1  DefaultDispatcher-worker-10
+
+Top frames:
+      1  androidx/compose/runtime/changelist/ComposerChangeListWriter.moveDown
+      1  kotlinx/serialization/encoding/AbstractDecoder.decodeSerializableValue
+      1  kotlinx/serialization/json/internal/AbstractJsonLexer.skipElement
+      1  com/music/innertube/models/BrowseEndpoint$BrowseEndpointContextSupportedConfigs$BrowseEndpointContextMusicConfig$$serializer.deserialize
+      1  kotlin/jvm/internal/Intrinsics.areEqual
+      1  com/convx/desktop/ui/components/ItemsKt$ItemShelf_GmEhDVc$lambda$2$0$$inlined$items$default$2.invoke
+      1  java/util/regex/Matcher.reset
+      1  androidx/compose/foundation/layout/FillNode.measure-3p2s80s
+      1  androidx/compose/ui/node/NodeChain.markAsDetached$ui
+      1  androidx/compose/runtime/Recomposer.recordComposerModifications
+      1  kotlinx/coroutines/BuildersKt.launch
+      1  androidx/compose/ui/scene/CanvasLayersComposeSceneImpl.hoveredOwner
+      1  androidx/compose/ui/text/ParagraphIntrinsicsKt.ParagraphIntrinsics
+      1  androidx/compose/ui/node/DepthSortedSet.pop
+      1  androidx/compose/ui/text/platform/ParagraphBuilder.makeOps
+      1  androidx/compose/runtime/SnapshotStateKt__ProduceStateKt.produceState
+      1  androidx/compose/runtime/ComposerImpl.start-BaiHCIY
+      1  androidx/compose/ui/node/RootNodeOwner.measureAndLayout
+      1  androidx/compose/ui/unit/Constraints.getHasBoundedHeight-impl
+      1  androidx/compose/ui/layout/LayoutNodeSubcompositionsState$Scope.layout
+      1  androidx/compose/runtime/ComposerImpl$CompositionContextImpl.invalidate$runtime
+      1  androidx/compose/ui/scene/ComposeSceneMediator.getContentComponent
+      1  androidx/compose/ui/spatial/RectList.defragment
+      1  com.convx.desktop.ui.screens.HomeScreenKt$$Lambda/0x0000000100837438.invoke
+      1  androidx/compose/ui/input/pointer/SyntheticEventSender.sendMissingReleases-l-3BpVI
+
+First Convx frame:
+      3  com.convx.desktop.ui.components.PageInsetsKt$$Lambda/0x000000010083c708.invoke
+      1  com.convx.desktop.ui.glass.GlassButtonsKt$$Lambda/0x000000010073a000.invoke
+      1  com.convx.desktop.ui.screens.HomeScreenKt$$Lambda/0x0000000100837438.invoke
+
+First Compose/Skia frame:
+      4  androidx.compose.ui.node.MeasurePassDelegate$$Lambda/0x00000001004cd6e0.invoke
+      3  androidx.compose.runtime.Recomposer$runRecomposeAndApplyChanges$2$$Lambda/0x00000001007ab0e0.invoke
+      2  androidx.compose.ui.scene.ComposeSceneMediator$$Lambda/0x00000001005410c0.invoke
+      1  androidx.compose.foundation.lazy.layout.NearestRangeKeyIndexMap$$Lambda/0x00000001006f69b8.invoke
+      1  androidx.compose.ui.platform.FlushCoroutineDispatcher$dispatch$2$$Lambda/0x00000001007a4000.invoke
+      1  androidx.compose.ui.scene.ComposeSceneRecomposer$$Lambda/0x0000000100789c68.run
+      1  androidx.compose.foundation.lazy.LazyListKt$rememberLazyListMeasurePolicy$1$1$$Lambda/0x00000001006f7c00.invoke
+      1  androidx.compose.foundation.lazy.LazyListState$$Lambda/0x0000000100648fc8.invoke
+      1  androidx.compose.foundation.lazy.layout.LazyLayoutKt$LazyLayout$2$$Lambda/0x00000001006607a0.invoke
+      1  androidx.compose.ui.node.ComposeUiNode$Companion$$Lambda/0x0000000100511250.invoke
+
+Native samples, top frame (threads waiting in native code show here too):
+    517  sun/nio/ch/Net.poll
+     58  com/sun/jna/Native.invokeInt
+     58  sun/nio/ch/Net.accept
+     58  sun/awt/windows/WToolkit.eventLoop
+     20  org/jetbrains/skiko/context/Direct3DContextHandler.flush
+      1  org/jetbrains/skia/PathKt._nMakeCombining
+      1  org/jetbrains/skia/PictureRecorderKt._nFinishRecordingAsPicture

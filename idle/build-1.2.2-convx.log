@@ -1,0 +1,30 @@
+20:02:04.926 I/Startup: Convx 1.2.2 on Windows Server 2025 amd64, Java 21.0.11, 216 GB free
+20:02:05.171 I/YouTube: Region US, language en (this PC: en-US)
+20:02:05.543 I/LocalMusic: Scanned 1 folders: 0 songs, 0 new, 0 gone, 0 read
+20:02:05.546 I/LocalCopies: Download folder: 0 songs, 0 read
+20:02:06.946 I/TitleBar: Custom title bar on, buttons take 141.0px
+20:02:07.002 I/Lyrics: PaxSenix: Spotify: nothing after 9 ms
+20:02:07.019 I/Lyrics: PaxSenix: Musixmatch: nothing after 38 ms
+20:02:07.208 I/Lyrics: SimpMusic: nothing after 226 ms
+20:02:07.281 I/Lyrics: YouTube Subtitle: nothing after 301 ms
+20:02:07.392 I/Lyrics: LRCLIB: lines after 411 ms
+20:02:07.427 I/Lyrics: BetterLyrics Portato: words after 447 ms
+20:02:07.541 I/Lyrics: Genius: nothing after 559 ms
+20:02:07.577 I/Lyrics: Musixmatch: nothing after 596 ms
+20:02:07.589 I/Lyrics: LyricsPlus: words after 608 ms
+20:02:07.595 I/Lyrics: Better Lyrics: words after 614 ms
+20:02:07.600 I/Lyrics: BiniLyrics: words after 618 ms
+20:02:07.602 I/Lyrics: lrc.red: words after 621 ms
+20:02:07.603 I/Lyrics: Unison: words after 621 ms
+20:02:07.625 I/SpicyLyrics: Syllable lyrics from spicy_lyrics for 0VjIjW4GlUZAMYd2vXMi3b
+20:02:07.627 I/Lyrics: Spicy Lyrics: words after 645 ms
+20:02:11.387 I/Touch: Listening to touch on 3 windows
+20:02:11.422 I/MediaControls: Windows media controls on
+20:02:11.591 I/MediaControls: Taskbar buttons on, 3 of 3 pictures, dark glyphs for a light taskbar
+20:02:41.338 I/Perf: Last 30 s: CPU 2.4% of 4 threads, 0.1 frames/s (DIRECT3D), window in front. Memory: 436 MB in use, 455 MB private; Java heap 41 of 67 MB, other Java 107 MB, covers 5 MB
+20:03:11.341 I/Perf: Last 30 s: CPU 0.3% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 437 MB in use, 452 MB private; Java heap 43 of 67 MB, other Java 108 MB, covers 5 MB
+20:03:41.345 I/Perf: Last 30 s: CPU 1.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 444 MB in use, 477 MB private; Java heap 44 of 64 MB, other Java 111 MB, covers 5 MB
+20:04:11.348 I/Perf: Last 30 s: CPU 7.6% of 4 threads, 0.9 frames/s (DIRECT3D), window in front. Memory: 496 MB in use, 590 MB private; Java heap 71 of 82 MB, other Java 115 MB, covers 10 MB
+20:04:41.351 I/Perf: Last 30 s: CPU 9.4% of 4 threads, 2.3 frames/s (DIRECT3D), window in front. Memory: 493 MB in use, 598 MB private; Java heap 70 of 82 MB, other Java 119 MB, covers 10 MB
+20:05:11.355 I/Perf: Last 30 s: CPU 0.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 450 MB in use, 597 MB private; Java heap 71 of 82 MB, other Java 119 MB, covers 10 MB
+20:05:41.357 I/Perf: Last 30 s: CPU 0.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 399 MB in use, 597 MB private; Java heap 71 of 82 MB, other Java 119 MB, covers 10 MB

@@ -1,0 +1,15 @@
+Idle check: build-1.2.2 (D:\a\convx-desktop\convx-desktop\desktop\build\compose\binaries\main\app\Convx\Convx.exe)
+Measured process 9380 (Convx), started by 5236
+CPU while idle: 0.2% of all 4 threads (0.9% of one)
+Memory: working set 438 MB, private working set 359 MB (Task Manager's column), private bytes 453 MB; graphics memory dedicated 0 MB, shared 59 MB
+Threads: 63
+CPU while scrolling for 15 s: 30.1% of all 4 threads (120.6% of one)
+Memory right after scrolling: working set 502 MB, private working set 423 MB (Task Manager's column), private bytes 599 MB; graphics memory dedicated 0 MB, shared 126 MB
+Memory 75 s after scrolling: working set 402 MB, private working set 364 MB (Task Manager's column), private bytes 600 MB; graphics memory dedicated 0 MB, shared 126 MB
+20:02:41.338 I/Perf: Last 30 s: CPU 2.4% of 4 threads, 0.1 frames/s (DIRECT3D), window in front. Memory: 436 MB in use, 455 MB private; Java heap 41 of 67 MB, other Java 107 MB, covers 5 MB
+20:03:11.341 I/Perf: Last 30 s: CPU 0.3% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 437 MB in use, 452 MB private; Java heap 43 of 67 MB, other Java 108 MB, covers 5 MB
+20:03:41.345 I/Perf: Last 30 s: CPU 1.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 444 MB in use, 477 MB private; Java heap 44 of 64 MB, other Java 111 MB, covers 5 MB
+20:04:11.348 I/Perf: Last 30 s: CPU 7.6% of 4 threads, 0.9 frames/s (DIRECT3D), window in front. Memory: 496 MB in use, 590 MB private; Java heap 71 of 82 MB, other Java 115 MB, covers 10 MB
+20:04:41.351 I/Perf: Last 30 s: CPU 9.4% of 4 threads, 2.3 frames/s (DIRECT3D), window in front. Memory: 493 MB in use, 598 MB private; Java heap 70 of 82 MB, other Java 119 MB, covers 10 MB
+20:05:11.355 I/Perf: Last 30 s: CPU 0.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 450 MB in use, 597 MB private; Java heap 71 of 82 MB, other Java 119 MB, covers 10 MB
+20:05:41.357 I/Perf: Last 30 s: CPU 0.1% of 4 threads, 0.0 frames/s (DIRECT3D), window in front. Memory: 399 MB in use, 597 MB private; Java heap 71 of 82 MB, other Java 119 MB, covers 10 MB

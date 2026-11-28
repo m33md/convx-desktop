@@ -1,0 +1,33 @@
+﻿0 running samples, 1198 in native code
+
+Threads by CPU (share of the whole processor, average):
+    1.65%  C2 CompilerThread1
+    0.83%  AWT-EventQueue-0
+    0.62%  C2 CompilerThread0
+    0.57%  C1 CompilerThread0
+    0.40%  JFR Periodic Tasks
+    0.16%  main
+    0.10%  DefaultDispatcher-worker-1
+    0.06%  Attach Listener
+    0.05%  AWT-Windows
+    0.04%  DefaultDispatcher-worker-3
+    0.03%  DefaultDispatcher-worker-4
+    0.03%  DefaultDispatcher-worker-5
+    0.02%  OkHttp music.youtube.com
+    0.01%  convx-taskbar
+    0.01%  convx-media-controls
+
+Running samples by thread:
+
+Top frames:
+
+First Convx frame:
+
+First Compose/Skia frame:
+
+Native samples, top frame (threads waiting in native code show here too):
+    871  sun/nio/ch/Net.poll
+    109  sun/nio/ch/Net.accept
+    109  sun/awt/windows/WToolkit.eventLoop
+    108  com/sun/jna/Native.invokeInt
+      1  jdk/jfr/internal/JVM.emitEvent
