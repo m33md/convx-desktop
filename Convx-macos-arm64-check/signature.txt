@@ -1,0 +1,538 @@
+-- codesign -dv
+Executable=/Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app/Contents/MacOS/Convx
+Identifier=com.convx.desktop
+Format=app bundle with Mach-O thin (arm64)
+CodeDirectory v=20500 size=658 flags=0x10002(adhoc,runtime) hashes=10+7 location=embedded
+Signature=adhoc
+Info.plist entries=15
+TeamIdentifier=not set
+Runtime Version=14.2.0
+Sealed Resources version=2 rules=13 files=419
+Internal requirements count=0 size=12
+-- codesign --verify --deep --strict
+/Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app: valid on disk
+/Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app: satisfies its Designated Requirement
+valid
+-- spctl (Gatekeeper)
+/Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app: rejected
+-- syspolicy_check distribution
+Checking distribution readiness on /Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app
+Checking certificate type for /Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app
+Passed developer ID certificate check
+Passed certificate-profile match check
+  Progress: 720769 / 303443968 = 0.002375
+  Progress: 1441539 / 303443968 = 0.004751
+  Progress: 2162308 / 303443968 = 0.007126
+  Progress: 2883078 / 303443968 = 0.009501
+  Progress: 3603847 / 303443968 = 0.011876
+  Progress: 4324617 / 303443968 = 0.014252
+  Progress: 5045387 / 303443968 = 0.016627
+  Progress: 5766156 / 303443968 = 0.019002
+  Progress: 6486925 / 303443968 = 0.021378
+  Progress: 7207695 / 303443968 = 0.023753
+  Progress: 7928464 / 303443968 = 0.026128
+  Progress: 8649234 / 303443968 = 0.028504
+  Progress: 9370004 / 303443968 = 0.030879
+  Progress: 10090774 / 303443968 = 0.033254
+  Progress: 10811543 / 303443968 = 0.035629
+  Progress: 11532313 / 303443968 = 0.038005
+  Progress: 12253081 / 303443968 = 0.040380
+  Progress: 12973851 / 303443968 = 0.042755
+  Progress: 13694621 / 303443968 = 0.045131
+  Progress: 14415390 / 303443968 = 0.047506
+  Progress: 15136160 / 303443968 = 0.049881
+  Progress: 15856929 / 303443968 = 0.052257
+  Progress: 16577699 / 303443968 = 0.054632
+  Progress: 17298468 / 303443968 = 0.057007
+  Progress: 18019238 / 303443968 = 0.059382
+  Progress: 18740008 / 303443968 = 0.061758
+  Progress: 19460778 / 303443968 = 0.064133
+  Progress: 20181548 / 303443968 = 0.066508
+  Progress: 20902316 / 303443968 = 0.068884
+  Progress: 21623086 / 303443968 = 0.071259
+  Progress: 22343856 / 303443968 = 0.073634
+  Progress: 23064626 / 303443968 = 0.076010
+  Progress: 23785396 / 303443968 = 0.078385
+  Progress: 24506162 / 303443968 = 0.080760
+  Progress: 25226932 / 303443968 = 0.083135
+  Progress: 25947702 / 303443968 = 0.085511
+  Progress: 26668472 / 303443968 = 0.087886
+  Progress: 27389242 / 303443968 = 0.090261
+  Progress: 28110010 / 303443968 = 0.092637
+  Progress: 28830780 / 303443968 = 0.095012
+  Progress: 29551550 / 303443968 = 0.097387
+  Progress: 30272320 / 303443968 = 0.099762
+  Progress: 30993090 / 303443968 = 0.102138
+  Progress: 31713858 / 303443968 = 0.104513
+  Progress: 32434628 / 303443968 = 0.106888
+  Progress: 33155398 / 303443968 = 0.109264
+  Progress: 33876168 / 303443968 = 0.111639
+  Progress: 34596936 / 303443968 = 0.114014
+  Progress: 35317708 / 303443968 = 0.116390
+  Progress: 36038476 / 303443968 = 0.118765
+  Progress: 36759248 / 303443968 = 0.121140
+  Progress: 37480016 / 303443968 = 0.123515
+  Progress: 38200784 / 303443968 = 0.125891
+  Progress: 38921556 / 303443968 = 0.128266
+  Progress: 39642324 / 303443968 = 0.130641
+  Progress: 40363096 / 303443968 = 0.133017
+  Progress: 41083860 / 303443968 = 0.135392
+  Progress: 41804632 / 303443968 = 0.137767
+  Progress: 42525400 / 303443968 = 0.140143
+  Progress: 43246172 / 303443968 = 0.142518
+  Progress: 43966940 / 303443968 = 0.144893
+  Progress: 44687712 / 303443968 = 0.147268
+  Progress: 45408480 / 303443968 = 0.149644
+  Progress: 46129252 / 303443968 = 0.152019
+  Progress: 46850020 / 303443968 = 0.154394
+  Progress: 47570792 / 303443968 = 0.156770
+  Progress: 48291556 / 303443968 = 0.159145
+  Progress: 49012324 / 303443968 = 0.161520
+  Progress: 49733096 / 303443968 = 0.163895
+  Progress: 50453864 / 303443968 = 0.166271
+  Progress: 51174636 / 303443968 = 0.168646
+  Progress: 51895404 / 303443968 = 0.171021
+  Progress: 52616176 / 303443968 = 0.173397
+  Progress: 53336944 / 303443968 = 0.175772
+  Progress: 54057716 / 303443968 = 0.178147
+  Progress: 54778484 / 303443968 = 0.180523
+  Progress: 55499256 / 303443968 = 0.182898
+  Progress: 56220020 / 303443968 = 0.185273
+  Progress: 56940792 / 303443968 = 0.187648
+  Progress: 57661560 / 303443968 = 0.190024
+  Progress: 58382332 / 303443968 = 0.192399
+  Progress: 59103100 / 303443968 = 0.194774
+  Progress: 59823872 / 303443968 = 0.197150
+  Progress: 60544640 / 303443968 = 0.199525
+  Progress: 61265412 / 303443968 = 0.201900
+  Progress: 61986180 / 303443968 = 0.204276
+  Progress: 62706952 / 303443968 = 0.206651
+  Progress: 63427716 / 303443968 = 0.209026
+  Progress: 64148484 / 303443968 = 0.211401
+  Progress: 64869256 / 303443968 = 0.213777
+  Progress: 65590024 / 303443968 = 0.216152
+  Progress: 66310796 / 303443968 = 0.218527
+  Progress: 67031564 / 303443968 = 0.220903
+  Progress: 67752336 / 303443968 = 0.223278
+  Progress: 68473104 / 303443968 = 0.225653
+  Progress: 69193872 / 303443968 = 0.228028
+  Progress: 69914640 / 303443968 = 0.230404
+  Progress: 70635416 / 303443968 = 0.232779
+  Progress: 71356184 / 303443968 = 0.235154
+  Progress: 72076952 / 303443968 = 0.237530
+  Progress: 72797720 / 303443968 = 0.239905
+  Progress: 73518496 / 303443968 = 0.242280
+  Progress: 74239256 / 303443968 = 0.244656
+  Progress: 74960032 / 303443968 = 0.247031
+  Progress: 75680800 / 303443968 = 0.249406
+  Progress: 76401568 / 303443968 = 0.251781
+  Progress: 77122336 / 303443968 = 0.254157
+  Progress: 77843112 / 303443968 = 0.256532
+  Progress: 78563880 / 303443968 = 0.258907
+  Progress: 79284648 / 303443968 = 0.261283
+  Progress: 80005416 / 303443968 = 0.263658
+  Progress: 80726192 / 303443968 = 0.266033
+  Progress: 81446952 / 303443968 = 0.268409
+  Progress: 82167720 / 303443968 = 0.270784
+  Progress: 82888496 / 303443968 = 0.273159
+  Progress: 83609264 / 303443968 = 0.275534
+  Progress: 84330032 / 303443968 = 0.277910
+  Progress: 85050800 / 303443968 = 0.280285
+  Progress: 85771576 / 303443968 = 0.282660
+  Progress: 86492344 / 303443968 = 0.285036
+  Progress: 87213112 / 303443968 = 0.287411
+  Progress: 87933880 / 303443968 = 0.289786
+  Progress: 88654656 / 303443968 = 0.292162
+  Progress: 89375424 / 303443968 = 0.294537
+  Progress: 90096184 / 303443968 = 0.296912
+  Progress: 90816960 / 303443968 = 0.299287
+  Progress: 91537728 / 303443968 = 0.301663
+  Progress: 92258504 / 303443968 = 0.304038
+  Progress: 92979264 / 303443968 = 0.306413
+  Progress: 93700040 / 303443968 = 0.308789
+  Progress: 94420808 / 303443968 = 0.311164
+  Progress: 95141584 / 303443968 = 0.313539
+  Progress: 95862344 / 303443968 = 0.315914
+  Progress: 96583112 / 303443968 = 0.318290
+  Progress: 97303888 / 303443968 = 0.320665
+  Progress: 98024648 / 303443968 = 0.323040
+  Progress: 98745424 / 303443968 = 0.325416
+  Progress: 99466192 / 303443968 = 0.327791
+  Progress: 100186968 / 303443968 = 0.330166
+  Progress: 100907728 / 303443968 = 0.332542
+  Progress: 101628504 / 303443968 = 0.334917
+  Progress: 102349272 / 303443968 = 0.337292
+  Progress: 103070048 / 303443968 = 0.339667
+  Progress: 103790808 / 303443968 = 0.342043
+  Progress: 104511576 / 303443968 = 0.344418
+  Progress: 105232352 / 303443968 = 0.346793
+  Progress: 105953120 / 303443968 = 0.349169
+  Progress: 106673888 / 303443968 = 0.351544
+  Progress: 107394656 / 303443968 = 0.353919
+  Progress: 108115432 / 303443968 = 0.356295
+  Progress: 108836200 / 303443968 = 0.358670
+  Progress: 109556968 / 303443968 = 0.361045
+  Progress: 110277736 / 303443968 = 0.363420
+  Progress: 110998512 / 303443968 = 0.365796
+  Progress: 111719280 / 303443968 = 0.368171
+  Progress: 112440040 / 303443968 = 0.370546
+  Progress: 113160816 / 303443968 = 0.372922
+  Progress: 113881584 / 303443968 = 0.375297
+  Progress: 114602352 / 303443968 = 0.377672
+  Progress: 115323120 / 303443968 = 0.380048
+  Progress: 116043896 / 303443968 = 0.382423
+  Progress: 116764664 / 303443968 = 0.384798
+  Progress: 117485432 / 303443968 = 0.387173
+  Progress: 118206200 / 303443968 = 0.389549
+  Progress: 118926968 / 303443968 = 0.391924
+  Progress: 119647744 / 303443968 = 0.394299
+  Progress: 120368504 / 303443968 = 0.396675
+  Progress: 121089280 / 303443968 = 0.399050
+  Progress: 121810048 / 303443968 = 0.401425
+  Progress: 122530824 / 303443968 = 0.403800
+  Progress: 123251584 / 303443968 = 0.406176
+  Progress: 123972360 / 303443968 = 0.408551
+  Progress: 124693128 / 303443968 = 0.410926
+  Progress: 125413904 / 303443968 = 0.413302
+  Progress: 126134664 / 303443968 = 0.415677
+  Progress: 126855432 / 303443968 = 0.418052
+  Progress: 127576208 / 303443968 = 0.420428
+  Progress: 128296968 / 303443968 = 0.422803
+  Progress: 129017744 / 303443968 = 0.425178
+  Progress: 129738512 / 303443968 = 0.427553
+  Progress: 130459288 / 303443968 = 0.429929
+  Progress: 131180048 / 303443968 = 0.432304
+  Progress: 131900824 / 303443968 = 0.434679
+  Progress: 132621592 / 303443968 = 0.437055
+  Progress: 133342368 / 303443968 = 0.439430
+  Progress: 134063128 / 303443968 = 0.441805
+  Progress: 134783904 / 303443968 = 0.444181
+  Progress: 135504672 / 303443968 = 0.446556
+  Progress: 136225440 / 303443968 = 0.448931
+  Progress: 136946208 / 303443968 = 0.451306
+  Progress: 137666976 / 303443968 = 0.453682
+  Progress: 138387744 / 303443968 = 0.456057
+  Progress: 139108528 / 303443968 = 0.458432
+  Progress: 139829280 / 303443968 = 0.460808
+  Progress: 140550048 / 303443968 = 0.463183
+  Progress: 141270832 / 303443968 = 0.465558
+  Progress: 141991600 / 303443968 = 0.467934
+  Progress: 142712368 / 303443968 = 0.470309
+  Progress: 143433136 / 303443968 = 0.472684
+  Progress: 144153904 / 303443968 = 0.475059
+  Progress: 144874672 / 303443968 = 0.477435
+  Progress: 145595440 / 303443968 = 0.479810
+  Progress: 146316208 / 303443968 = 0.482185
+  Progress: 147036992 / 303443968 = 0.484561
+  Progress: 147757744 / 303443968 = 0.486936
+  Progress: 148478512 / 303443968 = 0.489311
+  Progress: 149199296 / 303443968 = 0.491686
+  Progress: 149920064 / 303443968 = 0.494062
+  Progress: 150640832 / 303443968 = 0.496437
+  Progress: 151361600 / 303443968 = 0.498812
+  Progress: 152082368 / 303443968 = 0.501188
+  Progress: 152803136 / 303443968 = 0.503563
+  Progress: 153523904 / 303443968 = 0.505938
+  Progress: 154244672 / 303443968 = 0.508314
+  Progress: 154965456 / 303443968 = 0.510689
+  Progress: 155686224 / 303443968 = 0.513064
+  Progress: 156406992 / 303443968 = 0.515439
+  Progress: 157127760 / 303443968 = 0.517815
+  Progress: 157848512 / 303443968 = 0.520190
+  Progress: 158569296 / 303443968 = 0.522565
+  Progress: 159290064 / 303443968 = 0.524941
+  Progress: 160010832 / 303443968 = 0.527316
+  Progress: 160731600 / 303443968 = 0.529691
+  Progress: 161452384 / 303443968 = 0.532067
+  Progress: 162173152 / 303443968 = 0.534442
+  Progress: 162893904 / 303443968 = 0.536817
+  Progress: 163614672 / 303443968 = 0.539192
+  Progress: 164335440 / 303443968 = 0.541568
+  Progress: 165056224 / 303443968 = 0.543943
+  Progress: 165776992 / 303443968 = 0.546318
+  Progress: 166497760 / 303443968 = 0.548694
+  Progress: 167218528 / 303443968 = 0.551069
+  Progress: 167939312 / 303443968 = 0.553444
+  Progress: 168660064 / 303443968 = 0.555819
+  Progress: 169380832 / 303443968 = 0.558195
+  Progress: 170101600 / 303443968 = 0.560570
+  Progress: 170822368 / 303443968 = 0.562945
+  Progress: 171543152 / 303443968 = 0.565321
+  Progress: 172263920 / 303443968 = 0.567696
+  Progress: 172984688 / 303443968 = 0.570071
+  Progress: 173705456 / 303443968 = 0.572447
+  Progress: 174426224 / 303443968 = 0.574822
+  Progress: 175146992 / 303443968 = 0.577197
+  Progress: 175867760 / 303443968 = 0.579572
+  Progress: 176588528 / 303443968 = 0.581948
+  Progress: 177309312 / 303443968 = 0.584323
+  Progress: 178030080 / 303443968 = 0.586698
+  Progress: 178750848 / 303443968 = 0.589074
+  Progress: 179471600 / 303443968 = 0.591449
+  Progress: 180192368 / 303443968 = 0.593824
+  Progress: 180913152 / 303443968 = 0.596200
+  Progress: 181633920 / 303443968 = 0.598575
+  Progress: 182354688 / 303443968 = 0.600950
+  Progress: 183075456 / 303443968 = 0.603325
+  Progress: 183796240 / 303443968 = 0.605701
+  Progress: 184517008 / 303443968 = 0.608076
+  Progress: 185237760 / 303443968 = 0.610451
+  Progress: 185958528 / 303443968 = 0.612827
+  Progress: 186679296 / 303443968 = 0.615202
+  Progress: 187400080 / 303443968 = 0.617577
+  Progress: 188120848 / 303443968 = 0.619952
+  Progress: 188841616 / 303443968 = 0.622328
+  Progress: 189562384 / 303443968 = 0.624703
+  Progress: 190283168 / 303443968 = 0.627078
+  Progress: 191003920 / 303443968 = 0.629454
+  Progress: 191724688 / 303443968 = 0.631829
+  Progress: 192445456 / 303443968 = 0.634204
+  Progress: 193166224 / 303443968 = 0.636580
+  Progress: 193887008 / 303443968 = 0.638955
+  Progress: 194607776 / 303443968 = 0.641330
+  Progress: 195328544 / 303443968 = 0.643705
+  Progress: 196049296 / 303443968 = 0.646081
+  Progress: 196770080 / 303443968 = 0.648456
+  Progress: 197490848 / 303443968 = 0.650831
+  Progress: 198211616 / 303443968 = 0.653207
+  Progress: 198932384 / 303443968 = 0.655582
+  Progress: 199653168 / 303443968 = 0.657957
+  Progress: 200373936 / 303443968 = 0.660333
+  Progress: 201094704 / 303443968 = 0.662708
+  Progress: 201815456 / 303443968 = 0.665083
+  Progress: 202536224 / 303443968 = 0.667458
+  Progress: 203257008 / 303443968 = 0.669834
+  Progress: 203977776 / 303443968 = 0.672209
+  Progress: 204698544 / 303443968 = 0.674584
+  Progress: 205419312 / 303443968 = 0.676960
+  Progress: 206140096 / 303443968 = 0.679335
+  Progress: 206860864 / 303443968 = 0.681710
+  Progress: 207581616 / 303443968 = 0.684085
+  Progress: 208302384 / 303443968 = 0.686461
+  Progress: 209023152 / 303443968 = 0.688836
+  Progress: 209743936 / 303443968 = 0.691211
+  Progress: 210464704 / 303443968 = 0.693587
+  Progress: 211185472 / 303443968 = 0.695962
+  Progress: 211906240 / 303443968 = 0.698337
+  Progress: 212627008 / 303443968 = 0.700713
+  Progress: 213347776 / 303443968 = 0.703088
+  Progress: 214068544 / 303443968 = 0.705463
+  Progress: 214789312 / 303443968 = 0.707838
+  Progress: 215510080 / 303443968 = 0.710214
+  Progress: 216230864 / 303443968 = 0.712589
+  Progress: 216951632 / 303443968 = 0.714964
+  Progress: 217672400 / 303443968 = 0.717340
+  Progress: 218393152 / 303443968 = 0.719715
+  Progress: 219113936 / 303443968 = 0.722090
+  Progress: 219834704 / 303443968 = 0.724466
+  Progress: 220555472 / 303443968 = 0.726841
+  Progress: 221276240 / 303443968 = 0.729216
+  Progress: 221997024 / 303443968 = 0.731591
+  Progress: 222717792 / 303443968 = 0.733967
+  Progress: 223438560 / 303443968 = 0.736342
+  Progress: 224159312 / 303443968 = 0.738717
+  Progress: 224880080 / 303443968 = 0.741093
+  Progress: 225600864 / 303443968 = 0.743468
+  Progress: 226321632 / 303443968 = 0.745843
+  Progress: 227042400 / 303443968 = 0.748219
+  Progress: 227763168 / 303443968 = 0.750594
+  Progress: 228483952 / 303443968 = 0.752969
+  Progress: 229204704 / 303443968 = 0.755344
+  Progress: 229925472 / 303443968 = 0.757720
+  Progress: 230646240 / 303443968 = 0.760095
+  Progress: 231367008 / 303443968 = 0.762470
+  Progress: 232087792 / 303443968 = 0.764846
+  Progress: 232808560 / 303443968 = 0.767221
+  Progress: 233529328 / 303443968 = 0.769596
+  Progress: 234250096 / 303443968 = 0.771972
+  Progress: 234970864 / 303443968 = 0.774347
+  Progress: 235691632 / 303443968 = 0.776722
+  Progress: 236412400 / 303443968 = 0.779097
+  Progress: 237133168 / 303443968 = 0.781473
+  Progress: 237853936 / 303443968 = 0.783848
+  Progress: 238574720 / 303443968 = 0.786223
+  Progress: 239295488 / 303443968 = 0.788599
+  Progress: 240016240 / 303443968 = 0.790974
+  Progress: 240737008 / 303443968 = 0.793349
+  Progress: 241457792 / 303443968 = 0.795724
+  Progress: 242178560 / 303443968 = 0.798100
+  Progress: 242899328 / 303443968 = 0.800475
+  Progress: 243620096 / 303443968 = 0.802850
+  Progress: 244340880 / 303443968 = 0.805226
+  Progress: 245061648 / 303443968 = 0.807601
+  Progress: 245782400 / 303443968 = 0.809976
+  Progress: 246503168 / 303443968 = 0.812352
+  Progress: 247223936 / 303443968 = 0.814727
+  Progress: 247944720 / 303443968 = 0.817102
+  Progress: 248665488 / 303443968 = 0.819477
+  Progress: 249386256 / 303443968 = 0.821853
+  Progress: 250107024 / 303443968 = 0.824228
+  Progress: 250827808 / 303443968 = 0.826603
+  Progress: 251548560 / 303443968 = 0.828979
+  Progress: 252269328 / 303443968 = 0.831354
+  Progress: 252990096 / 303443968 = 0.833729
+  Progress: 253710864 / 303443968 = 0.836105
+  Progress: 254431648 / 303443968 = 0.838480
+  Progress: 255152416 / 303443968 = 0.840855
+  Progress: 255873184 / 303443968 = 0.843230
+  Progress: 256593936 / 303443968 = 0.845606
+  Progress: 257314720 / 303443968 = 0.847981
+  Progress: 258035488 / 303443968 = 0.850356
+  Progress: 258756256 / 303443968 = 0.852732
+  Progress: 259477024 / 303443968 = 0.855107
+  Progress: 260197792 / 303443968 = 0.857482
+  Progress: 260918576 / 303443968 = 0.859857
+  Progress: 261639344 / 303443968 = 0.862233
+  Progress: 262360096 / 303443968 = 0.864608
+  Progress: 263080864 / 303443968 = 0.866983
+  Progress: 263801648 / 303443968 = 0.869359
+  Progress: 264522416 / 303443968 = 0.871734
+  Progress: 265243184 / 303443968 = 0.874109
+  Progress: 265963952 / 303443968 = 0.876485
+  Progress: 266684736 / 303443968 = 0.878860
+  Progress: 267405504 / 303443968 = 0.881235
+  Progress: 268126256 / 303443968 = 0.883610
+  Progress: 268847040 / 303443968 = 0.885986
+  Progress: 269567808 / 303443968 = 0.888361
+  Progress: 270288576 / 303443968 = 0.890736
+  Progress: 271009344 / 303443968 = 0.893112
+  Progress: 271730112 / 303443968 = 0.895487
+  Progress: 272450880 / 303443968 = 0.897862
+  Progress: 273171648 / 303443968 = 0.900238
+  Progress: 273892416 / 303443968 = 0.902613
+  Progress: 274613184 / 303443968 = 0.904988
+  Progress: 275333952 / 303443968 = 0.907363
+  Progress: 276054720 / 303443968 = 0.909739
+  Progress: 276775488 / 303443968 = 0.912114
+  Progress: 277496256 / 303443968 = 0.914489
+  Progress: 278217056 / 303443968 = 0.916865
+  Progress: 278937792 / 303443968 = 0.919240
+  Progress: 279658560 / 303443968 = 0.921615
+  Progress: 280379328 / 303443968 = 0.923990
+  Progress: 281100096 / 303443968 = 0.926366
+  Progress: 281820896 / 303443968 = 0.928741
+  Progress: 282541664 / 303443968 = 0.931116
+  Progress: 283262432 / 303443968 = 0.933492
+  Progress: 283983200 / 303443968 = 0.935867
+  Progress: 284703968 / 303443968 = 0.938242
+  Progress: 285424736 / 303443968 = 0.940618
+  Progress: 286145504 / 303443968 = 0.942993
+  Progress: 286866272 / 303443968 = 0.945368
+  Progress: 287587040 / 303443968 = 0.947743
+  Progress: 288307808 / 303443968 = 0.950119
+  Progress: 289028576 / 303443968 = 0.952494
+  Progress: 289749344 / 303443968 = 0.954869
+  Progress: 290470112 / 303443968 = 0.957245
+  Progress: 291190880 / 303443968 = 0.959620
+  Progress: 291911648 / 303443968 = 0.961995
+  Progress: 292632416 / 303443968 = 0.964370
+  Progress: 293353184 / 303443968 = 0.966746
+  Progress: 294073984 / 303443968 = 0.969121
+  Progress: 294794752 / 303443968 = 0.971497
+  Progress: 295515488 / 303443968 = 0.973872
+  Progress: 296236256 / 303443968 = 0.976247
+  Progress: 296957024 / 303443968 = 0.978622
+  Progress: 297677824 / 303443968 = 0.980998
+  Progress: 298398592 / 303443968 = 0.983373
+  Progress: 299119360 / 303443968 = 0.985748
+  Progress: 299840128 / 303443968 = 0.988124
+  Progress: 300560896 / 303443968 = 0.990499
+  Progress: 301281664 / 303443968 = 0.992874
+  Progress: 302002432 / 303443968 = 0.995249
+  Progress: 302723200 / 303443968 = 0.997625
+  Progress: 303443968 / 303443968 = 1.000000
+
+  Top level policy match: none
+  Deep policy match: none
+App has failed one or more pre-distribution checks.
+---------------------------------------------------------------
+Adhoc Signed App
+    Severity: Warning 
+    Full Error: This app is adhoc signed. While it may run locally, adhoc 
+        signed apps are not suitable for distribution. 
+    Type: Distribution Error 
+    Suggested Fix: Sign the app with a valid Developer ID certificate for 
+        distribution. 
+    Documentation: 
+        https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution 
+    NSError.userInfo: ["SyspolicyCheckLongError": This app is adhoc signed. 
+        While it may run locally, adhoc signed apps are not suitable for 
+        distribution., "SyspolicyCheckAdditionalInformation": , 
+        "SyspolicyCheckErrorLevel": Warning, "SyspolicyCheckDocumentationLink": 
+        https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution, 
+        "SyspolicyCheckShortError": Adhoc Signed App, "SyspolicyCheckAdvice": 
+        Sign the app with a valid Developer ID certificate for distribution.] 
+
+Notary Ticket Missing
+    File: main/app/Convx.app 
+    Severity: Fatal 
+    Full Error: A Notarization ticket is not stapled to this application. 
+    Type: Distribution Error 
+    Suggested Fix: If this application has already been uploaded to the Apple 
+        notary service, please make sure to attach the ticket with the `stapler 
+        staple` command. If not, please upload to the Apple notary service 
+        using Xcode or via `notarytool`. 
+    Documentation: 
+        https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution. 
+    NSError.userInfo: ["SyspolicyCheckAdvice": If this application has already 
+        been uploaded to the Apple notary service, please make sure to attach 
+        the ticket with the `stapler staple` command. If not, please upload to 
+        the Apple notary service using Xcode or via `notarytool`. , 
+        "SyspolicyCheckErrorLevel": Fatal, "SyspolicyCheckShortError": Notary 
+        Ticket Missing, "SyspolicyCheckErrorFile": 
+        /Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app, 
+        "SyspolicyCheckDocumentationLink": 
+        https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution., 
+        "SyspolicyCheckAdditionalInformation": , "SyspolicyCheckLongError": A 
+        Notarization ticket is not stapled to this application.] 
+
+Internal Xprotect Error
+    Severity: Fatal 
+    Full Error: One or more files in your application triggered an Xprotect 
+        error. 
+    Type: Distribution Error 
+    Suggested Fix: Please take a sysdiagnose and file a Feedback using Feedback 
+        Assistant.app. 
+    Documentation: 
+    NSError.userInfo: ["SyspolicyCheckLongError": One or more files in your 
+        application triggered an Xprotect error., 
+        "SyspolicyCheckAdditionalInformation": , "SyspolicyCheckErrorLevel": 
+        Fatal, "SyspolicyCheckDocumentationLink": , "SyspolicyCheckShortError": 
+        Internal Xprotect Error, "SyspolicyCheckAdvice": Please take a 
+        sysdiagnose and file a Feedback using Feedback Assistant.app.] 
+
+---------------------------------------------------------------
+App has failed one or more pre-distribution checks.
+---------------------------------------------------------------
+Adhoc Signed App
+    Severity: Warning 
+    Full Error: This app is adhoc signed. While it may run locally, adhoc 
+        signed apps are not suitable for distribution. 
+    Type: Distribution Error 
+    Suggested Fix: Sign the app with a valid Developer ID certificate for 
+        distribution. 
+    Documentation: 
+        https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution 
+
+Notary Ticket Missing
+    File: main/app/Convx.app 
+    Severity: Fatal 
+    Full Error: A Notarization ticket is not stapled to this application. 
+    Type: Distribution Error 
+    Suggested Fix: If this application has already been uploaded to the Apple 
+        notary service, please make sure to attach the ticket with the `stapler 
+        staple` command. If not, please upload to the Apple notary service 
+        using Xcode or via `notarytool`. 
+    Documentation: 
+        https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution. 
+
+Internal Xprotect Error
+    Severity: Fatal 
+    Full Error: One or more files in your application triggered an Xprotect 
+        error. 
+    Type: Distribution Error 
+    Suggested Fix: Please take a sysdiagnose and file a Feedback using Feedback 
+        Assistant.app. 
+    Documentation: 
+
+---------------------------------------------------------------

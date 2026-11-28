@@ -1,0 +1,64 @@
+-- codesign -dv
+/Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app: code object is not signed at all
+-- codesign --verify --deep --strict
+/Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app: code object is not signed at all
+In architecture: x86_64
+-- spctl (Gatekeeper)
+/Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app: rejected
+source=no usable signature
+-- syspolicy_check distribution
+Checking distribution readiness on /Users/runner/work/convx-desktop/convx-desktop/desktop/build/compose/binaries/main/app/Convx.app
+App has failed one or more pre-distribution checks.
+---------------------------------------------------------------
+Codesign Error
+    File: main/app/Convx.app 
+    Severity: Fatal 
+    Full Error: File is not signed at all. 
+    Type: Notary Error 
+    Suggested Fix: Resign the application using the codesign command. 
+    Documentation: 
+        https://developer.apple.com/library/archive/technotes/tn2206/_index.html#//apple_ref/doc/uid/DTS40007919 
+
+Notary Ticket Missing
+    File: main/app/Convx.app 
+    Severity: Fatal 
+    Full Error: A Notarization ticket is not stapled to this application. 
+    Type: Distribution Error 
+    Suggested Fix: If this application has already been uploaded to the Apple 
+        notary service, please make sure to attach the ticket with the `stapler 
+        staple` command. If not, please upload to the Apple notary service 
+        using Xcode or via `notarytool`. 
+    Documentation: 
+        https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution. 
+
+Internal Xprotect Error
+    Severity: Fatal 
+    Full Error: One or more files in your application triggered an Xprotect 
+        error. 
+    Type: Distribution Error 
+    Suggested Fix: Please take a sysdiagnose and file a Feedback using Feedback 
+        Assistant.app. 
+    Documentation: 
+
+---------------------------------------------------------------
+App has failed one or more pre-distribution checks.
+---------------------------------------------------------------
+Codesign Error
+    File: main/app/Convx.app 
+    Severity: Fatal 
+    Full Error: File is not signed at all. 
+    Type: Notary Error 
+
+Notary Ticket Missing
+    File: main/app/Convx.app 
+    Severity: Fatal 
+    Full Error: A Notarization ticket is not stapled to this application. 
+    Type: Distribution Error 
+
+Internal Xprotect Error
+    Severity: Fatal 
+    Full Error: One or more files in your application triggered an Xprotect 
+        error. 
+    Type: Distribution Error 
+
+---------------------------------------------------------------

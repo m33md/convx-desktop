@@ -1,0 +1,21 @@
+19:42:23.476 I/Startup: Convx 1.2.2 on Mac OS X x86_64, Java 21.0.12.1, 106 GB free
+SLF4J(W): No SLF4J providers were found.
+SLF4J(W): Defaulting to no-operation (NOP) logger implementation
+SLF4J(W): See https://www.slf4j.org/codes.html#noProviders for further details.
+19:42:24.173 I/YouTube: Region US, language en (this PC: en-US)
+19:42:26.501 I/LocalCopies: Download folder: 0 songs, 0 read
+19:42:26.506 I/LocalMusic: Scanned 0 folders: 0 songs, 0 new, 0 gone, 0 read
+19:42:28.478 I/MacGlass: No AppKit Liquid Glass on this Mac; Convx draws its own buttons
+2026-11-28 19:42:32.769 Convx[12950:39309] NSWindow warning: adding an unknown subview: <NSVisualEffectView: 0x7fceba7cc280>. Break on NSLog to debug.
+2026-11-28 19:42:32.814 Convx[12950:39309] Call stack:
+(
+	0   AppKit                              0x00007ff8197c7f43 -[NSThemeFrame addSubview:] + 112
+	1   AppKit                              0x00007ff8197c7a71 -[NSView addSubview:positioned:relativeTo:] + 459
+	2   AppKit                              0x00007ff8197c782f -[NSThemeFrame addSubview:positioned:relativeTo:] + 46
+	3   jna13405829008183490277.tmp         0x000000011dfb2062 ffi_prep_go_closure + 1010
+	4   ???                                 0x00007ff7bdf27af8 0x0 + 140702020434680
+)
+19:42:32.849 I/MacSidebar: Using the sidebar material
+19:42:32.870 I/MacWindow: contentView AWTView subviews [NSVisualEffectView, AWTView, NSVisualEffectView, NSTitlebarContainerView] hidden=0 window=true layerBacked=1
+19:42:32.870 I/MacWindow: Native window material installed in a 1440x900 window
+19:42:34.236 I/MacMedia: macOS media controls on
