@@ -60,6 +60,29 @@ fun BackupSettings() {
 
     SectionGap()
     SettingsSection(
+        "Move playlists to another device",
+        footer = "Exported playlists are .m3u files with each song's YouTube Music link. Convx on another PC imports them " +
+            "with the same songs, and a playlist it already has only gets the songs it's missing. The phone's Import a m3u " +
+            "playlist reads them too, finding each song by its name.",
+    ) {
+        SettingsRow("Export playlists", "Save all your playlists, or the ones you pick, as files", icon = "ios_share", tint = SystemColors.Blue, onClick = {
+            exportPlaylistsDialog()
+        })
+        RowDivider()
+        val convxStatus = (importing as? PlaylistImport.State.Matching)?.takeIf { it.source == PlaylistImport.ConvxSource }
+            ?.let { "Matching ${it.title} (${it.list} of ${it.lists}): ${it.done} of ${it.total} songs" }
+        SettingsRow(
+            "Import playlists from Convx",
+            convxStatus ?: "Files exported from Convx on this PC or another one",
+            icon = "playlist_add",
+            tint = SystemColors.Indigo,
+            enabled = !PlaylistImport.busy,
+            onClick = { importConvxFiles() },
+        )
+    }
+
+    SectionGap()
+    SettingsSection(
         "Import playlists",
         footer = "Each song is found on YouTube Music by its title, artist and length. Songs with no close match are skipped and counted.",
     ) {

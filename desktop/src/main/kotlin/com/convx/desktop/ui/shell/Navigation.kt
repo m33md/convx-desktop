@@ -105,6 +105,16 @@ class Navigator(start: Screen = Screen.Home) {
         forwardStack.clear()
     }
 
+    /**
+     * Puts [to] in place of the page you're on when that page is still [from], as when a Spotify
+     * playlist opens as its Convx copy, so Back doesn't return to the one it stood in for.
+     */
+    fun replace(from: Screen, to: Screen) {
+        if (current.screen != from || from == to) return
+        discarded += backStack.removeAt(backStack.lastIndex).key
+        backStack += Entry(to)
+    }
+
     fun back() {
         if (backStack.size <= 1) return
         forwardStack += backStack.removeAt(backStack.lastIndex)

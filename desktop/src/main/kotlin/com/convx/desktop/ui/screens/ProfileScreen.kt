@@ -260,7 +260,7 @@ fun ProfileScreen() {
                     items(spotifyLists.orEmpty(), key = { "spotify-${it.id}" }) { p ->
                         SavedCard(
                             p.name,
-                            listOf("Spotify", pluralize(p.trackCount, "song")).joinToString(" • "),
+                            listOfNotNull("Spotify", p.trackCount.takeIf { it >= 0 }?.let { pluralize(it, "song") } ?: p.owner.ifBlank { null }).joinToString(" • "),
                             thumbnail = p.image,
                             onClick = { navigator.navigate(Screen.SpotifyPlaylist(p.id)) },
                         )

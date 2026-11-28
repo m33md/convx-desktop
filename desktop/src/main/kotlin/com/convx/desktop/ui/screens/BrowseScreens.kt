@@ -280,12 +280,15 @@ fun LibraryScreen() {
                     )
                 }
             }
-            spotifyLists.forEach { p ->
+            // A Spotify playlist you've brought in shows once, as the copy above that you can change.
+            val copies = com.convx.desktop.integrations.PlaylistImport.copies(spotifyLists, library.localPlaylists)
+            spotifyLists.filterIndexed { i, _ -> copies[i] == null }.forEach { p ->
                 add {
                     SavedCard(
                         p.name,
                         listOfNotNull("Spotify", p.owner.takeIf { it.isNotBlank() }).joinToString(" • "),
-                        thumbnail = p.image,
+                        // A disc design put on it shows instead of Spotify's picture.
+                        thumbnail = com.convx.desktop.ui.components.wornCover(DiscTargets.spotify(p.id)) ?: p.image,
                         onClick = { navigator.navigate(Screen.SpotifyPlaylist(p.id)) },
                     )
                 }

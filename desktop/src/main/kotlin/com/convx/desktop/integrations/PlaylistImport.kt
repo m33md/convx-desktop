@@ -10,11 +10,15 @@ import com.convx.desktop.core.AppScope
 import com.convx.desktop.core.Log
 import com.convx.desktop.data.ArtistRef
 import com.convx.desktop.data.Library
+import com.convx.desktop.data.LocalPlaylist
+import com.convx.desktop.data.PlaylistCovers
 import com.convx.desktop.data.Song
 import com.convx.desktop.data.toSong
 import com.convx.desktop.integrations.spotify.SpotifyApi
 import com.convx.desktop.integrations.spotify.SpotifyMatcher
 import com.convx.desktop.integrations.spotify.SpotifyPlaylist
+import com.convx.desktop.player.FolderPlaylists
+import com.convx.desktop.player.LocalCopies
 import com.convx.music.canvas.AppleMusicCatalog
 import com.convx.music.canvas.AppleMusicPlaylist
 import com.convx.music.canvas.ApplePlaylist
@@ -37,6 +41,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import java.io.File
+import java.util.UUID
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -59,12 +64,16 @@ object PlaylistImport {
         data class Matching(val source: String, val title: String, val done: Int, val total: Int, val list: Int = 1, val lists: Int = 1) : State
         /** An Apple playlist is matched and waits for where to put it. */
         data class Ready(val title: String, val songs: List<Song>, val skipped: Int) : State
-        data class Done(val message: String, val playlistId: String? = null) : State
+        /** [skipped] songs found no match on YouTube Music. */
+        data class Done(val message: String, val playlistId: String? = null, val skipped: Int = 0) : State
         data class Failed(val message: String) : State
     }
 
-    /** One thing to import from Spotify; [playlist] null means Liked Songs. */
-    data class SpotifySource(val playlist: SpotifyPlaylist?)
+    /**
+     * One thing to import from Spotify; [playlist] null means Liked Songs. [add] are songs to put in
+     * its Convx copy once it's there, as "Add to playlist" does with a list that's only on Spotify.
+     */
+    data class SpotifySource(val playlist: SpotifyPlaylist?, val add: List<Song> = emptyList())
 
     private val _state = MutableStateFlow<State>(State.Idle)
     val state: StateFlow<State> = _state.asStateFlow()
@@ -89,18 +98,21 @@ object PlaylistImport {
     // Spotify
 
     /**
-     * Mirrors each source into its own Convx playlist, as the phone's SpotifyImportViewModel does.
-     * Importing the same source again updates that playlist instead of making another.
+     * Brings each source into Convx, as the phone's SpotifyImportViewModel does. A playlist that is
+     * already here, from an earlier Spotify import or under its name from Exportify, gets only the
+     * songs it is missing; one that isn't (you deleted it, say) comes back. Nothing is in twice.
      */
-    fun importSpotify(sources: List<SpotifySource>) {
-        if (busy || sources.isEmpty()) return
-        job = AppScope.launch(Dispatchers.IO) {
-            var matchedTotal = 0
-            var skippedTotal = 0
+    fun importSpotify(sources: List<SpotifySource>): Job? {
+        if (busy || sources.isEmpty()) return null
+        // Busy from now, so a second click can't start another before this one has begun.
+        _state.value = State.Loading("Spotify")
+        return AppScope.launch(Dispatchers.IO) {
+            val tally = Tally()
             var lastId: String? = null
             try {
+                val targets = copiesAmongYours(sources.map { it.playlist })
                 sources.forEachIndexed { index, source ->
-                    val title = source.playlist?.name ?: "Spotify Liked Songs"
+                    val title = source.playlist?.name ?: LikedTitle
                     _state.value = State.Loading("Spotify")
                     val tracks = (source.playlist?.let { SpotifyApi.playlistTracks(it.id) } ?: SpotifyApi.likedSongs()).getOrThrow()
                     val songs = mutableListOf<Song>()
@@ -110,25 +122,176 @@ object PlaylistImport {
                         val standIn = SpotifyMatcher.toSong(track)
                         val wasMatched = !SpotifyMatcher.isSpotify(standIn)
                         val song = if (wasMatched) standIn else SpotifyMatcher.resolve(standIn)
-                        if (song != null && !SpotifyMatcher.isSpotify(song)) songs += song else skippedTotal++
+                        if (song != null && !SpotifyMatcher.isSpotify(song)) songs += song else tally.skipped++
                         if (!wasMatched) delay(150)
                     }
-                    val id = "local-spotify-" + (source.playlist?.id ?: "liked")
-                    // Spotify's own picture for the list, as it shows there.
-                    Library.upsertPlaylist(id, title, songs.distinctBy { it.id }, cover = source.playlist?.image)
-                    matchedTotal += songs.size
+                    val there = targets[index]
+                    val id = there?.id ?: (SpotifyPrefix + (source.playlist?.id ?: "liked"))
+                    // Spotify's own picture and name; a name you changed here stays.
+                    val added = Library.mergeImported(
+                        id, title, songs, cover = source.playlist?.image,
+                        spotifyId = source.playlist?.id?.takeIf { id != SpotifyPrefix + it },
+                        rename = there == null || slugOf(there.name) == slugOf(title),
+                        key = ::songKey,
+                    )
+                    tally.count(there != null, added)
+                    if (source.add.isNotEmpty()) Library.addToPlaylist(id, source.add)
+                    keepDisc(source.playlist?.id, id)
                     lastId = id
                 }
-                _state.value = State.Done(
-                    "Imported ${sources.size} ${if (sources.size == 1) "playlist" else "playlists"}: $matchedTotal songs matched, $skippedTotal skipped.",
-                    lastId.takeIf { sources.size == 1 },
-                )
+                _state.value = State.Done(tally.message(), lastId.takeIf { sources.size == 1 }, tally.skipped)
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 Log.w(Tag, "Spotify import failed", error)
                 _state.value = State.Failed("Couldn't import from Spotify: ${error.message ?: "check your connection"}")
             }
+        }.also { job = it }
+    }
+
+    /**
+     * The key a disc design put on a Spotify list (its [spotifyId], or null for Liked Songs) is kept
+     * by in Library.worn, while the list is only on Spotify.
+     */
+    fun discKey(spotifyId: String?) = "spotify:" + (spotifyId ?: "liked")
+
+    /**
+     * Moves a disc design worn by the Spotify list [spotifyId] onto [playlistId], the Convx playlist
+     * it came into, unless that one has a picture of its own already; either way the list's own key
+     * goes, as the copy now stands for it.
+     */
+    private fun keepDisc(spotifyId: String?, playlistId: String) {
+        val key = discKey(spotifyId)
+        val worn = Library.value.worn[key] ?: return
+        val copy = Library.playlist(playlistId)
+        if (copy != null && !PlaylistCovers.isOwn(copy.cover)) {
+            if (worn.design != null) Library.setPlaylistDesign(playlistId, worn.cover, worn.design) else Library.setPlaylistCover(playlistId, worn.cover)
         }
+        Library.removeWornCover(key)
+    }
+
+    /** What an import of several playlists did, for the line it ends with. */
+    private class Tally {
+        var created = 0
+        var updated = 0
+        var added = 0
+        var skipped = 0
+
+        fun count(wasThere: Boolean, songs: Int) {
+            if (wasThere) {
+                updated++
+                added += songs
+            } else {
+                created++
+            }
+        }
+
+        fun message(): String {
+            fun lists(n: Int) = if (n == 1) "1 playlist" else "$n playlists"
+            fun songs(n: Int) = if (n == 1) "1 song" else "$n songs"
+            return listOfNotNull(
+                "Imported ${lists(created)}.".takeIf { created > 0 },
+                when {
+                    updated == 0 -> null
+                    added > 0 -> "${lists(updated)} you already had got ${songs(added)} they were missing."
+                    else -> "${lists(updated)} you already had ${if (updated == 1) "was" else "were"} up to date."
+                },
+                "${songs(skipped)} had no match on YouTube Music.".takeIf { skipped > 0 },
+            ).joinToString(" ").ifEmpty { "Nothing to import." }
+        }
+    }
+
+    const val LikedId = "local-spotify-liked"
+    private const val LikedTitle = "Spotify Liked Songs"
+    private const val SpotifyPrefix = "local-spotify-"
+    private const val ImportPrefix = "local-import-"
+
+    /**
+     * A playlist to import: its Spotify id when known (Exportify's files have none), its name, and
+     * whether it's Liked Songs. A Convx export also has the [convxId] it had where it came from, and
+     * may land in [anyName] playlist of yours with its name, not only one from Spotify.
+     */
+    internal data class Wanted(
+        val spotifyId: String?,
+        val name: String,
+        val liked: Boolean = false,
+        val convxId: String? = null,
+        val anyName: Boolean = false,
+    )
+
+    /** The Spotify playlist a Convx playlist came from: in its id, or noted when a Spotify import found it by name. */
+    private fun spotifyIdOf(playlist: LocalPlaylist): String? =
+        playlist.spotifyId ?: playlist.id.takeIf { it.startsWith(SpotifyPrefix) && it != LikedId }?.removePrefix(SpotifyPrefix)
+
+    /** The names a Convx playlist goes by: its own, and the one an Exportify import put in its id. */
+    private fun nameKeys(playlist: LocalPlaylist): List<String> =
+        listOfNotNull(slugOf(playlist.name), playlist.id.takeIf { it.startsWith(ImportPrefix) }?.removePrefix(ImportPrefix))
+
+    /**
+     * Where each of [wanted] already is among [library]'s playlists, or null where it isn't: Liked
+     * Songs in its own playlist; a Spotify playlist in the one an earlier Spotify import made of it;
+     * else one from Spotify or Exportify with its name (Exportify's files carry no Spotify ids, and
+     * name their playlists in lowercase). A playlist found for one isn't found for another, so two
+     * Spotify playlists with the same name keep two.
+     */
+    internal fun existing(library: List<LocalPlaylist>, wanted: List<Wanted>): List<LocalPlaylist?> {
+        val found = arrayOfNulls<LocalPlaylist>(wanted.size)
+        val taken = HashSet<String>()
+        fun claim(i: Int, playlist: LocalPlaylist?) {
+            if (playlist != null && taken.add(playlist.id)) found[i] = playlist
+        }
+        wanted.forEachIndexed { i, w ->
+            when {
+                w.liked -> claim(i, library.firstOrNull { it.id == LikedId })
+                // The same playlist, brought over before, or back to the PC it came from.
+                w.convxId != null && library.any { it.id == w.convxId && it.id !in taken } -> claim(i, library.first { it.id == w.convxId })
+                w.spotifyId != null -> claim(i, library.firstOrNull { spotifyIdOf(it) == w.spotifyId && it.id !in taken })
+            }
+        }
+        // By name: Exportify's playlists first by the name they were imported under, then any from Spotify with it.
+        val named = library.filter { (it.id.startsWith(ImportPrefix) || it.id.startsWith(SpotifyPrefix)) && it.id != LikedId }
+        val yours = library.filter { !FolderPlaylists.isFolderPlaylist(it.id) && it.id != LikedId }
+        fun byName(i: Int, w: Wanted, match: (List<String>, String) -> Boolean) {
+            if (found[i] != null || w.liked) return
+            val slug = slugOf(w.name)
+            claim(i, (if (w.anyName) yours else named).firstOrNull { p ->
+                p.id !in taken && match(nameKeys(p), slug) &&
+                    // One that came from another Spotify playlist is that one's, not this one's.
+                    (w.spotifyId == null || spotifyIdOf(p).let { it == null || it == w.spotifyId })
+            })
+        }
+        wanted.forEachIndexed { i, w -> byName(i, w) { keys, slug -> slug in keys } }
+        // Two Exportify files with one name were imported as "name" and "name-2".
+        wanted.forEachIndexed { i, w -> byName(i, w) { keys, slug -> keys.any { it.startsWith("$slug-") && it.removePrefix("$slug-").all(Char::isDigit) } } }
+        return found.toList()
+    }
+
+    /** Which Spotify playlists ([playlists], with null for Liked Songs) are in Convx already, by their place in the list. */
+    fun alreadyThere(playlists: List<SpotifyPlaylist?>): List<Boolean> = copies(playlists).map { it != null }
+
+    /**
+     * The Convx playlist each of [playlists] (null for Liked Songs) was imported into, or null where
+     * there's none: the editable copy that stands for it, found as an import would find it.
+     */
+    fun copies(playlists: List<SpotifyPlaylist?>, library: List<LocalPlaylist> = Library.value.localPlaylists): List<LocalPlaylist?> =
+        existing(library, playlists.map { Wanted(it?.id, it?.name ?: LikedTitle, it == null) })
+
+    /**
+     * [copies] of [playlists] found among all your Spotify lists as last read, as the side bar and a
+     * Spotify list's page find them: of two lists with one name, only the first is the copy's, and
+     * the other is a list of its own. Asked of a few on their own, both would get the one copy.
+     */
+    fun copiesAmongYours(playlists: List<SpotifyPlaylist?>, library: List<LocalPlaylist> = Library.value.localPlaylists): List<LocalPlaylist?> {
+        val known = listOf<SpotifyPlaylist?>(null) + SpotifyApi.knownPlaylists.orEmpty()
+        val all = known + playlists.filterNotNull().filter { p -> known.none { it?.id == p.id } }.distinctBy { it.id }
+        val found = copies(all, library)
+        return playlists.map { p -> found[all.indexOfFirst { it?.id == p?.id }] }
+    }
+
+    /** A song's title and main artist, as playlists compare songs that may be two uploads of one recording. */
+    private fun songKey(song: Song): String? {
+        val title = LocalCopies.titleKey(song.title)
+        val artist = song.artists.firstOrNull()?.name?.let(LocalCopies::artistKey).orEmpty()
+        return if (title.isEmpty() || artist.isEmpty()) null else "$title|$artist"
     }
 
     // Apple Music
@@ -203,7 +366,7 @@ object PlaylistImport {
      * The id part for an imported playlist's name, so importing it again updates it. A name of
      * only punctuation or emoji still gets one of its own, from its characters' codes.
      */
-    private fun slugOf(title: String): String =
+    internal fun slugOf(title: String): String =
         title.lowercase().replace(Regex("[^\\p{L}\\p{N}]+"), "-").trim('-').take(60).ifEmpty {
             title.trim().codePoints().toArray().joinToString("") { Integer.toHexString(it) }.take(60).ifEmpty { "playlist" }
         }
@@ -211,40 +374,55 @@ object PlaylistImport {
     /** Where Exportify's files are imported from, as the progress names it. */
     const val ExportifySource = "Exportify"
 
+    /** Playlists exported from Convx (PlaylistExport), here or on another device. */
+    const val ConvxSource = "Convx playlists"
+
     /**
      * Several playlist files at once, such as Exportify's "Export All": each becomes its own Convx
-     * playlist, and importing the same playlist again updates it rather than making another.
-     * Exportify's Liked Songs lands in the same playlist a Spotify import of them does.
+     * playlist. One already here, from Exportify or from Spotify under the same name, gets only the
+     * songs it is missing rather than another copy. Exportify's Liked Songs lands in the same
+     * playlist a Spotify import of them does.
      */
     fun importFiles(lists: List<PlaylistFiles.Parsed>, source: String = ExportifySource) {
         val wanted = lists.filter { it.tracks.isNotEmpty() }
         if (busy || wanted.isEmpty()) return
         _state.value = State.Loading(source)
         job = AppScope.launch(Dispatchers.IO) {
-            var matchedTotal = 0
-            var skippedTotal = 0
+            val tally = Tally()
             var lastId: String? = null
-            val slugs = HashSet<String>()
+            val library = Library.value.localPlaylists
+            val convx = source == ConvxSource
+            // A Convx export says which playlist it is; Exportify's Liked Songs file only by its name.
+            fun isLiked(parsed: PlaylistFiles.Parsed) =
+                if (parsed.id != null) parsed.id == LikedId else slugOf(parsed.title).let { it == "liked-songs" || it == "liked" }
+            val targets = existing(library, wanted.map {
+                Wanted(it.id?.takeIf { id -> id.startsWith(SpotifyPrefix) && id != LikedId }?.removePrefix(SpotifyPrefix), it.title, isLiked(it), it.id, anyName = convx)
+            })
+            // A new playlist's id is one no playlist has, so two lists whose names make the same slug
+            // ("......." and "!!!", say) each keep their own.
+            val ids = library.mapTo(HashSet()) { it.id }
+            targets.forEach { it?.let { ids += it.id } }
             // Export All repeats a song in Liked Songs and in every playlist that has it; each is looked up once.
             val found = HashMap<String, Song?>()
             try {
                 wanted.forEachIndexed { index, parsed ->
                     val (songs, skipped) = matchFile(parsed, source, index + 1, wanted.size, found)
-                    // Two lists whose names make the same slug ("......." and "!!!", say) each keep their own.
-                    val base = slugOf(parsed.title)
-                    val slug = generateSequence(2) { it + 1 }.map { "$base-$it" }.let { sequenceOf(base) + it }.first { slugs.add(it) }
-                    val liked = slug == "liked-songs" || slug == "liked"
-                    val id = if (liked) "local-spotify-liked" else "local-import-$slug"
+                    val there = targets[index]
+                    val liked = isLiked(parsed)
+                    // A Convx export keeps its id, so it's found by it next time; a folder's playlist can't
+                    // (its folder isn't here), and one with no id gets a new one.
+                    val kept = parsed.id?.takeIf { it.startsWith("local-") && !FolderPlaylists.isFolderPlaylist(it) && ids.add(it) }
+                    val id = there?.id ?: if (liked) LikedId else kept ?: if (convx) "local-" + UUID.randomUUID() else {
+                        val base = ImportPrefix + slugOf(parsed.title)
+                        (sequenceOf(base) + generateSequence(2) { it + 1 }.map { "$base-$it" }).first { ids.add(it) }
+                    }
                     // Each list goes into the library as soon as its songs are matched.
-                    Library.upsertPlaylist(id, if (liked) "Spotify Liked Songs" else parsed.title, songs.distinctBy { it.id })
-                    matchedTotal += songs.size
-                    skippedTotal += skipped
+                    val added = Library.mergeImported(id, if (liked) LikedTitle else parsed.title, songs, cover = parsed.cover, key = ::songKey)
+                    tally.count(there != null, added)
+                    tally.skipped += skipped
                     lastId = id
                 }
-                _state.value = State.Done(
-                    "Imported ${wanted.size} ${if (wanted.size == 1) "playlist" else "playlists"}: $matchedTotal songs matched, $skippedTotal skipped.",
-                    lastId.takeIf { wanted.size == 1 },
-                )
+                _state.value = State.Done(tally.message(), lastId.takeIf { wanted.size == 1 })
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 Log.w(Tag, "Playlist files import failed", error)

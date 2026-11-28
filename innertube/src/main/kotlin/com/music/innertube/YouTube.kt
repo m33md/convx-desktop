@@ -84,6 +84,13 @@ object YouTube : InnertubeRepository {
         set(value) {
             innerTube.proxyAuth = value
         }
+    /** Notes about requests that needed a second try, for the app's log. */
+    var log: ((String) -> Unit)?
+        get() = innerTube.log
+        set(value) {
+            innerTube.log = value
+        }
+
     override var useLoginForBrowse: Boolean
         get() = innerTube.useLoginForBrowse
         set(value) {

@@ -9,6 +9,7 @@ import com.convx.desktop.core.AppDirs
 import com.convx.desktop.core.Log
 import com.convx.desktop.player.AudioCache
 import com.convx.desktop.player.Downloads
+import com.convx.desktop.player.LocalCopies
 import com.convx.desktop.player.LocalMusic
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -78,7 +79,7 @@ object TrackAnalyzer {
     /** The whole copy of a song on this PC: a local file, a download, or a finished cache file. */
     fun sourceFile(id: String): File? {
         if (LocalMusic.isLocal(id)) return LocalMusic.track(id)?.path?.let(::File)?.takeIf { it.isFile }
-        return Downloads.offline(id)?.second ?: AudioCache.completeFile(id)
+        return Downloads.offline(id)?.second ?: LocalCopies.knownFile(id) ?: AudioCache.completeFile(id)
     }
 
     /**

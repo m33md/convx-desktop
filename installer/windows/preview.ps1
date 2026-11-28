@@ -255,6 +255,13 @@ if ($Previous) {
         $p = Start-Process -FilePath $Previous -ArgumentList @('/quiet', '/norestart', '-log', "`"$(Join-Path $OutDir 'download-page.log')`"") -PassThru -Wait
         Write-Host "The download page's setup exited with $($p.ExitCode); Installed apps: $((Entries) -join '; ')"
         if (-not (Test-Path $exe)) { throw "The download page's setup didn't install Convx" }
+        # Covers saved by a Convx that kept its cache in the install folder, and by one that keeps it
+        # in Convx Cache beside it: an update empties the install folder, never Convx Cache.
+        $inInstall = Join-Path (Split-Path -Parent $exe) 'local-covers'
+        $inCache = Join-Path $env:LOCALAPPDATA 'Convx Cache\local-covers'
+        New-Item -ItemType Directory -Force $inInstall, $inCache | Out-Null
+        Set-Content (Join-Path $inInstall 'probe.img') 'install folder'
+        Set-Content (Join-Path $inCache 'probe.img') 'cache'
         $s = Start-Setup 'update-download-page.log'
         Wait-For $s 'Update Convx'
         Shot $s '12-update-download-page'
@@ -268,6 +275,19 @@ if ($Previous) {
         Write-Host "Installed apps: $((Entries) -join '; ')"
         if ($listed.Count -ne 1) { throw "Installed apps lists $($listed.Count) Convx" }
         if (-not (Test-Path $exe)) { throw 'Convx.exe is gone after the update' }
+        Write-Host "After the update, the install folder's cover is there: $(Test-Path (Join-Path $inInstall 'probe.img')); Convx Cache's: $(Test-Path (Join-Path $inCache 'probe.img'))"
+        if (-not (Test-Path (Join-Path $inCache 'probe.img'))) { throw 'The update emptied Convx Cache' }
+        # The updated Convx itself writes its log in Convx Cache.
+        $logs = Join-Path $env:LOCALAPPDATA 'Convx Cache\logs'
+        $app = Start-Process -FilePath $exe -PassThru
+        for ($i = 0; $i -lt 90 -and -not (Test-Path (Join-Path $logs 'convx.log')); $i++) { Start-Sleep -Seconds 1 }
+        Start-Sleep -Seconds 20
+        Stop-Process -Id $app.Id -Force -ErrorAction SilentlyContinue
+        $log = Join-Path $logs 'convx.log'
+        if (-not (Test-Path $log)) { throw 'The updated Convx wrote no log in Convx Cache' }
+        Copy-Item $log (Join-Path $OutDir 'updated-convx.log')
+        Write-Host "The updated Convx's log starts:"
+        Get-Content $log -TotalCount 40 | ForEach-Object { Write-Host "  $_" }
     }
 }
 

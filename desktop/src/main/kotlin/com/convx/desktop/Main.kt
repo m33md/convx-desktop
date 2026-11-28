@@ -46,6 +46,7 @@ import com.convx.desktop.integrations.youtube.YouTubeSync
 import com.convx.desktop.integrations.spotify.SpotifyAccount
 import com.convx.desktop.integrations.spotify.SpotifyMatcher
 import com.convx.desktop.player.AudioCache
+import com.convx.desktop.player.LocalCopies
 import com.convx.desktop.player.LocalMusic
 import com.convx.desktop.player.AudioEngine
 import com.convx.desktop.player.Downloads
@@ -129,7 +130,10 @@ private fun start() {
     part("Scrobbling") { Scrobbler.start() }
     part("YouTube Music sync") { YouTubeSync.start() }
     part("Playlist import") { PlaylistImport.init() }
-    part("Local files") { if (AppSettings.value.scanLocalOnStart) LocalMusic.scan() }
+    part("Local files") {
+        if (AppSettings.value.scanLocalOnStart) LocalMusic.scan() else LocalMusic.repairCovers()
+        LocalCopies.refresh()
+    }
     part("Listen together") { Party.start() }
     part("Downloads") { Downloads.start() }
 

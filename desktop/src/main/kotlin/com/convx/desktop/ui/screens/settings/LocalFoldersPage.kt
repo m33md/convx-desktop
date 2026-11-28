@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.convx.desktop.data.AppSettings
 import com.convx.desktop.player.FolderPlaylists
+import com.convx.desktop.player.LocalCopies
 import com.convx.desktop.player.LocalMusic
 import com.convx.desktop.ui.components.ConvxIcon
 import com.convx.desktop.ui.components.Overlays
@@ -36,6 +37,7 @@ fun LocalFoldersSettings() {
         index.tracks.values.groupingBy { track -> settings.localFolders.firstOrNull { FolderPlaylists.within(track.path, it) } }.eachCount()
     }
     val playlists = remember(settings.folderPlaylists) { settings.folderPlaylists.map { it.lowercase() }.toSet() }
+    val copiesFound by LocalCopies.found.collectAsState()
 
     SettingsSection(
         "Music folders",
@@ -116,6 +118,20 @@ fun LocalFoldersSettings() {
         RowDivider(PlainInset)
         SwitchRow("Scan when Convx starts", "Pick up new files by themselves", settings.scanLocalOnStart) { v ->
             AppSettings.update { it.copy(scanLocalOnStart = v) }
+        }
+    }
+
+    SectionGap()
+    SettingsSection(
+        "Your own copies",
+        footer = "A song you stream plays from your file instead when these folders or the download folder have one with the " +
+            "same title and artist and about the same length. The song stays the same everywhere else: likes, lyrics and " +
+            "history. Pointing the download folder at the music you already have works too; Convx then doesn't save its " +
+            "copies over your files." + (copiesFound?.let { " The download folder has ${com.convx.desktop.core.pluralize(it, "song")}." } ?: ""),
+    ) {
+        SwitchRow("Play your own copies", "Play from your files instead of streaming when you have the song", settings.playOwnCopies) { v ->
+            AppSettings.update { it.copy(playOwnCopies = v) }
+            if (v) LocalCopies.refresh()
         }
     }
 

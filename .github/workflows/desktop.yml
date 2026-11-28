@@ -116,7 +116,7 @@ jobs:
           status=0
           ./gradlew --no-daemon snapshots || status=$?
           mkdir -p build/snapshots
-          cp "$(cygpath -u "$LOCALAPPDATA")"/Convx/logs/*.log build/snapshots/ || true
+          cp "$(cygpath -u "$LOCALAPPDATA")"/"Convx Cache"/logs/*.log build/snapshots/ || true
           exit $status
 
       - name: Package installers

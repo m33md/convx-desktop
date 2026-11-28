@@ -252,7 +252,7 @@ fun LyricsView(
 
 /** "Lyrics from Spicy Lyrics · uploaded by A, made by B", each name opening its page. */
 @Composable
-private fun LyricsCreditLine(credit: com.convx.desktop.lyrics.LyricsCredit, modifier: Modifier = Modifier) {
+internal fun LyricsCreditLine(credit: com.convx.desktop.lyrics.LyricsCredit, modifier: Modifier = Modifier) {
     val style = ConvxType.Caption.copy(fontSize = 11.sp, lineHeight = 14.sp, fontWeight = FontWeight.Medium)
     val dim = Color.White.copy(alpha = 0.55f)
     @Composable

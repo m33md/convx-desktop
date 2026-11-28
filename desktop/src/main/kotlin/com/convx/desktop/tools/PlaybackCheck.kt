@@ -17,12 +17,14 @@ import com.convx.desktop.core.initYouTube
 import com.convx.desktop.data.ArtistRef
 import com.convx.desktop.data.AudioQuality
 import com.convx.desktop.data.Song
+import com.convx.desktop.data.toSong
 import com.convx.desktop.lyrics.toLyricsText
 import com.convx.desktop.player.AudioCache
 import com.convx.desktop.player.CachedAudio
 import com.convx.desktop.player.Decoder
 import com.convx.desktop.player.StreamResolver
 import com.convx.desktop.player.describePlaybackError
+import com.music.innertube.models.WatchEndpoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
@@ -41,7 +43,7 @@ fun main(args: Array<String>) {
             "kJQP7kiw5Fk",
         )
     }
-    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck() and streamFailureCheck() and modulesCheck() and hlsCheck()
+    val dspOk = dspCheck() and libraryCheck() and partyCheck() and backupCheck() and playlistFileCheck() and downloadsCheck() and lyricsMenuCheck() and spicyLyricsReadCheck() and homeOrderCheck() and statsCheck() and sonicCheck() and autoMixCheck() and djEffectsCheck() and recognitionCheck() and streamFailureCheck() and modulesCheck() and hlsCheck()
     partyServerCheck()
     runBlocking(Dispatchers.IO) { initYouTube() }
     var passed = 0
@@ -56,9 +58,176 @@ fun main(args: Array<String>) {
         }
     }
     println("$passed of ${ids.size} songs played")
+    cacheFolderCheck()
+    albumRadioCheck()
+    localCopiesCheck()
     signInBrowsersCheck()
+    spotifyWebPlayerCheck()
+    spicyLyricsCheck()
     mediaControlsCheck()
     exitProcess(if (passed > 0 && dspOk) 0 else 1)
+}
+
+/**
+ * The Spotify login's hidden web player, on the real open.spotify.com: Convx opens it with a login
+ * cookie that isn't one, so Spotify's player starts as a guest, and the check passes when Convx saw
+ * that guest token come (and said the login had run out) rather than waiting for nothing. It also
+ * lists the saved queries the player sent, to show when Spotify has changed them.
+ */
+private fun spotifyWebPlayerCheck() {
+    val browser = com.convx.desktop.integrations.spotify.SpotifyWebPlayer.browser()
+    if (browser == null) {
+        println("Spotify web player: skipped (no Chromium browser)")
+        return
+    }
+    val started = System.currentTimeMillis()
+    val result = runCatching {
+        runBlocking {
+            com.convx.desktop.integrations.spotify.SpotifyWebPlayer.token(
+                com.convx.desktop.integrations.spotify.SpotifyWebPlayer.Cookies("AQ" + "x".repeat(40)),
+                browser,
+            )
+        }
+    }
+    val seconds = (System.currentTimeMillis() - started) / 1000
+    val error = result.exceptionOrNull()
+    val ok = error is com.convx.desktop.integrations.spotify.SpotifyWebPlayer.LoggedOutException
+    println("${if (ok) "PASS" else "FAIL"} Spotify web player with ${browser.name}: ${error?.let { "${it::class.simpleName}: ${it.message}" } ?: "signed in?!"}, ${seconds}s")
+    val seen = com.convx.desktop.integrations.spotify.SpotifyWebPlayer.seenQueries
+    println("Spotify web player queries seen: " + seen.entries.joinToString { "${it.key}=${it.value.take(12)}" }.ifEmpty { "none" })
+    spotifyPublicCheck()
+}
+
+/**
+ * Spotify's saved queries and Convx's reading of their answers, on the real Spotify: with the
+ * guest token the web player had a moment ago, a public playlist's songs and a search are read the
+ * way a logged-in library is. Your own library needs a login, which a build machine doesn't have.
+ */
+private fun spotifyPublicCheck() {
+    val pathfinder = com.convx.desktop.integrations.spotify.SpotifyPathfinder
+    val guest = com.convx.desktop.integrations.spotify.SpotifyWebPlayer.lastGuest
+    if (guest == null) {
+        println("INFO Spotify public playlist: skipped (the web player gave no guest token)")
+        return
+    }
+    pathfinder.tokenForChecks = guest
+    try {
+        runBlocking(Dispatchers.IO) {
+            // Spotify's own Today's Top Hits, which anyone can open without logging in.
+            val tracks = runCatching { pathfinder.playlistTracks("37i9dQZF1DXcBWIGoYBM5M") }
+            tracks.onSuccess { list ->
+                val complete = list.count { it.title.isNotBlank() && it.artists.isNotEmpty() && it.durationMs > 0 && it.image != null }
+                println("${if (list.size >= 20 && complete == list.size) "PASS" else "FAIL"} Spotify public playlist: ${list.size} songs, $complete with title, artist, length and cover; first: " +
+                    list.take(3).joinToString { "${it.title} by ${it.artists.joinToString()} (${it.durationMs / 1000}s)" })
+            }.onFailure { println("FAIL Spotify public playlist: ${it::class.simpleName}: ${it.message?.take(300)}") }
+            val found = runCatching { pathfinder.searchTracks("Blinding Lights The Weeknd", 5) }
+            found.onSuccess { list -> println("${if (list.isNotEmpty()) "PASS" else "FAIL"} Spotify search: ${list.size} songs, first ${list.firstOrNull()?.let { "${it.title} by ${it.artists.joinToString()}" }}") }
+                .onFailure { println("FAIL Spotify search: ${it::class.simpleName}: ${it.message?.take(300)}") }
+        }
+    } finally {
+        pathfinder.tokenForChecks = null
+    }
+}
+
+/** Where the cache lives: beside the install folder on Windows, where an update leaves it alone. */
+private fun cacheFolderCheck() {
+    val cache = com.convx.desktop.core.AppDirs.cache
+    val windows = System.getProperty("os.name").lowercase().contains("win")
+    val ok = !windows || (cache.name == "Convx Cache" && cache.parentFile?.absolutePath.equals(System.getenv("LOCALAPPDATA"), ignoreCase = true))
+    println("${if (ok) "PASS" else "FAIL"} cache folder: ${cache.absolutePath}, logs in ${com.convx.desktop.core.AppDirs.logs.absolutePath}")
+}
+
+/**
+ * Albums and radios on the real YouTube Music: albums found by search load with their songs, a
+ * song's radio and an album's queue fill. The same album and radio asked as countries YouTube
+ * Music doesn't serve (what a PC set to one used to send) are printed for comparison.
+ */
+private fun albumRadioCheck() = runBlocking(Dispatchers.IO) {
+    fun line(pass: Boolean?, what: String) = println("${when (pass) { true -> "PASS"; false -> "FAIL"; null -> "INFO" }} $what")
+    val youTube = com.music.innertube.YouTube
+    println("YouTube Music region ${youTube.locale.gl}, language ${youTube.locale.hl}")
+    val albums = listOf("The Weeknd After Hours", "Daft Punk Discovery", "Taylor Swift 1989").mapNotNull { q ->
+        val found = youTube.search(q, com.music.innertube.SearchFilter.FILTER_ALBUM).getOrNull()?.items
+            ?.filterIsInstance<com.music.innertube.models.AlbumItem>()?.firstOrNull()
+        if (found == null) line(false, "album search \"$q\": no album found")
+        found
+    }
+    for (album in albums) {
+        youTube.album(album.browseId)
+            .onSuccess { line(it.songs.size >= 5, "album ${it.album.title} (${album.browseId}): ${it.songs.size} songs, ${it.unavailable} that can't play, first ${it.songs.firstOrNull()?.title}") }
+            .onFailure { line(false, "album ${album.title} (${album.browseId}): ${it::class.simpleName}: ${it.message?.take(200)}") }
+    }
+    val seed = WatchEndpoint(videoId = "4NRXx6U8ABQ", playlistId = "RDAMVM4NRXx6U8ABQ")
+    youTube.next(seed)
+        .onSuccess { line(it.items.size >= 10, "radio for Blinding Lights: ${it.items.size} songs, starting ${it.items.take(3).joinToString { s -> s.title }}") }
+        .onFailure { line(false, "radio for Blinding Lights: ${it::class.simpleName}: ${it.message?.take(200)}") }
+    albums.firstOrNull()?.let { album ->
+        youTube.next(WatchEndpoint(playlistId = album.playlistId.removePrefix("VL")))
+            .onSuccess { line(it.items.size >= 5, "playing album ${album.title}: ${it.items.size} songs in the queue") }
+            .onFailure { line(false, "playing album ${album.title}: ${it::class.simpleName}: ${it.message?.take(200)}") }
+    }
+    val saved = youTube.locale
+    try {
+        for (gl in listOf("IR", "MN", "AL")) {
+            youTube.locale = com.music.innertube.models.YouTubeLocale(gl = gl, hl = "en")
+            val album = albums.firstOrNull()?.let { a ->
+                youTube.album(a.browseId).fold({ "${it.songs.size} songs, ${it.unavailable} that can't play" }, { "${it::class.simpleName}: ${it.message?.take(120)}" })
+            }
+            val radio = youTube.next(seed).fold({ "${it.items.size} songs" }, { "${it::class.simpleName}: ${it.message?.take(120)}" })
+            line(null, "asked as $gl (not a YouTube Music country): album $album; radio $radio")
+        }
+    } finally {
+        youTube.locale = saved
+    }
+}
+
+/**
+ * Your own copy of a streamed song plays instead of the stream: a file tagged like a real song from
+ * YouTube Music, of its length, in the download folder is found for that song, and a recording of
+ * another length isn't.
+ */
+private fun localCopiesCheck() {
+    val copies = com.convx.desktop.player.LocalCopies
+    val before = com.convx.desktop.data.AppSettings.value
+    val folder = java.nio.file.Files.createTempDirectory("convx-copies").toFile()
+    try {
+        val song = runBlocking(Dispatchers.IO) {
+            com.music.innertube.YouTube.next(WatchEndpoint(videoId = "4NRXx6U8ABQ")).getOrNull()?.items?.firstOrNull()
+        }?.toSong()
+        if (song == null || song.duration == null || song.artists.isEmpty()) {
+            println("FAIL your own copies: no song from YouTube Music to match ($song)")
+            return
+        }
+        val rate = 8_000
+        val file = java.io.File(folder, "${song.artists.first().name} - ${song.title}.flac")
+        org.bytedeco.javacv.FFmpegFrameRecorder(file, 2).apply {
+            format = "flac"
+            sampleRate = rate
+            audioCodec = org.bytedeco.ffmpeg.global.avcodec.AV_CODEC_ID_FLAC
+            setMetadata("title", song.title)
+            setMetadata("artist", song.artists.joinToString(", ") { it.name })
+            start()
+            recordSamples(rate, 2, java.nio.ShortBuffer.wrap(ShortArray(rate * 2 * song.duration!!)))
+            stop()
+            release()
+        }
+        com.convx.desktop.data.AppSettings.update { it.copy(downloadFolder = folder.absolutePath, playOwnCopies = true) }
+        copies.refresh()
+        for (i in 0 until 600) {
+            if (copies.found.value != null) break
+            Thread.sleep(100)
+        }
+        val hit = copies.find(song)
+        val longer = copies.find(song.copy(id = "${song.id}-x", duration = song.duration!! + 30))
+        val pass = hit?.second?.name == file.name && hit.first.videoId == song.id && longer == null
+        println("${if (pass) "PASS" else "FAIL"} your own copies: \"${song.title}\" by ${song.artistText} (${song.duration}s) plays from ${hit?.second?.name ?: "nothing"} " +
+            "(${hit?.first?.detail}); 30 s longer: ${longer?.second?.name ?: "not matched"}")
+    } catch (e: Exception) {
+        println("FAIL your own copies: ${e::class.simpleName}: ${e.message}")
+    } finally {
+        com.convx.desktop.data.AppSettings.update { it.copy(downloadFolder = before.downloadFolder, playOwnCopies = before.playOwnCopies) }
+        folder.deleteRecursively()
+    }
 }
 
 /**
@@ -924,6 +1093,90 @@ private fun statsCheck(): Boolean {
     expect("all time", all.songs.size == 3 && all.songs.last().value.id == "old", all.songs.map { it.value.id }.toString())
     com.convx.desktop.data.Library.applySync { it.copy(history = saved) }
     return ok
+}
+
+/**
+ * Spicy Lyrics' answers read the way its reference documents them: a community syllable sync with
+ * a backing voice and a word split over two syllables, a line sync, and lyrics with no timing.
+ */
+private fun spicyLyricsReadCheck(): Boolean {
+    val spicy = com.convx.desktop.lyrics.SpicyLyrics
+    var ok = true
+    fun check(name: String, pass: Boolean, detail: String) {
+        if (!pass) ok = false
+        println("${if (pass) "PASS" else "FAIL"} Spicy Lyrics reads $name: $detail")
+    }
+    fun syl(text: String, start: Double, end: Double, part: Boolean = false) =
+        """{"Text":"$text","StartTime":$start,"EndTime":$end,"IsPartOfWord":$part}"""
+    val syllable = """{"Body":{"Type":"Syllable","StartTime":7.357,"EndTime":20.5,"id":"1QV6tiMFM6fSOKOGLMHYYg","source":"spicy_lyrics",
+        "UploadAttribution":{"Uploader":{"id":"1","username":"uploader","url":"https://spicylyrics.org/uid/1"},"Maker":{"id":"2","username":"maker","url":"https://spicylyrics.org/uid/2"}},
+        "Content":[
+          {"Type":"Vocal","OppositeAligned":false,"Lead":{"StartTime":7.357,"EndTime":9.9,"Syllables":[${syl("Mum", 7.357, 7.6, true)},${syl("mum", 7.6, 8.0)},${syl("mah", 8.1, 9.9)}]},
+            "Background":[{"StartTime":8.5,"EndTime":9.5,"Syllables":[${syl("(oh)", 8.5, 9.5)}]}]},
+          {"Type":"Vocal","OppositeAligned":true,"Lead":{"StartTime":12.0,"EndTime":20.5,"Syllables":[${syl("I'll", 12.0, 12.4)},${syl("get", 12.4, 12.8)}]}}
+        ]},"Status":200,"Type":"object"}"""
+    val (lines, credit) = spicy.read(syllable) ?: (emptyList<com.convx.music.lyrics.bitchord.LyricLine>() to null)
+    val sung = lines.filter { it.text.isNotBlank() }
+    val first = sung.firstOrNull()
+    check(
+        "a syllable sync",
+        sung.size == 2 && first?.timeMs == 7_357L && first?.words?.map { it.text } == listOf("Mummum", "mah") &&
+            first?.background?.text == "(oh)" && sung[1].alignment == com.convx.music.lyrics.bitchord.LyricAlignment.End,
+        sung.joinToString(" / ") { "${it.timeMs} ${it.words.joinToString("|") { w -> w.text }} bg=${it.background?.text} ${it.alignment}" },
+    )
+    check(
+        "a community credit",
+        credit?.provider == "Spicy Lyrics" && credit?.uploader?.name == "uploader" && credit?.maker?.url == "https://spicylyrics.org/uid/2",
+        "$credit",
+    )
+    val line = """{"Body":{"Type":"Line","source":"spotify","StartTime":10.81,"EndTime":183.44,"id":"x",
+        "Content":[{"Type":"Vocal","OppositeAligned":false,"Text":"First line (echo)","StartTime":10.81,"EndTime":13.2},
+                   {"Type":"Vocal","OppositeAligned":false,"Text":"Second line","StartTime":14.0,"EndTime":16.0}]},"Status":200,"Type":"object"}"""
+    val lineRead = spicy.read(line)
+    val timed = lineRead?.first.orEmpty().filter { it.text.isNotBlank() }
+    check(
+        "a line sync",
+        timed.map { it.timeMs } == listOf(10_810L, 14_000L) && timed.none { it.isWordSynced } && lineRead?.second?.provider == "Spotify",
+        timed.joinToString(" / ") { "${it.timeMs} ${it.text}" } + ", ${lineRead?.second}",
+    )
+    val static = """{"Body":{"Type":"Static","source":"apple_music","id":"x","Lines":[{"Text":"Only words"},{"Text":"No times"}]},"Status":200,"Type":"object"}"""
+    val plain = spicy.read(static)?.first.orEmpty()
+    check("lyrics with no timing", plain.map { it.text } == listOf("Only words", "No times") && plain.all { it.timeMs == 0L }, plain.joinToString(" / ") { it.text })
+    return ok
+}
+
+/**
+ * Spicy Lyrics on the real API with Convx's own key: a song found through its search (the way a
+ * YouTube Music song is), and a song asked by its Spotify id that has a community sync. Reported,
+ * not required, since the API is someone else's and can be busy.
+ */
+private fun spicyLyricsCheck() = runBlocking(Dispatchers.IO) {
+    val spicy = com.convx.desktop.lyrics.SpicyLyrics
+    if (!spicy.hasBuiltInKey) {
+        println("INFO Spicy Lyrics: skipped (this build has no key of its own)")
+        return@runBlocking
+    }
+    suspend fun ask(what: String, song: com.convx.desktop.data.Song, artist: String) {
+        val started = System.currentTimeMillis()
+        val lines = runCatching { spicy.lyrics(song, song.title, artist, (song.duration ?: 0) * 1000L) }.getOrNull()
+            .orEmpty().filter { it.text.isNotBlank() }
+        val words = lines.count { it.isWordSynced }
+        println(
+            "${if (lines.isNotEmpty()) "PASS" else "FAIL"} Spicy Lyrics $what: ${lines.size} lines, $words word-timed, " +
+                "${spicy.credit(song, song.title, artist) ?: "no credit"}, ${System.currentTimeMillis() - started} ms" +
+                (spicy.problem.value?.let { ", problem: $it" } ?: ""),
+        )
+    }
+    ask(
+        "found by search",
+        com.convx.desktop.data.Song(id = "dQw4w9WgXcQ", title = "Never Gonna Give You Up", duration = 213),
+        "Rick Astley",
+    )
+    ask(
+        "by Spotify id",
+        com.convx.desktop.data.Song(id = com.convx.desktop.integrations.spotify.SpotifyMatcher.Prefix + "1QV6tiMFM6fSOKOGLMHYYg", title = "Poker Face", duration = 238),
+        "Lady Gaga",
+    )
 }
 
 /**

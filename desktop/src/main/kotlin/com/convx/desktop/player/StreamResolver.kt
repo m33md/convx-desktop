@@ -112,6 +112,7 @@ data class ResolvedStream(
             if (lossless) bitDepth?.let { add("$it-bit") } else if (bitrate > 0) add("${bitrate / 1000} kbps")
             sampleRateText?.let { add(it) }
             module?.let { add(it) }
+            if (client == LocalCopies.Client) add(client)
         }.joinToString(" · ")
 }
 

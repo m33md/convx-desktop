@@ -509,15 +509,29 @@ fun LyricsSourcesSettings() {
     }
     SectionGap()
     val hasSpicyKey = !secrets[com.convx.desktop.lyrics.SpicyLyrics.KeyName].isNullOrBlank()
+    val spicyBuiltIn = com.convx.desktop.lyrics.SpicyLyrics.hasBuiltInKey
     val spicyProblem by com.convx.desktop.lyrics.SpicyLyrics.problem.collectAsState()
     SettingsSection(
         "Spicy Lyrics",
-        footer = spicyProblem ?: ("Word-synced lyrics from Spicy Lyrics' community, Apple Music and Spotify. The key is free: " +
-            "make an application at developers.spicylyrics.org, turn on client access with \"No origin header\", and paste its " +
-            "sl_pk_ key here. Songs are found by their Spotify ID, through your Spotify link or song.link. As its terms ask, " +
-            "its lyrics always show who they're from and aren't saved as .lrc files."),
+        footer = spicyProblem ?: (
+            "Lyrics from Spicy Lyrics' community, Apple Music and Spotify. When it has lyrics for a song, even line by line, " +
+                "they're the ones shown; the other sources are used when it has none. " +
+                (if (spicyBuiltIn) "It works with no setup. A key of your own from developers.spicylyrics.org is used instead when you add one. "
+                else "The key is free: make an application at developers.spicylyrics.org, turn on client access with \"No origin header\", and paste its sl_pk_ key here. ") +
+                "Songs are found by their Spotify ID, through Spicy Lyrics' search, your Spotify link or song.link. As its terms ask, " +
+                "its lyrics always show who they're from and aren't saved as .lrc files."
+            ),
     ) {
-        LinkRow("Spicy Lyrics key", icon = "lock", tint = SystemColors.Gray, value = if (hasSpicyKey) "Set" else "Not set") { editSpicyLyricsKey() }
+        LinkRow(
+            if (spicyBuiltIn) "Your own key" else "Spicy Lyrics key",
+            icon = "lock",
+            tint = SystemColors.Gray,
+            value = when {
+                hasSpicyKey -> "Set"
+                spicyBuiltIn -> "Not needed"
+                else -> "Not set"
+            },
+        ) { editSpicyLyricsKey() }
         RowDivider()
         LinkRow("Get a key at developers.spicylyrics.org", icon = "link", tint = SystemColors.Gray) {
             openUrl("https://developers.spicylyrics.org/dashboard")
